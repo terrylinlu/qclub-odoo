@@ -1,0 +1,9 @@
+.env
+__pycache__/
+*.pyc
+node_modules/
+e2e/test-results/
+e2e/playwright-report/
+# 报告由 make report 生成，CI 以产物形式保存，不入库
+docs/reports/*
+!docs/reports/.gitkeep

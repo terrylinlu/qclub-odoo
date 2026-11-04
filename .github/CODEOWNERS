@@ -1,0 +1,9 @@
+# 代码所有者：下列路径的改动需要 @terrylinlu 审核
+/addons/qclub_billiard/tests/ @terrylinlu
+/AGENTS.md @terrylinlu
+/CLAUDE.md @terrylinlu
+/docs/spec/ @terrylinlu
+/Makefile @terrylinlu
+/docker/ @terrylinlu
+/tools/ @terrylinlu
+/.github/ @terrylinlu

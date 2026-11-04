@@ -1,0 +1,41 @@
+# 仅用于开发/测试，与生产环境完全隔离。数据库不对外暴露端口。
+name: qclub-test
+
+services:
+  db:
+    image: postgres:16            # 官方镜像自带 contrib，包含 btree_gist
+    environment:
+      POSTGRES_USER: odoo
+      POSTGRES_PASSWORD: odoo_test   # 仅测试用，不是任何真实环境的密码
+      POSTGRES_DB: postgres
+    # 测试环境关闭强制落盘，加快速度（不要用于生产）
+    command: ["postgres", "-c", "fsync=off", "-c", "full_page_writes=off", "-c", "synchronous_commit=off"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U odoo -d postgres"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  odoo:
+    image: odoo:19.0              # 首次使用请确认该标签可拉取；确认后建议固定到具体版本/摘要
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      HOST: db
+      USER: odoo
+      PASSWORD: odoo_test
+      TZ: UTC
+    volumes:
+      - ../addons:/mnt/extra-addons:ro
+      - odoo-data:/var/lib/odoo
+    ports:
+      - "127.0.0.1:8069:8069"     # 仅本机可访问，供端到端测试使用
+    # 默认命令用于 `docker compose up odoo`（端到端测试）；make 的各命令会用 run 覆盖
+    command: ["odoo", "-d", "qclub_test", "--no-database-list", "--without-demo=all"]
+
+volumes:
+  pgdata:
+  odoo-data:
