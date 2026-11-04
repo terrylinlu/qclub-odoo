@@ -14,7 +14,7 @@
 ## 2. 硬性红线（任何情况下不得违反）
 
 1. 只能连接测试数据库。**绝不连接、读取或修改生产库 `AUSHARE`**
-2. 不得写入、提交或打印任何真实密钥（Stripe、生产数据库密码、服务器凭据）。真实密钥只通过环境变量提供，`.env` 必须在 `.gitignore` 中。例外：`docker/docker-compose.test.yml` 中仅用于一次性本地测试容器的占位密码（如 `odoo_test`）允许存在，但不得与任何真实环境的密码相同
+2. 不得写入、提交或打印任何真实密钥（Stripe、生产数据库密码、服务器凭据）。真实密钥只通过环境变量提供，`.env` 必须在 `.gitignore` 中。例外：`docker/docker-compose.test.yml` 中仅用于一次性本地测试容器的占位密码（如 `odoo_test`），以及仅绑定本机 127.0.0.1 的演示库里的占位账号密码，允许存在，但不得与任何真实环境的密码相同
 3. Stripe 只使用**测试模式**
 4. 不得修改 Odoo 核心代码或其他模块；改动范围限定在 `addons/qclub_billiard`、`e2e/`、`docs/`、`tools/`。`Makefile`、`docker/`、`.github/` 只有在任务明确授权时才可修改
 5. 不得删除、跳过或弱化已有测试来让测试通过。已有测试只能由人类批准后修改，AI 只能新增测试
@@ -65,6 +65,7 @@ make shell     进入测试库的 Odoo shell
 - 没有修改受保护的已有测试
 - 没有引入新的 Python 依赖（如确需，必须写入 `__manifest__.py` 的 `external_dependencies` 并说明）
 - 报告已更新，列出未覆盖项和需要人工手动验收的项目
+- 涉及用户可见功能的任务：同步更新演示数据（docker/ 下的演示脚本）和 docs/demo/phase-N.md 的演示脚本，并确认 make demo 可以按脚本走通
 
 ## 7. Odoo 19 开发约定
 
