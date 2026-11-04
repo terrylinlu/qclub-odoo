@@ -18,7 +18,7 @@ services:
       timeout: 3s
       retries: 20
 
-  odoo:
+  odoo: &odoo
     image: odoo:19.0@sha256:5e755c725b3c43cf0be16d579904e1418300db3a2c44952f928eaddbcb0cc16d  # 固定摘要（2026-11-04）；升级时重新获取摘要并单独提 PR
     depends_on:
       db:
@@ -30,11 +30,18 @@ services:
       TZ: UTC
     volumes:
       - ../addons:/mnt/extra-addons:ro
-      - odoo-data:/var/lib/odoo
+      - odoo-data:/var/lib/odoo   # 文件存储按库名分目录，测试库与演示库互不干扰
     ports:
-      - "127.0.0.1:8069:8069"     # 仅本机可访问，供端到端测试使用
+      - "127.0.0.1:8070:8069"     # 仅本机可访问，供端到端测试使用（8069 留给演示环境）
     # 默认命令用于 `docker compose up odoo`（端到端测试）；make 的各命令会用 run 覆盖
     command: ["odoo", "-d", "qclub_test", "--no-database-list", "--without-demo=True"]
+
+  # 演示环境（make demo）：与 odoo 服务同镜像、同配置，只看得到演示库 qclub_demo
+  demo:
+    <<: *odoo
+    ports:
+      - "127.0.0.1:8069:8069"     # 仅本机可访问；浏览器用 localhost / qclub.localhost / aushare.localhost
+    command: ["odoo", "-d", "qclub_demo", "--db-filter=^qclub_demo$$", "--no-database-list", "--without-demo=True"]
 
 volumes:
   pgdata:
