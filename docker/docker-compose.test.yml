@@ -19,7 +19,7 @@ services:
       retries: 20
 
   odoo:
-    image: odoo:19.0              # 首次使用请确认该标签可拉取；确认后建议固定到具体版本/摘要
+    image: odoo:19.0@sha256:5e755c725b3c43cf0be16d579904e1418300db3a2c44952f928eaddbcb0cc16d  # 固定摘要（2026-11-04）；升级时重新获取摘要并单独提 PR
     depends_on:
       db:
         condition: service_healthy
