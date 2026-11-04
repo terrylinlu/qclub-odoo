@@ -18,7 +18,8 @@ SUMMARY = re.compile(r"(\d+) failed, (\d+) error\(s\) of (\d+) tests")
 
 
 def main(log_path, xml_path):
-    lines = open(log_path, encoding="utf-8", errors="replace").read().splitlines()
+    with open(log_path, encoding="utf-8", errors="replace") as fh:
+        lines = fh.read().splitlines()
     order, module_of, kinds, details = [], {}, {}, {}
     current, summary, install_error = None, None, False
 
@@ -73,7 +74,8 @@ def main(log_path, xml_path):
         f'<testsuite name="qclub_billiard" tests="{total}" failures="{failures}" errors="{errors}">\n'
         + "\n".join(cases) + "\n</testsuite>\n"
     )
-    open(xml_path, "w", encoding="utf-8").write(xml)
+    with open(xml_path, "w", encoding="utf-8") as fh:
+        fh.write(xml)
 
     print(f"[junit] 共 {total} 个测试，失败 {failures}，错误 {errors} -> {xml_path}")
     if total == 0:

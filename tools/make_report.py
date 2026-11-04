@@ -23,8 +23,10 @@ TID = re.compile(r"(?:^|_)([a-z]{2,4})_(\d{3})(?=_|$)")
 def load_spec():
     spec = {}
     for path in sorted(glob.glob("docs/spec/*.md")):
-        for line in open(path, encoding="utf-8"):
-            m = ROW.match(line.rstrip("\n"))
+        with open(path, encoding="utf-8") as fh:
+            lines = fh.read().splitlines()
+        for line in lines:
+            m = ROW.match(line)
             if m and m.group(1).split("-")[0] in PREFIXES:
                 spec[m.group(1)] = m.group(2)
     return spec
@@ -96,7 +98,8 @@ def main():
             "- [ ] 员工实际收到新预约通知"]
     os.makedirs(REPORTS, exist_ok=True)
     path = os.path.join(REPORTS, "report.md")
-    open(path, "w", encoding="utf-8").write("\n".join(out) + "\n")
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write("\n".join(out) + "\n")
     print(f"[report] 测试 {len(cases)}（失败 {n_fail}），需求 {len(spec)}（未覆盖 {len(uncovered)}）-> {path}")
     if STRICT and (uncovered or n_fail):
         return 1
