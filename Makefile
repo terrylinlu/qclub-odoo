@@ -37,13 +37,13 @@ base: guard
 	$(COMPOSE) up -d --wait db
 	$(PSQL) -d postgres -c "DROP DATABASE IF EXISTS $(BASE_DB) WITH (FORCE)" -c "CREATE DATABASE $(BASE_DB) ENCODING 'UTF8' TEMPLATE template0"
 	$(PSQL) -d $(BASE_DB) -c "CREATE EXTENSION IF NOT EXISTS btree_gist"
-	$(ODOO) -d $(BASE_DB) -i website_sale,portal,bus,mail --without-demo=all --stop-after-init
+	$(ODOO) -d $(BASE_DB) -i website_sale,portal,bus,mail --without-demo=True --stop-after-init
 	$(ODOO) shell -d $(BASE_DB) --no-http < docker/seed_websites.py
 
 test: guard up
 	mkdir -p $(REPORTS)
 	$(PSQL) -d postgres -c "DROP DATABASE IF EXISTS $(DB) WITH (FORCE)" -c "CREATE DATABASE $(DB) TEMPLATE $(BASE_DB)"
-	$(ODOO) -d $(DB) -i $(MODULE) --test-enable --test-tags /$(MODULE) --stop-after-init --without-demo=all --log-level=test 2>&1 | tee $(REPORTS)/odoo-test.log || true
+	$(ODOO) -d $(DB) -i $(MODULE) --test-enable --test-tags /$(MODULE) --stop-after-init --without-demo=True --log-level=test 2>&1 | tee $(REPORTS)/odoo-test.log || true
 	python3 tools/odoo_log_to_junit.py $(REPORTS)/odoo-test.log $(REPORTS)/junit.xml
 
 e2e: guard

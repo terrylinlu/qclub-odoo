@@ -34,7 +34,7 @@ services:
     ports:
       - "127.0.0.1:8069:8069"     # 仅本机可访问，供端到端测试使用
     # 默认命令用于 `docker compose up odoo`（端到端测试）；make 的各命令会用 run 覆盖
-    command: ["odoo", "-d", "qclub_test", "--no-database-list", "--without-demo=all"]
+    command: ["odoo", "-d", "qclub_test", "--no-database-list", "--without-demo=True"]
 
 volumes:
   pgdata:
