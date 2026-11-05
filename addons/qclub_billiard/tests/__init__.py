@@ -8,3 +8,4 @@ from . import test_booking
 from . import test_booking_concurrency
 from . import test_access_isolation
 from . import test_isolation_http
+from . import test_booking_list
