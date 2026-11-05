@@ -22,6 +22,12 @@
         <field name="model">qclub.config</field>
         <field name="arch" type="xml">
             <form string="Billiard Settings">
+                <header>
+                    <field name="has_opening_hours" invisible="1"/>
+                    <button name="action_load_default_opening_hours" type="object"
+                            string="Load Default Opening Hours"
+                            groups="qclub_billiard.group_billiard_manager" invisible="has_opening_hours"/>
+                </header>
                 <sheet>
                     <div class="oe_title">
                         <label for="website_id"/>

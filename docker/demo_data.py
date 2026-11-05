@@ -85,7 +85,8 @@ for seq, (type_name, table_name, price) in enumerate(DEMO_TABLES, start=1):
     summary.append(f"table {table_name} ({type_name}, {price:g} AUD/h)")
 
 # ---- 任务 1.2：营业时间 ----
-# 按规格第 G 节写入初始营业时间（周五、周六至次日 02:00）
+hours = env["qclub.opening.hours"]._load_default_hours(qclub)
+summary.append(f"Q Club opening hours: {len(hours)} segments (Friday/Saturday close at 02:00 next day)")
 
 # ---- 任务 1.3 起：演示预约 ----
 

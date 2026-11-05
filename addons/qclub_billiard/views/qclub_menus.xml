@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- ADM-001: Billiards menu, visible to Billiard Staff and above.
-         Opening Hours (task 1.2) and Bookings (task 1.3) are added by later tasks. -->
+         Bookings (task 1.3) are added by a later task. -->
     <menuitem id="menu_billiard_root"
               name="Billiards"
               groups="group_billiard_staff"
@@ -13,6 +13,13 @@
               action="qclub_table_action"
               groups="group_billiard_staff"
               sequence="10"/>
+
+    <menuitem id="menu_billiard_opening_hours"
+              name="Opening Hours"
+              parent="menu_billiard_root"
+              action="qclub_opening_hours_action"
+              groups="group_billiard_staff"
+              sequence="20"/>
 
     <menuitem id="menu_billiard_configuration"
               name="Configuration"
