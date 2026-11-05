@@ -6,6 +6,7 @@
         <field name="arch" type="xml">
             <list>
                 <field name="name"/>
+                <field name="create_date" string="Booked On"/>
                 <field name="business_date"/>
                 <field name="table_id"/>
                 <field name="partner_id"/>
@@ -54,6 +55,7 @@
                         <field name="end" readonly="True"/>
                         <field name="business_date" readonly="True"/>
                         <field name="lock_expire" readonly="True" invisible="not lock_expire"/>
+                        <field name="create_date" string="Booked On" readonly="True" invisible="not create_date"/>
                     </group>
                     <group string="Price snapshot">
                         <field name="hourly_price" readonly="True"/>
@@ -102,6 +104,7 @@
                     <filter name="group_state" string="Status" context="{'group_by': 'state'}"/>
                     <filter name="group_table_id" string="Table" context="{'group_by': 'table_id'}"/>
                     <filter name="group_business_date" string="Business Date" context="{'group_by': 'business_date'}"/>
+                    <filter name="group_create_date" string="Booked On" context="{'group_by': 'create_date:day'}"/>
                 </group>
             </search>
         </field>
