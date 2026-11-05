@@ -5,3 +5,4 @@ from . import test_menu
 from . import test_table
 from . import test_opening_hours
 from . import test_booking
+from . import test_booking_concurrency
