@@ -7,6 +7,11 @@
 # - 账号密码为本机演示库的占位值（AGENTS.md 规则 2 例外），不得与任何真实环境相同
 # - 后续任务往下面对应的分段里补数据
 
+from datetime import datetime, time, timedelta, timezone
+from zoneinfo import ZoneInfo
+
+from odoo import fields
+
 DEMO_DB = "qclub_demo"
 if env.cr.dbname != DEMO_DB:
     raise SystemExit(f"REFUSED: 演示数据只能写入 {DEMO_DB}（当前: {env.cr.dbname}）")
@@ -89,6 +94,38 @@ hours = env["qclub.opening.hours"]._load_default_hours(qclub)
 summary.append(f"Q Club opening hours: {len(hours)} segments (Friday/Saturday close at 02:00 next day)")
 
 # ---- 任务 1.3 起：演示预约 ----
+Booking = env["qclub.booking"].sudo()
+now = fields.Datetime.now()
+business_tz = ZoneInfo("Australia/Adelaide")
+business_day = now.replace(tzinfo=timezone.utc).astimezone(business_tz).date() + timedelta(days=1)
+# A weekly schedule repeats within seven days. Do not change custom opening hours.
+for offset in range(7):
+    candidate = business_day + timedelta(days=offset)
+    if env["qclub.opening.hours"]._get_business_intervals(qclub, candidate):
+        business_day = candidate
+        break
+else:
+    raise SystemExit("Q Club has no business day for demo bookings.")
+
+for table_name, login, start_hour, duration, confirmed in (
+    ("[Demo] Table 1", "demo-customer-a", 15, 2, True),
+    ("[Demo] Table 2", "demo-customer-b", 18, 1, False),
+):
+    customer = Users.search([("login", "=", login)], limit=1).partner_id
+    booking = Booking.search([
+        ("website_id", "=", qclub.id), ("partner_id", "=", customer.id), ("start", ">", now),
+    ], limit=1)
+    if not booking:
+        start = datetime.combine(business_day, time(start_hour), business_tz)
+        booking = Booking.create({
+            "table_id": Table.search([("name", "=", table_name), ("website_id", "=", qclub.id)], limit=1).id,
+            "partner_id": customer.id,
+            "start": start.astimezone(timezone.utc).replace(tzinfo=None), "duration_hours": duration,
+        })
+        if confirmed:
+            booking.action_confirm()
+    summary.append(f"booking {booking.name}: {customer.name}, {booking.table_id.name}, "
+                   f"{booking.start} UTC, {booking.duration_hours} h, {booking.state}")
 
 env.cr.commit()
 print("[demo] demo data written to " + DEMO_DB + ":")
