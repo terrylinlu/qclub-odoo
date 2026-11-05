@@ -18,8 +18,8 @@ class QclubOpeningHours(models.Model):
 
     website_id = fields.Many2one("website", string="Website", required=True, ondelete="cascade", index=True)
     weekday = fields.Selection(WEEKDAYS, required=True)
-    open_hour = fields.Integer(string="Opening Hour", required=True)
-    close_hour = fields.Integer(string="Closing Hour", required=True)
+    open_hour = fields.Integer(string="Opening Hour", required=True, aggregator=False)
+    close_hour = fields.Integer(string="Closing Hour", required=True, aggregator=False)
     open_display = fields.Char(string="Opens", compute="_compute_hour_display")
     close_display = fields.Char(string="Closes", compute="_compute_hour_display")
 
@@ -35,11 +35,16 @@ class QclubOpeningHours(models.Model):
     @api.depends("open_hour", "close_hour")
     def _compute_hour_display(self):
         for hours in self:
-            hours.open_display = f"{hours.open_hour:02d}:00"
-            hours.close_display = (
-                _("%s (+1 day)", f"{hours.close_hour % 24:02d}:00")
-                if hours.close_hour >= 24 else f"{hours.close_hour:02d}:00"
-            )
+            opening = hours.open_hour
+            closing = hours.close_hour % 24
+            hours.open_display = f"{opening % 12 or 12}:00 {'AM' if opening < 12 else 'PM'}"
+            close_display = f"{closing % 12 or 12}:00 {'AM' if closing < 12 else 'PM'}"
+            if hours.close_hour == 24:
+                hours.close_display = _("%s (midnight)", close_display)
+            elif hours.close_hour > 24:
+                hours.close_display = _("%s (+1 day)", close_display)
+            else:
+                hours.close_display = close_display
 
     @api.depends("weekday", "open_hour", "close_hour")
     def _compute_display_name(self):

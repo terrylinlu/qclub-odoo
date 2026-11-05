@@ -62,7 +62,7 @@ class TestOpeningHours(BilliardCase):
                 {"website_id": self.qclub.id, "weekday": "2", "open_hour": 14, "close_hour": 20},
                 {"website_id": self.qclub.id, "weekday": "2", "open_hour": 18, "close_hour": 22},
             ])
-        self.assertEqual(earlier.open_display, "14:00")
+        self.assertEqual(earlier.open_display, "2:00 PM")
 
     def test_tbl_004_database_checks(self):
         segment = self._segment()
@@ -92,12 +92,12 @@ class TestOpeningHours(BilliardCase):
     def test_tbl_004_business_day_ownership_and_display(self):
         segment = self._segment("4", 14, 26)
         self.assertEqual(segment.display_name, "Friday 14:00 – Saturday 02:00")
-        self.assertEqual(segment.close_display, "02:00 (+1 day)")
+        self.assertEqual(segment.close_display, "2:00 AM (+1 day)")
         self.assertEqual(len(self.Hours._get_business_intervals(self.qclub, date(2026, 6, 5))), 1)
         self.assertEqual(self.Hours._get_business_intervals(self.qclub, date(2026, 6, 6)), [])
         self.assertEqual(self.Hours._get_business_intervals(self.qclub, date(2026, 6, 1)), [])
         segment.write({"close_hour": 24})
-        self.assertEqual(segment.close_display, "00:00 (+1 day)")
+        self.assertEqual(segment.close_display, "12:00 AM (midnight)")
 
     def test_tbl_004_timezone_and_dst(self):
         cases = (
@@ -153,3 +153,23 @@ class TestOpeningHours(BilliardCase):
         self.assertEqual(self.Hours.search_count([("website_id", "=", self.qclub.id)]), 7)
         with self.assertRaises(AccessError):
             config.with_user(self.staff).action_load_default_opening_hours()
+
+    def test_tbl_004_twelve_hour_display_and_no_aggregation(self):
+        for opening, expected in ((0, "12:00 AM"), (12, "12:00 PM"), (13, "1:00 PM")):
+            with self.subTest(opening=opening):
+                segment = self._segment(opening=opening, closing=opening + 1)
+                self.assertEqual(segment.open_display, expected)
+                segment.unlink()
+        for opening, closing, expected in (
+            (14, 22, "10:00 PM"),
+            (14, 24, "12:00 AM (midnight)"),
+            (14, 26, "2:00 AM (+1 day)"),
+            (23, 47, "11:00 PM (+1 day)"),
+        ):
+            with self.subTest(closing=closing):
+                segment = self._segment(opening=opening, closing=closing)
+                self.assertEqual(segment.close_display, expected)
+                segment.unlink()
+        for field_name in ("open_hour", "close_hour"):
+            with self.subTest(field_name=field_name):
+                self.assertFalse(self.Hours._fields[field_name].aggregator)
