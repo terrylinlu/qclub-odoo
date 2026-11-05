@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="rule_qclub_booking_portal" model="ir.rule">
+        <field name="name">Portal: current website qclub.booking</field>
+        <field name="model_id" ref="model_qclub_booking"/>
+        <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
+        <field name="domain_force">[('partner_id', '=', user.partner_id.id), ('website_id', '=', website.id)]</field>
+    </record>
+    <record id="rule_qclub_table_portal" model="ir.rule">
+        <field name="name">Portal: current website qclub.table</field>
+        <field name="model_id" ref="model_qclub_table"/>
+        <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
+        <field name="domain_force">[('website_id', '=', website.id), ('active', '=', True)]</field>
+    </record>
+    <record id="rule_qclub_table_type_portal" model="ir.rule">
+        <field name="name">Portal: current website qclub.table.type</field>
+        <field name="model_id" ref="model_qclub_table_type"/>
+        <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
+        <field name="domain_force">[('website_id', '=', website.id), ('active', '=', True)]</field>
+    </record>
+    <record id="rule_qclub_opening_hours_portal" model="ir.rule">
+        <field name="name">Portal: current website qclub.opening.hours</field>
+        <field name="model_id" ref="model_qclub_opening_hours"/>
+        <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
+        <field name="domain_force">[('website_id', '=', website.id)]</field>
+    </record>
+</odoo>

@@ -12,12 +12,13 @@ PSQL    := $(COMPOSE) exec -T db psql -U odoo -v ON_ERROR_STOP=1
 ODOO    := $(COMPOSE) run --rm -T odoo odoo
 
 .DEFAULT_GOAL := help
-.PHONY: help guard up base test e2e lint report shell down reset demo demo-reset demo-stop demo-logs
+.PHONY: help guard up base test iso-check e2e lint report shell down reset demo demo-reset demo-stop demo-logs
 
 help:
 	@echo "make up      启动测试数据库，并在首次运行时构建基础模板库（几分钟）"
 	@echo "make test    重建测试库、安装模块、运行单元测试，输出 JUnit XML"
 	@echo "make e2e     运行浏览器端到端测试（阶段 2 起）"
+	@echo "make iso-check  只读对比安装前后 AUSHARE 行为指纹"
 	@echo "make lint    代码检查"
 	@echo "make report  生成测试报告与需求覆盖对照表"
 	@echo "make shell   进入测试库的 Odoo shell"
@@ -47,8 +48,17 @@ base: guard
 test: guard up
 	mkdir -p $(REPORTS)
 	$(PSQL) -d postgres -c "DROP DATABASE IF EXISTS $(DB) WITH (FORCE)" -c "CREATE DATABASE $(DB) TEMPLATE $(BASE_DB)"
+	$(COMPOSE) run --rm -T --entrypoint sh odoo -c "rm -rf /var/lib/odoo/filestore/$(DB) && if [ -d /var/lib/odoo/filestore/$(BASE_DB) ]; then cp -a /var/lib/odoo/filestore/$(BASE_DB) /var/lib/odoo/filestore/$(DB); else mkdir -p /var/lib/odoo/filestore/$(DB); fi"
 	$(ODOO) -d $(DB) -i $(MODULE) --test-enable --test-tags /$(MODULE) --stop-after-init --without-demo=True --log-level=test 2>&1 | tee $(REPORTS)/odoo-test.log || true
 	python3 tools/odoo_log_to_junit.py $(REPORTS)/odoo-test.log $(REPORTS)/junit.xml
+
+# ISO-001: compare only guarded test databases; SQL itself is READ ONLY.
+iso-check: guard
+	@$(MAKE) --no-print-directory guard DB="$(BASE_DB)"
+	mkdir -p $(REPORTS)
+	$(PSQL) -X -qAt -d "$(BASE_DB)" < tools/iso_fingerprint.sql > $(REPORTS)/iso-base.txt
+	$(PSQL) -X -qAt -d "$(DB)" < tools/iso_fingerprint.sql > $(REPORTS)/iso-test.txt
+	diff -u --label "$(BASE_DB) (before)" --label "$(DB) (after)" $(REPORTS)/iso-base.txt $(REPORTS)/iso-test.txt
 
 e2e: guard
 	@if [ ! -f e2e/package.json ]; then echo "e2e 尚未建立（阶段 2 开始），跳过"; exit 0; fi; \
