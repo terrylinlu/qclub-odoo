@@ -9,6 +9,7 @@ jobs:
       - run: make lint
       - run: make up
       - run: make test
+      - run: make iso-check
       - run: make report
         if: always()
         # 阶段 1 完成后，把这里改成: STRICT=1 make report

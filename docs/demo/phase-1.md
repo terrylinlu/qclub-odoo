@@ -50,3 +50,9 @@ make demo-logs     # 查看演示服务日志
 ## 验收
 
 本阶段 31 条规格（含 ADM）在 `make report` 中全部有测试且通过，且上表步骤 0–7 能走通。结果记录到 `docs/acceptance/phase-1.md`，通过后在 main 上打标签 `phase-1-demo`。
+
+## 权限与网站隔离（任务 1.5）
+
+SEC / ISO 由自动测试和 `make iso-check` 验证。可选：用 `demo-customer-a` 分别登录
+`qclub.localhost:8069` 与 `aushare.localhost:8069`，打开门户 **My Account**。
+当前没有预约页面；门户预约数据按网站隔离的页面检查留到阶段 2。

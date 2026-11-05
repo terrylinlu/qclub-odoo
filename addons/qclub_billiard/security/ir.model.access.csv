@@ -9,3 +9,7 @@ access_qclub_opening_hours_staff,qclub.opening.hours staff,model_qclub_opening_h
 access_qclub_opening_hours_manager,qclub.opening.hours manager,model_qclub_opening_hours,group_billiard_manager,1,1,1,1
 access_qclub_booking_staff,qclub.booking staff,model_qclub_booking,group_billiard_staff,1,1,1,0
 access_qclub_booking_manager,qclub.booking manager,model_qclub_booking,group_billiard_manager,1,1,1,0
+access_qclub_booking_portal,qclub.booking portal,model_qclub_booking,base.group_portal,1,0,0,0
+access_qclub_table_portal,qclub.table portal,model_qclub_table,base.group_portal,1,0,0,0
+access_qclub_table_type_portal,qclub.table.type portal,model_qclub_table_type,base.group_portal,1,0,0,0
+access_qclub_opening_hours_portal,qclub.opening.hours portal,model_qclub_opening_hours,base.group_portal,1,0,0,0

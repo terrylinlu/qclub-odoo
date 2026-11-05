@@ -305,6 +305,7 @@ class QclubBooking(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
+        self.check_access("create")
         try:
             with self.env.cr.savepoint():
                 table_ids = {vals["table_id"] for vals in vals_list if vals.get("table_id")}
@@ -348,6 +349,7 @@ class QclubBooking(models.Model):
             )) from error
 
     def write(self, vals):
+        self.check_access("write")
         vals = dict(vals)
         # Readonly fields must also be protected from direct RPC writes.
         if "lock_expire" in vals or "name" in vals:
