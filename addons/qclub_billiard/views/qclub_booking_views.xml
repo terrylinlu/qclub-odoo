@@ -47,7 +47,9 @@
                         <field name="table_id" domain="[('active', '=', True)]"
                                readonly="state not in ('pending', 'confirmed')"/>
                         <field name="partner_id"/>
-                        <field name="start" readonly="state not in ('pending', 'confirmed')"/>
+                        <field name="start" invisible="True" readonly="True" force_save="1"/>
+                        <field name="start_date" readonly="state not in ('pending', 'confirmed')"/>
+                        <field name="start_hour" readonly="state not in ('pending', 'confirmed')"/>
                         <field name="duration_hours" readonly="state not in ('pending', 'confirmed')"/>
                         <field name="end" readonly="True"/>
                         <field name="business_date" readonly="True"/>

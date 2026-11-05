@@ -45,6 +45,108 @@ class TestBooking(BilliardCase):
         with self.assertRaises(ValidationError), self.env.cr.savepoint():
             self._book(**values)
 
+    def test_bk_003_form_defaults_to_next_business_hour(self):
+        cases = (
+            ("2026-06-01 01:30:00", date(2026, 6, 1), "14", datetime(2026, 6, 1, 4, 30)),
+            ("2026-06-01 05:50:00", date(2026, 6, 1), "16", datetime(2026, 6, 1, 6, 30)),
+            ("2026-06-01 14:00:00", date(2026, 6, 2), "14", datetime(2026, 6, 2, 4, 30)),
+        )
+        for now, day, hour, expected in cases:
+            with self.subTest(now=now), freeze_time(now):
+                form = Form(self.Booking.with_user(self.staff), view="qclub_billiard.qclub_booking_view_form")
+                form.table_id = self.table
+                form.partner_id = self.partner
+                self.assertEqual((form.start_date, form.start_hour), (day, hour))
+                booking = form.save()
+                self.assertEqual(booking.start, expected)
+                booking.action_cancel()
+
+    def test_bk_002_form_date_defaults_and_overnight_calendar_date(self):
+        form = Form(self.Booking.with_user(self.staff), view="qclub_billiard.qclub_booking_view_form")
+        form.table_id = self.table
+        form.partner_id = self.partner
+        form.start_date = date(2026, 6, 6)
+        self.assertEqual(form.start_hour, "13")
+        form.start_hour = "1"
+        booking = form.save()
+        self.assertEqual(booking.start, datetime(2026, 6, 5, 15, 30))
+        self.assertEqual(booking.end, datetime(2026, 6, 5, 16, 30))
+        self.assertEqual(booking.business_date, date(2026, 6, 5))
+
+    def test_bk_001_hour_selection_has_24_whole_hours(self):
+        selection = self.Booking._fields["start_hour"]._description_selection(self.env)
+        self.assertEqual(selection, [
+            ("0", "12:00 AM"), ("1", "1:00 AM"), ("2", "2:00 AM"), ("3", "3:00 AM"),
+            ("4", "4:00 AM"), ("5", "5:00 AM"), ("6", "6:00 AM"), ("7", "7:00 AM"),
+            ("8", "8:00 AM"), ("9", "9:00 AM"), ("10", "10:00 AM"), ("11", "11:00 AM"),
+            ("12", "12:00 PM"), ("13", "1:00 PM"), ("14", "2:00 PM"), ("15", "3:00 PM"),
+            ("16", "4:00 PM"), ("17", "5:00 PM"), ("18", "6:00 PM"), ("19", "7:00 PM"),
+            ("20", "8:00 PM"), ("21", "9:00 PM"), ("22", "10:00 PM"), ("23", "11:00 PM"),
+        ])
+
+    def test_bk_002_outside_hours_warns_and_save_still_rejects(self):
+        form = Form(self.Booking.with_user(self.staff), view="qclub_billiard.qclub_booking_view_form")
+        form.table_id = self.table
+        form.partner_id = self.partner
+        form.start_hour = "13"
+        self.assertEqual(form.start_date, date(2026, 6, 1))
+        self.assertEqual(form.start_hour, "13")
+        preview = self.Booking.with_user(self.staff).new({
+            "state": "pending", "table_id": self.table.id, "start": datetime(2026, 6, 1, 3, 30), "duration_hours": 1,
+        })
+        self.assertIn("warning", preview._onchange_start_slot())
+        with self.assertRaises(ValidationError), self.env.cr.savepoint():
+            form.save()
+
+    def test_bk_003_past_hour_and_duration_overrun_warn(self):
+        preview = self.Booking.with_user(self.staff).new({
+            "state": "pending", "table_id": self.table.id, "start": datetime(2026, 6, 1, 13, 30), "duration_hours": 2,
+        })
+        self.assertIn("warning", preview._onchange_start_slot())
+        preview.duration_hours = 1
+        with freeze_time("2026-06-01 13:30:00"):
+            self.assertIn("warning", preview._onchange_start_slot())
+
+    def test_bk_002_closed_date_keeps_date_and_warns(self):
+        self.Hours.search([("website_id", "=", self.qclub.id), ("weekday", "=", "2")]).unlink()
+        form = Form(self.Booking.with_user(self.staff), view="qclub_billiard.qclub_booking_view_form")
+        form.table_id = self.table
+        form.partner_id = self.partner
+        form.start_date = date(2026, 6, 3)
+        self.assertEqual((form.start_date, form.start_hour), (date(2026, 6, 3), "14"))
+        preview = self.Booking.with_user(self.staff).new({
+            "state": "pending", "table_id": self.table.id, "start": datetime(2026, 6, 1, 4, 30), "duration_hours": 1,
+        })
+        preview.start_date = date(2026, 6, 3)
+        self.assertIn("warning", preview._onchange_start_slot())
+        self.assertEqual(preview.start_date, date(2026, 6, 3))
+        with self.assertRaises(ValidationError), self.env.cr.savepoint():
+            form.save()
+
+    def test_bk_003_first_start_includes_previous_business_day_and_limit(self):
+        with freeze_time("2026-06-05 15:00:00"):
+            self.assertEqual(self.Booking._first_available_start(self.qclub), datetime(2026, 6, 5, 15, 30))
+        self.Hours.search([("website_id", "=", self.qclub.id)]).unlink()
+        self.assertFalse(self.Booking._first_available_start(self.qclub))
+        self.Hours.create({"website_id": self.qclub.id, "weekday": "1", "open_hour": 14, "close_hour": 24})
+        self.config.max_advance_days = 0
+        self.assertFalse(self.Booking._first_available_start(self.qclub))
+        self.assertFalse(self.Booking._first_available_start(self.qclub, date(2026, 6, 16)))
+
+    def test_bk_003_saved_form_date_change_updates_start(self):
+        for state in ("pending", "confirmed"):
+            with self.subTest(state=state):
+                booking = self._book()
+                if state == "confirmed":
+                    booking.action_confirm()
+                form = Form(booking.with_user(self.staff), view="qclub_billiard.qclub_booking_view_form")
+                form.start_date = date(2026, 6, 6)
+                self.assertEqual(form.start_hour, "13")
+                form.start_hour = "15"
+                saved = form.save()
+                self.assertEqual(saved.start, datetime(2026, 6, 6, 5, 30))
+                saved.action_cancel()
+
     def test_bk_001_local_hours_and_duration_bounds(self):
         for start in ("2026-06-01 05:00:00", "2026-06-01 04:31:00", "2026-06-01 04:30:01"):
             self._reject(start=start)
@@ -235,7 +337,8 @@ class TestBooking(BilliardCase):
         form = Form(self.Booking.with_user(self.staff), view="qclub_billiard.qclub_booking_view_form")
         form.table_id = self.table
         form.partner_id = self.partner
-        form.start = datetime(2026, 6, 1, 4, 30)
+        form.start_date = date(2026, 6, 1)
+        form.start_hour = "14"
         form.duration_hours = 2
         self.assertEqual(form.hourly_price, 25)
         self.assertEqual((form.deposit_ratio, form.free_cancel_hours, form.no_show_wait_minutes), (30.5, 12, 15))
