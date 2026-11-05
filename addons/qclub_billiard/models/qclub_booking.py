@@ -1,11 +1,19 @@
+import logging
 from datetime import datetime, time, timedelta, timezone
 from zoneinfo import ZoneInfo
 
+from psycopg2.errors import ExclusionViolation
+
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError, ValidationError
+from odoo.tools import SQL
 
 from .qclub_opening_hours import BUSINESS_TZ
 
+_logger = logging.getLogger(__name__)
+
+# Stable signed int32 namespace ("QCLB"); never use Python's randomized hash().
+TABLE_LOCK_NAMESPACE = 0x51434C42
 ACTIVE_STATES = ("pending", "confirmed", "arrived")
 ALLOWED_TRANSITIONS = {
     "pending": {"confirmed", "expired", "cancelled"},
@@ -31,7 +39,7 @@ class QclubBooking(models.Model):
         (str(hour), f"{hour % 12 or 12}:00 {'AM' if hour < 12 else 'PM'}") for hour in range(24)
     ], string="Start Time", compute="_compute_start_parts", readonly=False)
     duration_hours = fields.Integer(string="Number of Hours", required=True, default=1)
-    end = fields.Datetime(compute="_compute_end", store=True, readonly=True)
+    end = fields.Datetime(compute="_compute_end", store=True, readonly=True, precompute=True)
     business_date = fields.Date(compute="_compute_business_date", store=True, index=True)
     state = fields.Selection([
         ("pending", "Awaiting Deposit"), ("confirmed", "Confirmed"), ("arrived", "Arrived"),
@@ -47,6 +55,80 @@ class QclubBooking(models.Model):
     deposit_amount = fields.Monetary(compute="_compute_amounts", store=True)
 
     _name_unique = models.Constraint("UNIQUE(name)", "Booking numbers must be unique.")
+
+    def init(self):
+        super().init()
+        # Let PostgreSQL canonicalize the expected definition using the same column
+        # types. Comparing deparsed definitions avoids fragile cast/whitespace checks.
+        definition = SQL("""
+            EXCLUDE USING gist (table_id WITH =, tsrange(start, "end", '[)') WITH &&)
+            WHERE (state IN %s)
+        """, ACTIVE_STATES)
+        with self.env.cr.savepoint():
+            self.env.cr.execute("""
+                CREATE TEMP TABLE qclub_booking_overlap_definition
+                (LIKE qclub_booking) ON COMMIT DROP
+            """)
+            self.env.cr.execute(SQL(
+                "ALTER TABLE qclub_booking_overlap_definition "
+                "ADD CONSTRAINT qclub_booking_no_overlap %s", definition,
+            ))
+            self.env.cr.execute("""
+                SELECT pg_get_constraintdef(oid)
+                FROM pg_constraint
+                WHERE conname = 'qclub_booking_no_overlap'
+                  AND conrelid = 'pg_temp.qclub_booking_overlap_definition'::regclass
+            """)
+            expected = self.env.cr.fetchone()[0]
+            self.env.cr.execute("""
+                SELECT pg_get_constraintdef(oid)
+                FROM pg_constraint
+                WHERE conname = 'qclub_booking_no_overlap'
+                  AND conrelid = 'qclub_booking'::regclass
+            """)
+            existing = self.env.cr.fetchone()
+            if existing and existing[0] != expected:
+                self.env.cr.execute("ALTER TABLE qclub_booking DROP CONSTRAINT qclub_booking_no_overlap")
+                existing = None
+            if not existing:
+                # btree_gist is provisioned by the database environment.
+                self.env.cr.execute(SQL(
+                    "ALTER TABLE qclub_booking ADD CONSTRAINT qclub_booking_no_overlap %s", definition,
+                ))
+            self.env.cr.execute("DROP TABLE pg_temp.qclub_booking_overlap_definition")
+
+    @api.model
+    def _cron_expire_pending(self):
+        bookings = self.sudo().search([
+            ("state", "=", "pending"), ("lock_expire", "<=", fields.Datetime.now()),
+        ])
+        expired = self.sudo().browse()
+        for booking in bookings:
+            try:
+                with self.env.cr.savepoint():
+                    booking._action_expire()
+                expired |= booking
+            except Exception:
+                _logger.exception("Failed to expire unpaid booking %s", booking.id)
+        return expired
+
+    @api.model
+    def _lock_tables(self, table_ids):
+        """Serialize changes to each table until this transaction ends."""
+        for table_id in sorted(set(table_ids)):
+            self.env.cr.execute(
+                "SELECT pg_advisory_xact_lock(%s, %s)", (TABLE_LOCK_NAMESPACE, table_id),
+            )
+
+    @api.model
+    def _expire_stale_locks(self, table_ids):
+        if table_ids:
+            bookings = self.sudo().search([
+                ("table_id", "in", list(table_ids)), ("state", "=", "pending"),
+                ("lock_expire", "<=", fields.Datetime.now()),
+            ])
+            for booking in bookings:
+                booking._action_expire()
 
     @api.depends("start")
     def _compute_start_parts(self):
@@ -217,42 +299,56 @@ class QclubBooking(models.Model):
                 ("id", "!=", booking.id), ("table_id", "=", booking.table_id.id),
                 ("state", "in", ACTIVE_STATES), ("start", "<", booking.end), ("end", ">", booking.start),
             ], limit=1):
-                raise ValidationError(_("This table is already booked for the selected time."))
+                raise ValidationError(_(
+                    "This table is already booked for the selected time. Please choose another time or table."
+                ))
 
     @api.model_create_multi
     def create(self, vals_list):
-        prepared = []
-        for incoming in vals_list:
-            vals = {key: value for key, value in incoming.items() if key not in DERIVED_FIELDS}
-            if vals.get("state", "pending") != "pending":
-                raise ValidationError(_("New bookings must be awaiting deposit."))
-            table = self.env["qclub.table"].browse(vals.get("table_id"))
-            table._check_bookable()
-            config = self.env["qclub.config"].sudo()._get_for_website(table.website_id)
-            vals.update({field: config[field] for field in SNAPSHOT_FIELDS if field != "hourly_price"})
-            vals.update({
-                "hourly_price": table.hourly_price,
-                "state": "pending",
-                "lock_expire": fields.Datetime.now() + timedelta(minutes=config.lock_minutes),
-                "name": self.env["ir.sequence"].next_by_code("qclub.booking"),
-            })
-            prepared.append(vals)
-        bookings = super().create(prepared)
-        bookings._check_slot()
-        bookings._check_future()
-        return bookings
+        try:
+            with self.env.cr.savepoint():
+                table_ids = {vals["table_id"] for vals in vals_list if vals.get("table_id")}
+                self._lock_tables(table_ids)
+                self._expire_stale_locks(table_ids)
+                prepared = []
+                for incoming in vals_list:
+                    vals = {key: value for key, value in incoming.items() if key not in DERIVED_FIELDS}
+                    if vals.get("state", "pending") != "pending":
+                        raise ValidationError(_("New bookings must be awaiting deposit."))
+                    table = self.env["qclub.table"].browse(vals.get("table_id"))
+                    table._check_bookable()
+                    config = self.env["qclub.config"].sudo()._get_for_website(table.website_id)
+                    # Validate before precomputing end: a negative duration would
+                    # otherwise reach PostgreSQL as an invalid (reversed) range.
+                    duration = vals.get("duration_hours") if "duration_hours" in vals else self.default_get(
+                        ["duration_hours"],
+                    ).get("duration_hours", 0)
+                    duration = self._fields["duration_hours"].convert_to_cache(duration, self)
+                    if not 1 <= duration <= config.max_consecutive_hours:
+                        raise ValidationError(_(
+                            "The number of hours must be between 1 and %s.", config.max_consecutive_hours,
+                        ))
+                    vals["duration_hours"] = duration
+                    vals.update({field: config[field] for field in SNAPSHOT_FIELDS if field != "hourly_price"})
+                    vals.update({
+                        "hourly_price": table.hourly_price,
+                        "state": "pending",
+                        "lock_expire": fields.Datetime.now() + timedelta(minutes=config.lock_minutes),
+                        "name": self.env["ir.sequence"].next_by_code("qclub.booking"),
+                    })
+                    prepared.append(vals)
+                bookings = super().create(prepared)
+                bookings._check_slot()
+                bookings._check_future()
+                bookings.flush_recordset()
+                return bookings
+        except ExclusionViolation as error:
+            raise ValidationError(_(
+                "This table is already booked for the selected time. Please choose another time or table."
+            )) from error
 
     def write(self, vals):
         vals = dict(vals)
-        if "state" in vals:
-            labels = dict(self._fields["state"]._description_selection(self.env))
-            for booking in self:
-                target = vals["state"]
-                if target != booking.state and target not in ALLOWED_TRANSITIONS.get(booking.state, set()):
-                    raise ValidationError(_(
-                        "Cannot change a booking from %(old)s to %(new)s.",
-                        old=labels[booking.state], new=labels.get(target, target),
-                    ))
         # Readonly fields must also be protected from direct RPC writes.
         if "lock_expire" in vals or "name" in vals:
             raise ValidationError(_("Booking numbers and lock expiry times cannot be edited directly."))
@@ -260,24 +356,48 @@ class QclubBooking(models.Model):
             raise ValidationError(_("Price and policy snapshots cannot be edited directly."))
         if any(field in vals for field in DERIVED_FIELDS):
             raise ValidationError(_("Booking end, business date and amounts are calculated automatically."))
-        if "table_id" in vals:
-            table = self.env["qclub.table"].browse(vals["table_id"])
-            table._check_bookable()
-            for booking in self:
-                record_vals = dict(vals)
-                if booking.table_id != table:
-                    record_vals["hourly_price"] = table.hourly_price
-                super(QclubBooking, booking).write(record_vals)
-            result = True
-        else:
-            result = super().write(vals)
-        if {"start", "duration_hours", "table_id"}.intersection(vals):
-            self._check_slot()
-        elif vals.get("state") in ACTIVE_STATES:
-            self._check_conflicts()
-        if "start" in vals:
-            self._check_future()
-        return result
+        try:
+            with self.env.cr.savepoint():
+                slot_changed = bool({"start", "duration_hours", "table_id"}.intersection(vals))
+                if slot_changed or vals.get("state") in ACTIVE_STATES:
+                    table_ids = set(self.table_id.ids)
+                    if vals.get("table_id"):
+                        table_ids.add(vals["table_id"])
+                    self._lock_tables(table_ids)
+                    if slot_changed:
+                        self._expire_stale_locks(table_ids)
+                if "state" in vals:
+                    labels = dict(self._fields["state"]._description_selection(self.env))
+                    for booking in self:
+                        target = vals["state"]
+                        if target != booking.state and target not in ALLOWED_TRANSITIONS.get(booking.state, set()):
+                            raise ValidationError(_(
+                                "Cannot change a booking from %(old)s to %(new)s.",
+                                old=labels[booking.state], new=labels.get(target, target),
+                            ))
+                if "table_id" in vals:
+                    table = self.env["qclub.table"].browse(vals["table_id"])
+                    table._check_bookable()
+                    for booking in self:
+                        record_vals = dict(vals)
+                        if booking.table_id != table:
+                            record_vals["hourly_price"] = table.hourly_price
+                        super(QclubBooking, booking).write(record_vals)
+                    result = True
+                else:
+                    result = super().write(vals)
+                if {"start", "duration_hours", "table_id"}.intersection(vals):
+                    self._check_slot()
+                elif vals.get("state") in ACTIVE_STATES:
+                    self._check_conflicts()
+                if "start" in vals:
+                    self._check_future()
+                self.flush_recordset()
+                return result
+        except ExclusionViolation as error:
+            raise ValidationError(_(
+                "This table is already booked for the selected time. Please choose another time or table."
+            )) from error
 
     def action_confirm(self):
         return self.write({"state": "confirmed"})
