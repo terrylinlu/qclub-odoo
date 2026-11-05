@@ -1,4 +1,5 @@
-from odoo import fields, models
+from odoo import _, api, fields, models
+from odoo.exceptions import ValidationError
 
 
 class QclubTableType(models.Model):
@@ -17,3 +18,13 @@ class QclubTableType(models.Model):
         "UNIQUE(website_id, name)",
         "A table type with this name already exists on this website.",
     )
+
+    @api.constrains("website_id")
+    def _check_table_websites(self):
+        Table = self.env["qclub.table"].sudo().with_context(active_test=False)
+        for table_type in self:
+            if Table.search_count([
+                ("type_id", "=", table_type.id),
+                ("website_id", "!=", table_type.website_id.id),
+            ], limit=1):
+                raise ValidationError(_("A table type and all tables using it must belong to the same website."))

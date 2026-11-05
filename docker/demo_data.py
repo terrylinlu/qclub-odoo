@@ -61,7 +61,7 @@ ensure_user("demo-customer-a", "[Demo] Customer A", ["base.group_portal"])
 ensure_user("demo-customer-b", "[Demo] Customer B", ["base.group_portal"])
 
 # ---- 任务 1.1：球厅配置、桌台类型、桌台 ----
-config = env["qclub.config"].get_for_website(qclub)
+config = env["qclub.config"]._get_for_website(qclub)
 summary.append(f"billiard settings for Q Club (deposit {config.deposit_ratio:g}%)")
 
 TableType = env["qclub.table.type"].with_context(active_test=False)

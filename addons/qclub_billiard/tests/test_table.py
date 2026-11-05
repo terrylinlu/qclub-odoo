@@ -70,6 +70,21 @@ class TestTable(BilliardCase):
         with self.assertRaises(ValidationError):
             self._make_table("Table 3", table_type=aushare_type)
 
+    def test_tbl_001_type_website_change_blocked_when_used(self):
+        for active in (True, False):
+            with self.subTest(active=active):
+                table_type = self._make_type("Used type %s" % active)
+                table = self._make_table("Used table %s" % active, table_type=table_type, active=active)
+                with self.assertRaises(ValidationError), self.env.cr.savepoint():
+                    table_type.with_user(self.manager).write({"website_id": self.aushare.id})
+                self.assertEqual(table_type.website_id, self.qclub)
+                self.assertEqual(table.website_id, self.qclub)
+
+    def test_tbl_001_unused_type_website_change_allowed(self):
+        table_type = self._make_type("Unused type")
+        table_type.with_user(self.manager).write({"website_id": self.aushare.id})
+        self.assertEqual(table_type.website_id, self.aushare)
+
     def test_tbl_001_manager_manages_staff_reads(self):
         table = self._make_table("Table 4")
         self.assertEqual(table.with_user(self.staff).name, "Table 4")

@@ -13,7 +13,7 @@ class TestConfig(BilliardCase):
     def setUpClass(cls):
         super().setUpClass()
         cls.Config = cls.env["qclub.config"]
-        cls.config = cls.Config.get_for_website(cls.qclub)
+        cls.config = cls.Config._get_for_website(cls.qclub)
 
     # ---- CFG-001 ----
     def test_cfg_001_defaults(self):
@@ -25,12 +25,12 @@ class TestConfig(BilliardCase):
         self.assertEqual(self.config.max_advance_days, 14)
 
     def test_cfg_001_get_for_website_does_not_duplicate(self):
-        again = self.Config.get_for_website(self.qclub)
+        again = self.Config._get_for_website(self.qclub)
         self.assertEqual(again, self.config)
         self.assertEqual(self.Config.search_count([("website_id", "=", self.qclub.id)]), 1)
 
     def test_cfg_001_one_config_per_website(self):
-        other = self.Config.get_for_website(self.aushare)
+        other = self.Config._get_for_website(self.aushare)
         self.assertNotEqual(other, self.config)
         with self.assertRaises(UniqueViolation), mute_logger("odoo.sql_db"), self.env.cr.savepoint():
             self.Config.create({"website_id": self.qclub.id})
@@ -85,6 +85,23 @@ class TestConfig(BilliardCase):
                 self.env.cr.execute(sql, [self.config.id])
 
     # ---- CFG-004 ----
+    def test_cfg_004_staff_cannot_create_settings_via_helper(self):
+        website = self.env["website"].create({"name": "Staff helper website"})
+        domain = [("website_id", "=", website.id)]
+        self.assertEqual(self.Config.search_count(domain), 0)
+        with self.assertRaises(AccessError), self.env.cr.savepoint():
+            self.Config.with_user(self.staff)._get_for_website(website)
+        self.assertEqual(self.Config.search_count(domain), 0)
+
+    def test_cfg_004_manager_helper_creates_missing_settings(self):
+        website = self.env["website"].create({"name": "Manager helper website"})
+        domain = [("website_id", "=", website.id)]
+        self.assertEqual(self.Config.search_count(domain), 0)
+        config = self.Config.with_user(self.manager)._get_for_website(website)
+        self.assertEqual(config.website_id, website)
+        self.assertEqual(config.env.uid, self.manager.id)
+        self.assertEqual(self.Config.search_count(domain), 1)
+
     def test_cfg_004_staff_read_only(self):
         as_staff = self.config.with_user(self.staff)
         self.assertEqual(as_staff.deposit_ratio, 50.0)

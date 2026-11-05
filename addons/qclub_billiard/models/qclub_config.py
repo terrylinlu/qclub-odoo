@@ -76,10 +76,14 @@ class QclubConfig(models.Model):
                 raise ValidationError(_("Max consecutive hours must be at least 1."))
 
     @api.model
-    def get_for_website(self, website):
-        """Return the settings of ``website``, creating them with default values if missing."""
+    def _get_for_website(self, website):
+        """Return or create default settings using the caller's access rights.
+
+        Trusted server-side callers needing elevated access must explicitly use
+        ``sudo()`` at the call site.
+        """
         website.ensure_one()
-        config = self.sudo().search([("website_id", "=", website.id)], limit=1)
+        config = self.search([("website_id", "=", website.id)], limit=1)
         if not config:
-            config = self.sudo().create({"website_id": website.id})
-        return config.with_env(self.env)
+            config = self.create({"website_id": website.id})
+        return config
