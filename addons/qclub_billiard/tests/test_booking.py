@@ -6,6 +6,7 @@ from freezegun import freeze_time
 from psycopg2.errors import UniqueViolation
 
 from odoo.exceptions import UserError, ValidationError
+from odoo.tests import Form
 from odoo.tests.common import tagged
 from odoo.tools import mute_logger
 
@@ -228,6 +229,59 @@ class TestBooking(BilliardCase):
         self.assertEqual(first.deposit_ratio, 50)
         with self.assertRaises(ValidationError), self.env.cr.savepoint():
             first.write({"deposit_ratio": 99})
+
+    def test_cfg_003_new_form_previews_and_saves_server_snapshot(self):
+        self.config.write({"deposit_ratio": 30.5, "free_cancel_hours": 12, "no_show_wait_minutes": 15})
+        form = Form(self.Booking.with_user(self.staff), view="qclub_billiard.qclub_booking_view_form")
+        form.table_id = self.table
+        form.partner_id = self.partner
+        form.start = datetime(2026, 6, 1, 4, 30)
+        form.duration_hours = 2
+        self.assertEqual(form.hourly_price, 25)
+        self.assertEqual((form.deposit_ratio, form.free_cancel_hours, form.no_show_wait_minutes), (30.5, 12, 15))
+        self.assertEqual(form.table_fee, 50)
+        self.assertEqual(Decimal(str(form.deposit_amount)), Decimal("15.25"))
+        booking = form.save()
+        self.assertEqual(booking.hourly_price, 25)
+        self.assertEqual((booking.deposit_ratio, booking.free_cancel_hours, booking.no_show_wait_minutes),
+                         (30.5, 12, 15))
+        self.assertEqual(booking.table_fee, 50)
+        self.assertEqual(Decimal(str(booking.deposit_amount)), Decimal("15.25"))
+
+    def test_cfg_003_new_form_clears_snapshot_without_table(self):
+        form = Form(self.Booking.with_user(self.staff), view="qclub_billiard.qclub_booking_view_form")
+        form.table_id = self.table
+        form.duration_hours = 2
+        self.assertEqual(form.table_fee, 50)
+        form.table_id = self.env["qclub.table"]
+        self.assertEqual((form.hourly_price, form.deposit_ratio, form.free_cancel_hours, form.no_show_wait_minutes),
+                         (0, 0, 0, 0))
+        self.assertEqual((form.table_fee, form.deposit_amount), (0, 0))
+
+    def test_cfg_003_saved_form_preserves_snapshot(self):
+        booking = self._book(duration_hours=2)
+        self.table.hourly_price = 40
+        self.other_table.hourly_price = 60
+        self.config.write({"deposit_ratio": 20, "free_cancel_hours": 12, "no_show_wait_minutes": 15})
+        form = Form(booking.with_user(self.staff), view="qclub_billiard.qclub_booking_view_form")
+        self.assertEqual((form.hourly_price, form.deposit_ratio, form.free_cancel_hours, form.no_show_wait_minutes),
+                         (25, 50, 24, 30))
+        self.assertEqual((form.table_fee, form.deposit_amount), (50, 25))
+        # An onchange on a saved booking must also leave its stored snapshot alone.
+        form.table_id = self.other_table
+        self.assertEqual((form.hourly_price, form.deposit_ratio, form.free_cancel_hours, form.no_show_wait_minutes),
+                         (25, 50, 24, 30))
+        self.assertEqual((booking.hourly_price, booking.deposit_ratio), (25, 50))
+
+    def test_cfg_003_create_ignores_forged_client_snapshot(self):
+        booking = self.Booking.with_user(self.staff).create({
+            "table_id": self.table.id, "partner_id": self.partner.id,
+            "start": "2026-06-01 04:30:00", "duration_hours": 2,
+            "hourly_price": 1, "deposit_ratio": 1, "free_cancel_hours": 999, "no_show_wait_minutes": 999,
+        })
+        self.assertEqual((booking.hourly_price, booking.deposit_ratio, booking.free_cancel_hours,
+                          booking.no_show_wait_minutes), (25, 50, 24, 30))
+        self.assertEqual((booking.table_fee, booking.deposit_amount), (50, 25))
 
     def test_tbl_005_price_snapshot(self):
         first = self._book()

@@ -51,7 +51,7 @@
                         <field name="duration_hours" readonly="state not in ('pending', 'confirmed')"/>
                         <field name="end" readonly="True"/>
                         <field name="business_date" readonly="True"/>
-                        <field name="lock_expire" readonly="True"/>
+                        <field name="lock_expire" readonly="True" invisible="not lock_expire"/>
                     </group>
                     <group string="Price snapshot">
                         <field name="hourly_price" readonly="True"/>

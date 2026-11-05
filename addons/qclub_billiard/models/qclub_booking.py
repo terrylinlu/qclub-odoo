@@ -44,6 +44,23 @@ class QclubBooking(models.Model):
 
     _name_unique = models.Constraint("UNIQUE(name)", "Booking numbers must be unique.")
 
+    @api.onchange("table_id")
+    def _onchange_table_id(self):
+        for booking in self:
+            if booking._origin.id:
+                continue
+            table = booking.table_id
+            if not table:
+                booking.update({field: 0 for field in SNAPSHOT_FIELDS})
+                continue
+            config = self.env["qclub.config"].sudo()._get_for_website(table.website_id)
+            booking.update({
+                "hourly_price": table.hourly_price,
+                "deposit_ratio": config.deposit_ratio,
+                "free_cancel_hours": config.free_cancel_hours,
+                "no_show_wait_minutes": config.no_show_wait_minutes,
+            })
+
     @api.depends("start", "duration_hours")
     def _compute_end(self):
         for booking in self:
