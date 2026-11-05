@@ -12,6 +12,7 @@ Q Club 台球厅在线预约系统（Odoo 19 社区版模块 `qclub_billiard`）
 make up       # 首次约需几分钟：拉镜像、构建基础模板库
 make test     # 运行测试
 make report   # 生成 docs/reports/report.md
+make demo     # 启动本机演示环境 http://localhost:8069（见 docs/demo/phase-1.md）
 ```
 
 ## 首次接入校准
