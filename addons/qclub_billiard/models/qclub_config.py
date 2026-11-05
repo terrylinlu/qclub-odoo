@@ -14,6 +14,8 @@ class QclubConfig(models.Model):
     _order = "website_id"
 
     website_id = fields.Many2one("website", string="Website", required=True, ondelete="cascade")
+    has_opening_hours = fields.Boolean(compute="_compute_has_opening_hours")
+
     deposit_ratio = fields.Float(
         string="Deposit (%)", default=50.0, required=True, digits=(5, 2),
         help="Deposit = table fee x this percentage.",
@@ -87,3 +89,16 @@ class QclubConfig(models.Model):
         if not config:
             config = self.create({"website_id": website.id})
         return config
+
+    @api.depends("website_id")
+    def _compute_has_opening_hours(self):
+        for config in self:
+            config.has_opening_hours = bool(self.env["qclub.opening.hours"].search_count([
+                ("website_id", "=", config.website_id.id),
+            ]))
+
+    def action_load_default_opening_hours(self):
+        for config in self:
+            self.env["qclub.opening.hours"]._load_default_hours(config.website_id)
+        self.invalidate_recordset(["has_opening_hours"])
+        return {"type": "ir.actions.client", "tag": "reload"}

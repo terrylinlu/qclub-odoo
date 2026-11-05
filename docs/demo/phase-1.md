@@ -41,7 +41,7 @@ make demo-logs     # 查看演示服务日志
 | 0 | 运行 `make demo`；用 `admin` 登录后台；分别打开两个网站地址 | 后台登录成功；`qclub.localhost` 标签页标题为"Home \| Q Club"，`aushare.localhost` 为"Home \| AUSHARE" | ✅ 任务 1.0 |
 | 1 | 用 `admin` 打开 **Billiards → Tables**；再用 `demo-staff` 登录 | 看到 3 张演示桌台：`[Demo] Table 1`（Chinese 8-Ball，20 AUD/h）、`Table 2`（Snooker，30）、`Table 3`（9-Ball，25）。`demo-staff` 能看到 Tables 和 **Configuration → Settings**，但只能查看不能修改，也看不到 **Table Types** | ✅ 任务 1.1 |
 | 2 | 用 `admin` 打开 **Configuration → Settings → Q Club**，把 Deposit 改为 40、Free Cancellation 改为 12 并保存；再把 Deposit 改成 150 | 保存成功；150 被拒绝，提示 "The deposit percentage must be between 0 and 100."（演示后改回 50 / 24） | ✅ 任务 1.1 |
-| 3 | 查看营业时间 | 周五、周六到次日 02:00，其余日到 24:00；周六、周日 13:00 开始 | 任务 1.2 |
+| 3 | 用 `admin` 打开 **Billiards → Opening Hours**；再用 `demo-staff` 查看 | 默认按 Website 分组，Q Club 有 7 段；Friday / Saturday 的 Closes 为 `02:00 (+1 day)`，其余为 `00:00 (+1 day)`；Saturday / Sunday 的 Opens 为 `13:00`，其余为 `14:00`。管理员可直接编辑，员工只读。**加载默认营业时间按钮**：该按钮只在**表单**里、且只在网站**还没有任何营业时间**时显示（演示库建库时已为 Q Club 加载，所以默认看不到）。验证方法：在 Opening Hours 勾选 Q Club 的 7 行 → Actions → Delete；再打开 **Configuration → Settings**，**点开 Q Club 那一行**，表单顶部出现 **Load Default Opening Hours**；点击后页面刷新、按钮消失，Opening Hours 里 7 段恢复。`demo-staff` 任何时候都看不到该按钮 | ✅ 任务 1.2 |
 | 4 | 手动新建一条预约；再建一条同桌重叠预约 | 押金自动 = 台费 × 比例；重叠预约被拒绝，提示为清楚的英文说明而不是数据库报错 | 任务 1.3、1.4 |
 | 5 | 新建一条营业时间外的预约 | 被拒绝 | 任务 1.3 |
 | 6 | 修改桌台单价，再看已有预约、新建预约 | 已有预约价格不变，新预约用新价格 | 任务 1.3 |

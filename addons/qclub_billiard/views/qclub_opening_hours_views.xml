@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="qclub_opening_hours_view_list" model="ir.ui.view">
+        <field name="name">qclub.opening.hours.list</field>
+        <field name="model">qclub.opening.hours</field>
+        <field name="arch" type="xml">
+            <list string="Opening Hours" editable="bottom">
+                <field name="website_id"/>
+                <field name="weekday"/>
+                <field name="open_hour"/>
+                <field name="close_hour"/>
+                <field name="open_display"/>
+                <field name="close_display"/>
+            </list>
+        </field>
+    </record>
+    <record id="qclub_opening_hours_view_search" model="ir.ui.view">
+        <field name="name">qclub.opening.hours.search</field>
+        <field name="model">qclub.opening.hours</field>
+        <field name="arch" type="xml">
+            <search string="Opening Hours">
+                <field name="website_id"/>
+                <field name="weekday"/>
+                <filter name="group_website" string="Website" context="{'group_by': 'website_id'}"/>
+            </search>
+        </field>
+    </record>
+    <record id="qclub_opening_hours_action" model="ir.actions.act_window">
+        <field name="name">Opening Hours</field>
+        <field name="res_model">qclub.opening.hours</field>
+        <field name="view_mode">list</field>
+        <field name="search_view_id" ref="qclub_opening_hours_view_search"/>
+        <field name="context">{'search_default_group_website': 1}</field>
+    </record>
+</odoo>
