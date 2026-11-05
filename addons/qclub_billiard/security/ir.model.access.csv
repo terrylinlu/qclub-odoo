@@ -7,3 +7,5 @@ access_qclub_config_staff,qclub.config staff,model_qclub_config,group_billiard_s
 access_qclub_config_manager,qclub.config manager,model_qclub_config,group_billiard_manager,1,1,1,0
 access_qclub_opening_hours_staff,qclub.opening.hours staff,model_qclub_opening_hours,group_billiard_staff,1,0,0,0
 access_qclub_opening_hours_manager,qclub.opening.hours manager,model_qclub_opening_hours,group_billiard_manager,1,1,1,1
+access_qclub_booking_staff,qclub.booking staff,model_qclub_booking,group_billiard_staff,1,1,1,0
+access_qclub_booking_manager,qclub.booking manager,model_qclub_booking,group_billiard_manager,1,1,1,0

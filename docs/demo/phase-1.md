@@ -42,9 +42,9 @@ make demo-logs     # 查看演示服务日志
 | 1 | 用 `admin` 打开 **Billiards → Tables**；再用 `demo-staff` 登录 | 看到 3 张演示桌台：`[Demo] Table 1`（Chinese 8-Ball，20 AUD/h）、`Table 2`（Snooker，30）、`Table 3`（9-Ball，25）。`demo-staff` 能看到 Tables 和 **Configuration → Settings**，但只能查看不能修改，也看不到 **Table Types** | ✅ 任务 1.1 |
 | 2 | 用 `admin` 打开 **Configuration → Settings → Q Club**，把 Deposit 改为 40、Free Cancellation 改为 12 并保存；再把 Deposit 改成 150 | 保存成功；150 被拒绝，提示 "The deposit percentage must be between 0 and 100."（演示后改回 50 / 24） | ✅ 任务 1.1 |
 | 3 | 用 `admin` 打开 **Billiards → Opening Hours**；再用 `demo-staff` 查看 | 默认按 Website 分组，Q Club 有 7 段；Friday / Saturday 的 Closes 为 `02:00 (+1 day)`，其余为 `00:00 (+1 day)`；Saturday / Sunday 的 Opens 为 `13:00`，其余为 `14:00`。管理员可直接编辑，员工只读。**加载默认营业时间按钮**：该按钮只在**表单**里、且只在网站**还没有任何营业时间**时显示（演示库建库时已为 Q Club 加载，所以默认看不到）。验证方法：在 Opening Hours 勾选 Q Club 的 7 行 → Actions → Delete；再打开 **Configuration → Settings**，**点开 Q Club 那一行**，表单顶部出现 **Load Default Opening Hours**；点击后页面刷新、按钮消失，Opening Hours 里 7 段恢复。`demo-staff` 任何时候都看不到该按钮 | ✅ 任务 1.2 |
-| 4 | 手动新建一条预约；再建一条同桌重叠预约 | 押金自动 = 台费 × 比例；重叠预约被拒绝，提示为清楚的英文说明而不是数据库报错 | 任务 1.3、1.4 |
-| 5 | 新建一条营业时间外的预约 | 被拒绝 | 任务 1.3 |
-| 6 | 修改桌台单价，再看已有预约、新建预约 | 已有预约价格不变，新预约用新价格 | 任务 1.3 |
+| 4 | 用 `demo-staff` 打开 **Billiards → Bookings → New**，选择启用的 Table、Customer、未来营业日的 Start（Adelaide 整点）和 Number of Hours，点击 Save；再建一条同桌同时间预约 | End 自动计算；Price snapshot 显示单价、比例、台费和押金；重叠预约被拒绝："This table is already booked for the selected time."。已有两条演示预约：Customer A / Table 1 / 15:00–17:00 / Confirmed，Customer B / Table 2 / 18:00–19:00 / Awaiting Deposit；可切换 Calendar 查看 | ✅ 任务 1.3 |
+| 5 | **Billiards → Bookings → New**，选择未来周一，Start 设为 Adelaide 13:00、Number of Hours 设为 1，保存 | 被拒绝："The booking must be fully within one business opening interval."（默认周一 14:00 开门） | ✅ 任务 1.3 |
+| 6 | 记下已有预约的 Price snapshot；管理员在 **Billiards → Tables** 修改该桌 Hourly Price，在 **Configuration → Settings** 修改 Deposit Percentage；再在另一空闲时段新建预约 | 已有预约的单价、比例和金额不变；新预约用新价格和比例。修改已有预约的 Number of Hours 时按自己的快照重算；更换 Table 时只刷新单价，保留政策快照 | ✅ 任务 1.3 |
 | 7 | 把锁定时长改成 1 分钟，新建"待付押金"预约，等 1–2 分钟 | 自动变"已过期"，同一时段可重新预约 | 任务 1.4 |
 
 ## 验收
