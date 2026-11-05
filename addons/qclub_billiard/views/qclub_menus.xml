@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ADM-001: Billiards menu, visible to Billiard Staff and above.
+         Opening Hours (task 1.2) and Bookings (task 1.3) are added by later tasks. -->
+    <menuitem id="menu_billiard_root"
+              name="Billiards"
+              groups="group_billiard_staff"
+              sequence="45"/>
+
+    <menuitem id="menu_billiard_tables"
+              name="Tables"
+              parent="menu_billiard_root"
+              action="qclub_table_action"
+              groups="group_billiard_staff"
+              sequence="10"/>
+
+    <menuitem id="menu_billiard_configuration"
+              name="Configuration"
+              parent="menu_billiard_root"
+              groups="group_billiard_staff"
+              sequence="90"/>
+
+    <menuitem id="menu_billiard_settings"
+              name="Settings"
+              parent="menu_billiard_configuration"
+              action="qclub_config_action"
+              groups="group_billiard_staff"
+              sequence="10"/>
+
+    <menuitem id="menu_billiard_table_types"
+              name="Table Types"
+              parent="menu_billiard_configuration"
+              action="qclub_table_type_action"
+              groups="group_billiard_manager"
+              sequence="20"/>
+</odoo>

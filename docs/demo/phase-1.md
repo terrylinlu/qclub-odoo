@@ -26,11 +26,11 @@ make demo-logs     # 查看演示服务日志
 | 登录名 | 密码 | 身份 |
 |---|---|---|
 | `admin` | `admin` | 管理员 |
-| `demo-staff` | `demo` | 员工（任务 1.1 起加入"球厅员工"组） |
+| `demo-staff` | `demo` | 员工（Billiard Staff 组：桌台和配置只读） |
 | `demo-customer-a` | `demo` | 门户顾客 |
 | `demo-customer-b` | `demo` | 门户顾客 |
 
-演示数据全部是假数据，名称带"【演示】"前缀。注意：`make reset` 会连同演示库一起删除。
+界面为英语。演示数据全部是假数据，名称带 `[Demo]` 前缀（如 `[Demo] Table 1`）。注意：`make reset` 会连同演示库一起删除。
 
 ## 演示步骤
 
@@ -39,10 +39,10 @@ make demo-logs     # 查看演示服务日志
 | 步骤 | 操作 | 应该看到 | 可演示 |
 |---|---|---|---|
 | 0 | 运行 `make demo`；用 `admin` 登录后台；分别打开两个网站地址 | 后台登录成功；`qclub.localhost` 标签页标题为"Home \| Q Club"，`aushare.localhost` 为"Home \| AUSHARE" | ✅ 任务 1.0 |
-| 1 | 打开"台球厅"菜单 | 看到演示桌台（中式八球、斯诺克、九球）；用 `demo-staff` 登录看不到"配置" | 任务 1.1 |
-| 2 | 在配置页修改押金比例、取消窗口等并保存；再把押金比例改成 150% | 保存成功；150% 被拒绝并有提示 | 任务 1.1 |
+| 1 | 用 `admin` 打开 **Billiards → Tables**；再用 `demo-staff` 登录 | 看到 3 张演示桌台：`[Demo] Table 1`（Chinese 8-Ball，20 AUD/h）、`Table 2`（Snooker，30）、`Table 3`（9-Ball，25）。`demo-staff` 能看到 Tables 和 **Configuration → Settings**，但只能查看不能修改，也看不到 **Table Types** | ✅ 任务 1.1 |
+| 2 | 用 `admin` 打开 **Configuration → Settings → Q Club**，把 Deposit 改为 40、Free Cancellation 改为 12 并保存；再把 Deposit 改成 150 | 保存成功；150 被拒绝，提示 "The deposit percentage must be between 0 and 100."（演示后改回 50 / 24） | ✅ 任务 1.1 |
 | 3 | 查看营业时间 | 周五、周六到次日 02:00，其余日到 24:00；周六、周日 13:00 开始 | 任务 1.2 |
-| 4 | 手动新建一条预约；再建一条同桌重叠预约 | 押金自动 = 台费 × 比例；重叠预约被拒绝，提示为中文而不是数据库报错 | 任务 1.3、1.4 |
+| 4 | 手动新建一条预约；再建一条同桌重叠预约 | 押金自动 = 台费 × 比例；重叠预约被拒绝，提示为清楚的英文说明而不是数据库报错 | 任务 1.3、1.4 |
 | 5 | 新建一条营业时间外的预约 | 被拒绝 | 任务 1.3 |
 | 6 | 修改桌台单价，再看已有预约、新建预约 | 已有预约价格不变，新预约用新价格 | 任务 1.3 |
 | 7 | 把锁定时长改成 1 分钟，新建"待付押金"预约，等 1–2 分钟 | 自动变"已过期"，同一时段可重新预约 | 任务 1.4 |

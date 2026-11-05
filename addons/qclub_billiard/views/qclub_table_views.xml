@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Tables (TBL-001, TBL-003) -->
+    <record id="qclub_table_view_list" model="ir.ui.view">
+        <field name="name">qclub.table.list</field>
+        <field name="model">qclub.table</field>
+        <field name="arch" type="xml">
+            <list string="Tables">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="type_id"/>
+                <field name="hourly_price"/>
+                <field name="currency_id" column_invisible="True"/>
+                <field name="website_id"/>
+                <field name="active" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="qclub_table_view_form" model="ir.ui.view">
+        <field name="name">qclub.table.form</field>
+        <field name="model">qclub.table</field>
+        <field name="arch" type="xml">
+            <form string="Table">
+                <sheet>
+                    <widget name="web_ribbon" title="Disabled" bg_color="text-bg-danger" invisible="active"/>
+                    <div class="oe_title">
+                        <label for="name"/>
+                        <h1><field name="name" placeholder="e.g. Table 1"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="website_id" options="{'no_create': True}"/>
+                            <field name="type_id" options="{'no_create': True}"/>
+                        </group>
+                        <group>
+                            <field name="hourly_price"/>
+                            <field name="currency_id" invisible="1"/>
+                            <field name="active"/>
+                            <field name="sequence"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="qclub_table_view_search" model="ir.ui.view">
+        <field name="name">qclub.table.search</field>
+        <field name="model">qclub.table</field>
+        <field name="arch" type="xml">
+            <search string="Tables">
+                <field name="name"/>
+                <field name="type_id"/>
+                <field name="website_id"/>
+                <filter name="filter_disabled" string="Disabled" domain="[('active', '=', False)]"/>
+                <separator/>
+                <filter name="group_type" string="Table Type" context="{'group_by': 'type_id'}"/>
+                <filter name="group_website" string="Website" context="{'group_by': 'website_id'}"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="qclub_table_action" model="ir.actions.act_window">
+        <field name="name">Tables</field>
+        <field name="res_model">qclub.table</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Create your first billiard table</p>
+            <p>Set a name, table type and hourly price. Disabled tables cannot receive new bookings.</p>
+        </field>
+    </record>
+
+    <!-- Table types (TBL-002) -->
+    <record id="qclub_table_type_view_list" model="ir.ui.view">
+        <field name="name">qclub.table.type.list</field>
+        <field name="model">qclub.table.type</field>
+        <field name="arch" type="xml">
+            <list string="Table Types" editable="bottom">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="website_id" options="{'no_create': True}"/>
+                <field name="active" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="qclub_table_type_view_search" model="ir.ui.view">
+        <field name="name">qclub.table.type.search</field>
+        <field name="model">qclub.table.type</field>
+        <field name="arch" type="xml">
+            <search string="Table Types">
+                <field name="name"/>
+                <field name="website_id"/>
+                <filter name="filter_archived" string="Archived" domain="[('active', '=', False)]"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="qclub_table_type_action" model="ir.actions.act_window">
+        <field name="name">Table Types</field>
+        <field name="res_model">qclub.table.type</field>
+        <field name="view_mode">list</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Create a table type</p>
+            <p>For example Chinese 8-Ball, Snooker or 9-Ball.</p>
+        </field>
+    </record>
+</odoo>
