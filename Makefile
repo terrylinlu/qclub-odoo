@@ -62,7 +62,12 @@ iso-check: guard
 
 e2e: guard
 	@if [ ! -f e2e/package.json ]; then echo "e2e 尚未建立（阶段 2 开始），跳过"; exit 0; fi; \
-	cd e2e && npm ci && npx playwright test
+	docker build -q -t qclub-e2e:1.56.1 e2e && \
+	docker run --rm --network host --ipc=host \
+		--user $$(id -u):$$(id -g) -e HOME=/tmp \
+		-v "$(CURDIR)/e2e":/work -w /work -e E2E_BASE_URL -e CI \
+		qclub-e2e:1.56.1 \
+		/bin/bash -lc "npm ci --no-audit --no-fund && npx playwright test"
 
 lint:
 	docker run --rm -v "$(CURDIR)":/io -w /io ghcr.io/astral-sh/ruff:latest check addons tools

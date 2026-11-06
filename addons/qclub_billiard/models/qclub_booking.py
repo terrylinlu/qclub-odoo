@@ -58,6 +58,7 @@ class QclubBooking(models.Model):
 
     def init(self):
         super().init()
+        self.env.cr.execute("CREATE EXTENSION IF NOT EXISTS btree_gist")
         # Let PostgreSQL canonicalize the expected definition using the same column
         # types. Comparing deparsed definitions avoids fragile cast/whitespace checks.
         definition = SQL("""
@@ -96,6 +97,70 @@ class QclubBooking(models.Model):
                     "ALTER TABLE qclub_booking ADD CONSTRAINT qclub_booking_no_overlap %s", definition,
                 ))
             self.env.cr.execute("DROP TABLE pg_temp.qclub_booking_overlap_definition")
+
+    @api.model
+    def _get_occupancy(self, website, business_date):
+        """Read-only public projection: no booking identifiers or customer fields."""
+        website.ensure_one()
+        now = fields.Datetime.now()
+        tz = ZoneInfo(BUSINESS_TZ)
+        today = now.replace(tzinfo=timezone.utc).astimezone(tz).date()
+        config = self.env["qclub.config"].sudo().search([("website_id", "=", website.id)], limit=1)
+        intervals = self.env["qclub.opening.hours"]._get_business_intervals(website, business_date)
+        starts = []
+        for start, end in intervals:
+            while start + timedelta(hours=1) <= end:
+                starts.append(start)
+                start += timedelta(hours=1)
+        slots = []
+        for start in starts:
+            local = start.replace(tzinfo=timezone.utc).astimezone(tz)
+            slots.append({
+                "start": start.isoformat(timespec="seconds") + "Z",
+                "label": f"{local.hour % 12 or 12}:00 {'AM' if local.hour < 12 else 'PM'}",
+                "next_day": local.date() > business_date,
+            })
+        tables = self.env["qclub.table"].sudo().search_read(
+            [("website_id", "=", website.id), ("active", "=", True)],
+            ["name", "type_id", "hourly_price"], order="sequence, name, id",
+        )
+        by_table = {table["id"]: [] for table in tables}
+        if starts and tables:
+            bookings = self.sudo().search_read([
+                ("website_id", "=", website.id), ("table_id", "in", list(by_table)),
+                ("state", "in", ACTIVE_STATES),
+                ("start", "<", starts[-1] + timedelta(hours=1)), ("end", ">", starts[0]),
+            ], ["table_id", "start", "end", "state", "lock_expire"], load=None)
+            for booking in bookings:
+                lock_expire = fields.Datetime.to_datetime(booking["lock_expire"])
+                if booking["state"] == "pending" and lock_expire and lock_expire <= now:
+                    continue
+                by_table[booking["table_id"]].append((
+                    fields.Datetime.to_datetime(booking["start"]), fields.Datetime.to_datetime(booking["end"]),
+                ))
+        rows = []
+        for table in tables:
+            states = []
+            for start in starts:
+                if start <= now:
+                    state = "past"
+                elif any(a < start + timedelta(hours=1) and b > start for a, b in by_table[table["id"]]):
+                    state = "occupied"
+                else:
+                    state = "free"
+                states.append(state)
+            rows.append({
+                "id": table["id"], "name": table["name"], "type": table["type_id"][1],
+                "hourly_price": table["hourly_price"], "slots": states,
+            })
+        return {
+            "business_date": business_date.isoformat(),
+            "available_dates": {"min": today.isoformat(), "max": (today + timedelta(
+                days=config.max_advance_days,
+            )).isoformat()},
+            "currency": website.sudo().company_id.currency_id.name,
+            "slots": slots, "tables": rows,
+        }
 
     @api.model
     def _cron_expire_pending(self):

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Associate this standalone QWeb view with our own model, as required by
+         the existing ISO-001 module-data whitelist. It inherits no core view. -->
+    <record id="booking_page" model="ir.ui.view">
+        <field name="name">Book a Table</field>
+        <field name="key">qclub_billiard.booking_page</field>
+        <field name="type">qweb</field>
+        <field name="model">qclub.booking</field>
+        <field name="arch" type="xml">
+            <t t-name="qclub_billiard.booking_page" t-call="website.layout">
+                <div id="wrap" class="o_qclub_booking_page container-fluid py-3">
+                    <h1>Book a Table</h1>
+                    <div class="o_qclub_booking_grid" t-att-data-login-required="'1' if login_required else '0'">
+                        <div class="o_qclub_date_controls d-flex align-items-center flex-wrap gap-2 mb-2">
+                            <label for="qclub_booking_date" class="form-label mb-0">Business date (Adelaide)</label>
+                            <input id="qclub_booking_date" type="date" class="o_qclub_booking_date form-control"
+                                   t-att-min="min_date" t-att-max="max_date" t-att-value="min_date"/>
+                        </div>
+                        <div class="o_qclub_login_prompt alert alert-info" t-att-hidden="not login_required">
+                            Please log in to view availability.
+                            <a href="/web/login?redirect=/billiard/booking">Log in</a>
+                        </div>
+                        <p class="o_qclub_grid_message" role="status" aria-live="polite"/>
+                        <div class="o_qclub_grid_scroll" role="region" aria-label="Table availability" tabindex="0">
+                            <table class="o_qclub_grid_table table table-bordered" hidden="hidden">
+                                <caption>Hourly availability in Australia/Adelaide</caption>
+                                <thead/>
+                                <tbody/>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </t>
+        </field>
+    </record>
+</odoo>
