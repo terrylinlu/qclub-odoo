@@ -256,7 +256,7 @@
 - [ ] 确认第一个自动快照已生成（EC2 → 快照）；之后每季度做一次恢复演练；可选：另加每日 `pg_dump` 上传 S3
 - [ ] 🟠 禁用数据库管理接口：`/opt/odoo-server/odoo.conf` 加 `list_db = False`、`dbfilter = ^AUSHARE$`，重启 `odoo.service`
 - [x] 🟠 **安全组（2026-11-06）**：已删除对外开放的 8069（外网只能经 Nginx / HTTPS 访问 Odoo）；8072 本来未开放。**已接受的风险（你的决定）**：22（SSH）保持对所有 IP 开放（登录 IP 经常变化）；18280 TCP/UDP 保留（偶尔使用）
-- [ ] 🟡 SSH 补强：确认只允许密钥登录（`sudo sshd -T | grep -iE '^(passwordauthentication|permitrootlogin)'` 应为 `no` / `no` 或 `prohibit-password`）
+- [x] 🟡 SSH 补强（2026-11-06 已核查）：`passwordauthentication no`（只允许密钥登录）；`permitrootlogin without-password`（root 不可用密码登录）。22 端口对所有 IP 开放的风险由此缓解
 - [ ] 🟡 纵深防御：`odoo.conf` 加 `http_interface = 127.0.0.1`（安全组已拦截 8069，此项为第二道防线，可与升级 Odoo 时一并做）
 - [ ] 🟡 **升级生产 Odoo 到最新 19.0**（当前为 2026-03-17 的提交 `203c9270`，缺约 7.5 个月补丁）：先在生产库副本上验证，再安排维护窗口；完成后测试镜像与之对齐
 - [ ] 🟡 Q Club 站点 Nginx（`/etc/nginx/sites-available/odoo`）的 `location /websocket` 加 `proxy_http_version 1.1;`，`sudo nginx -t` 后重载
