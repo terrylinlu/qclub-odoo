@@ -9,12 +9,14 @@
         <field name="model">qclub.booking</field>
         <field name="arch" type="xml">
             <t t-name="qclub_billiard.booking_page" t-call="website.layout">
-                <div id="wrap" class="container py-4">
+                <div id="wrap" class="o_qclub_booking_page container-fluid py-3">
                     <h1>Book a Table</h1>
                     <div class="o_qclub_booking_grid" t-att-data-login-required="'1' if login_required else '0'">
-                        <label for="qclub_booking_date" class="form-label">Business date (Adelaide)</label>
-                        <input id="qclub_booking_date" type="date" class="o_qclub_booking_date form-control mb-3"
-                               t-att-min="min_date" t-att-max="max_date" t-att-value="min_date"/>
+                        <div class="o_qclub_date_controls d-flex align-items-center flex-wrap gap-2 mb-2">
+                            <label for="qclub_booking_date" class="form-label mb-0">Business date (Adelaide)</label>
+                            <input id="qclub_booking_date" type="date" class="o_qclub_booking_date form-control"
+                                   t-att-min="min_date" t-att-max="max_date" t-att-value="min_date"/>
+                        </div>
                         <div class="o_qclub_login_prompt alert alert-info" t-att-hidden="not login_required">
                             Please log in to view availability.
                             <a href="/web/login?redirect=/billiard/booking">Log in</a>

@@ -1,8 +1,17 @@
+.o_qclub_booking_page {
+    max-width: 1400px;
+    margin-inline: auto;
+}
+
 .o_qclub_booking_grid {
     min-width: 0;
 
     .o_qclub_booking_date {
-        max-width: 16rem;
+        max-width: 11rem;
+    }
+
+    .o_qclub_grid_message:empty {
+        display: none;
     }
 
     .o_qclub_grid_scroll {
@@ -17,21 +26,44 @@
         border-spacing: 0;
 
         th, td {
-            min-width: 7rem;
-            padding: 0.85rem;
+            min-width: 4.25rem;
+            padding: 0.35rem 0.25rem;
+            font-size: 0.85rem;
             text-align: center;
             vertical-align: middle;
+        }
+
+        caption {
+            caption-side: top;
+            padding: 0.25rem 0;
+            font-size: 0.8rem;
+            color: var(--bs-secondary-color, #6c757d);
+        }
+
+        thead th {
+            font-size: 0.8rem;
+            white-space: nowrap;
         }
 
         .o_qclub_table_heading {
             position: sticky;
             left: 0;
             z-index: 1;
-            min-width: 12rem;
-            max-width: 15rem;
+            width: 10rem;
+            min-width: 10rem;
+            max-width: 10rem;
+            white-space: normal;
             background: var(--body-bg, #fff);
             text-align: left;
             overflow-wrap: anywhere;
+        }
+    }
+
+    @media (max-width: 767.98px) {
+        .o_qclub_grid_table .o_qclub_table_heading {
+            width: 7rem;
+            min-width: 7rem;
+            max-width: 7rem;
         }
     }
 

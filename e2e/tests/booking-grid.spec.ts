@@ -61,3 +61,34 @@ test('AUSHARE booking page is 404', async ({ request, baseURL }) => {
   const response = await request.get(url.toString(), { headers: { Host: host } });
   expect(response.status()).toBe(404);
 });
+
+test('test_web_003_tbl_006_desktop_friday_fits_viewport', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium', 'Desktop viewport check');
+  await page.goto('/billiard/booking');
+  await expect(page.locator('.o_qclub_grid_table')).toBeVisible();
+  const picker = page.locator('.o_qclub_booking_date');
+  const minimum = await picker.getAttribute('min');
+  const maximum = await picker.getAttribute('max');
+  expect(minimum).toBeTruthy();
+  expect(maximum).toBeTruthy();
+  const friday = new Date(`${minimum}T12:00:00Z`);
+  friday.setUTCDate(friday.getUTCDate() + (5 - friday.getUTCDay() + 7) % 7);
+  const value = friday.toISOString().slice(0, 10);
+  expect(value <= maximum!, 'Next Friday must be in the demo booking range').toBe(true);
+  if (await picker.inputValue() !== value) {
+    const response = page.waitForResponse(r => r.url().endsWith('/billiard/booking/occupancy'));
+    await picker.fill(value);
+    await picker.dispatchEvent('change');
+    await response;
+    await expect(page.locator('.o_qclub_grid_table')).toBeVisible();
+  }
+  await expect(page.locator('thead th[data-slot-index]')).toHaveCount(12);
+  await expect(page.locator('.o_qclub_table_row')).toHaveCount(3);
+  await expect(page.locator('thead th[data-slot-index]').last()).toHaveText('1:00 AM (next day)');
+  const scroll = page.locator('.o_qclub_grid_scroll');
+  expect(await scroll.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+  const bounds = await scroll.boundingBox();
+  expect(bounds).not.toBeNull();
+  expect(bounds!.y).toBeGreaterThanOrEqual(0);
+  expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(800);
+});
