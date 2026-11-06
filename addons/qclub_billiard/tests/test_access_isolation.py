@@ -73,7 +73,7 @@ class TestAccessIsolation(BilliardCase):
                 "qclub.table.type": (self.kind, {"name": "Denied type", "website_id": self.qclub.id},
                                      {"name": "Denied"}),
                 "qclub.opening.hours": (self.hours[:1], {"website_id": self.qclub.id, "weekday": "0",
-                                                       "open_hour": 1, "close_hour": 2}, {"open_hour": 15}),
+                                                       "open_hour": 7, "close_hour": 8}, {"open_hour": 15}),
             }
             for model, (record, create_values, write_values) in records.items():
                 Model = self._portal(model, self.qclub)

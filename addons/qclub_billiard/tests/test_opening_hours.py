@@ -38,8 +38,8 @@ class TestOpeningHours(BilliardCase):
     def test_tbl_004_overlaps(self):
         for first, second in (
             (("0", 14, 20), ("0", 18, 22)),
-            (("4", 14, 30), ("5", 5, 10)),
-            (("6", 13, 30), ("0", 5, 10)),
+            (("4", 14, 26), ("4", 23, 27)),
+            (("6", 13, 30), ("6", 20, 24)),
         ):
             with self.subTest(first=first), self.env.cr.savepoint():
                 segment = self._segment(*first)
@@ -85,9 +85,9 @@ class TestOpeningHours(BilliardCase):
         self.assertEqual(segment.open_hour, 15)
         segment.with_user(self.manager).unlink()
         created = self.Hours.with_user(self.manager).create({
-            "website_id": self.qclub.id, "weekday": "0", "open_hour": 0, "close_hour": 24,
+            "website_id": self.qclub.id, "weekday": "0", "open_hour": 6, "close_hour": 30,
         })
-        self.assertEqual(created.open_hour, 0)
+        self.assertEqual(created.open_hour, 6)
 
     def test_tbl_004_business_day_ownership_and_display(self):
         segment = self._segment("4", 14, 26)
@@ -155,7 +155,7 @@ class TestOpeningHours(BilliardCase):
             config.with_user(self.staff).action_load_default_opening_hours()
 
     def test_tbl_004_twelve_hour_display_and_no_aggregation(self):
-        for opening, expected in ((0, "12:00 AM"), (12, "12:00 PM"), (13, "1:00 PM")):
+        for opening, expected in ((6, "6:00 AM"), (12, "12:00 PM"), (13, "1:00 PM")):
             with self.subTest(opening=opening):
                 segment = self._segment(opening=opening, closing=opening + 1)
                 self.assertEqual(segment.open_display, expected)
@@ -164,7 +164,7 @@ class TestOpeningHours(BilliardCase):
             (14, 22, "10:00 PM"),
             (14, 24, "12:00 AM (midnight)"),
             (14, 26, "2:00 AM (+1 day)"),
-            (23, 47, "11:00 PM (+1 day)"),
+            (23, 30, "6:00 AM (+1 day)"),
         ):
             with self.subTest(closing=closing):
                 segment = self._segment(opening=opening, closing=closing)

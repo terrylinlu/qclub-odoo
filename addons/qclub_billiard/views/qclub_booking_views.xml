@@ -49,11 +49,11 @@
                                readonly="state not in ('pending', 'confirmed')"/>
                         <field name="partner_id"/>
                         <field name="start" invisible="True" readonly="True" force_save="1"/>
-                        <field name="start_date" readonly="state not in ('pending', 'confirmed')"/>
+                        <field name="start_date" string="Business Date" readonly="state not in ('pending', 'confirmed')"/>
                         <field name="start_hour" readonly="state not in ('pending', 'confirmed')"/>
                         <field name="duration_hours" readonly="state not in ('pending', 'confirmed')"/>
                         <field name="end" readonly="True"/>
-                        <field name="business_date" readonly="True"/>
+                        <field name="business_date" readonly="True" invisible="True"/>
                         <field name="lock_expire" readonly="True" invisible="not lock_expire"/>
                         <field name="create_date" string="Booked On" readonly="True" invisible="not create_date"/>
                     </group>

@@ -11,3 +11,4 @@ from . import test_isolation_http
 from . import test_booking_list
 from . import test_occupancy
 from . import test_occupancy_http
+from . import test_business_day_form

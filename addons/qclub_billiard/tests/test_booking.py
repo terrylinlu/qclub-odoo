@@ -61,12 +61,12 @@ class TestBooking(BilliardCase):
                 self.assertEqual(booking.start, expected)
                 booking.action_cancel()
 
-    def test_bk_002_form_date_defaults_and_overnight_calendar_date(self):
+    def test_bk_002_form_date_defaults_and_overnight_business_date(self):
         form = Form(self.Booking.with_user(self.staff), view="qclub_billiard.qclub_booking_view_form")
         form.table_id = self.table
         form.partner_id = self.partner
-        form.start_date = date(2026, 6, 6)
-        self.assertEqual(form.start_hour, "13")
+        form.start_date = date(2026, 6, 5)
+        self.assertEqual(form.start_hour, "14")
         form.start_hour = "1"
         booking = form.save()
         self.assertEqual(booking.start, datetime(2026, 6, 5, 15, 30))
@@ -76,12 +76,14 @@ class TestBooking(BilliardCase):
     def test_bk_001_hour_selection_has_24_whole_hours(self):
         selection = self.Booking._fields["start_hour"]._description_selection(self.env)
         self.assertEqual(selection, [
-            ("0", "12:00 AM"), ("1", "1:00 AM"), ("2", "2:00 AM"), ("3", "3:00 AM"),
-            ("4", "4:00 AM"), ("5", "5:00 AM"), ("6", "6:00 AM"), ("7", "7:00 AM"),
+            ("6", "6:00 AM"), ("7", "7:00 AM"),
             ("8", "8:00 AM"), ("9", "9:00 AM"), ("10", "10:00 AM"), ("11", "11:00 AM"),
             ("12", "12:00 PM"), ("13", "1:00 PM"), ("14", "2:00 PM"), ("15", "3:00 PM"),
             ("16", "4:00 PM"), ("17", "5:00 PM"), ("18", "6:00 PM"), ("19", "7:00 PM"),
             ("20", "8:00 PM"), ("21", "9:00 PM"), ("22", "10:00 PM"), ("23", "11:00 PM"),
+            ("0", "12:00 AM (next day)"), ("1", "1:00 AM (next day)"),
+            ("2", "2:00 AM (next day)"), ("3", "3:00 AM (next day)"),
+            ("4", "4:00 AM (next day)"), ("5", "5:00 AM (next day)"),
         ])
 
     def test_bk_002_outside_hours_warns_and_save_still_rejects(self):
