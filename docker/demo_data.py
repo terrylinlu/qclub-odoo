@@ -67,6 +67,20 @@ ensure_user("demo-customer-b", "[Demo] Customer B", ["base.group_portal"])
 
 # ---- 任务 1.1：球厅配置、桌台类型、桌台 ----
 config = env["qclub.config"]._get_for_website(qclub)
+config.online_booking = True
+# 任务 2.1：仅演示库的 Q Club 菜单，模块数据本身不创建网站菜单。
+Menu = env["website.menu"]
+booking_menu = Menu.search([
+    ("website_id", "=", qclub.id), ("url", "=", "/billiard/booking"),
+], limit=1)
+menu_values = {
+    "name": "Book a Table", "url": "/billiard/booking",
+    "website_id": qclub.id, "parent_id": qclub.menu_id.id, "sequence": 50,
+}
+if booking_menu:
+    booking_menu.write(menu_values)
+else:
+    Menu.create(menu_values)
 summary.append(f"billiard settings for Q Club (deposit {config.deposit_ratio:g}%)")
 
 TableType = env["qclub.table.type"].with_context(active_test=False)

@@ -36,6 +36,10 @@
                     <div class="text-muted mb-3">
                         Changes only apply to new bookings. Existing bookings keep the values in force when they were made.
                     </div>
+                    <group string="Website Availability">
+                        <field name="online_booking"/>
+                        <field name="occupancy_requires_login"/>
+                    </group>
                     <group>
                         <group string="Deposit and Cancellation">
                             <field name="deposit_ratio"/>

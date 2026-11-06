@@ -14,6 +14,8 @@ class QclubConfig(models.Model):
     _order = "website_id"
 
     website_id = fields.Many2one("website", string="Website", required=True, ondelete="cascade")
+    online_booking = fields.Boolean(string="Online Booking", default=False)
+    occupancy_requires_login = fields.Boolean(string="Login Required to View Availability", default=False)
     has_opening_hours = fields.Boolean(compute="_compute_has_opening_hours")
 
     deposit_ratio = fields.Float(
