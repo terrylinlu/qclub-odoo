@@ -36,6 +36,7 @@
 | 3 | 后台 **Configuration → Settings → Q Club** 打开"登录后才能查看占用"，刷新步骤 1 的页面 | 未登录时看不到网格，提示登录；关闭后恢复匿名可看 | CFG-005 | ✅ 任务 2.1 |
 | 4 | 选择本周五，查看网格 | 列一直到 1:00 AM，其中 12:00 AM、1:00 AM 标注 **(next day)**，并排在周五下面，而不是出现在周六 | TBL-006、WEB-007 | ✅ 任务 2.1 |
 | 4a | 后台表单选“周五 + 1:00 AM (next day)”，与网格的同一列对应；从 1:00 AM 开始只能订 1 小时（周五营业到次日 2:00），选 2 小时会提示 "The booking must be fully within one business opening interval."。 | 表单与网格按同一营业日显示，超出营业时段被拒绝 | BK-002、TBL-006 | ✅ 任务 2.1b |
+| 4b | 后台选未来周五 6:00 PM、2 小时，再改为周六；随后选 2:00 AM (next day) 并改到另一个未来营业日 | 有效时间保持且无警告；无效时间移到新营业日首个可预约整点，并提示 "Start Time changed to …: … is not available on this date."；休息日提示 "There is no available opening hour on the selected date." | BK-003 | 待人工验收（2.1b 跟进） |
 | 5 | 未登录状态下选桌台、连续 2 小时，点 **Book** | 跳转登录页；用 `demo-customer-a` 登录后**回到刚才的选择**（日期、桌台、时段都还在） | WEB-006 | 任务 2.2 |
 | 6 | 查看所选时段 | 显示台费、应付押金，与后台同一桌台、同一时长新建预约时的金额一致 | WEB-008 | 任务 2.2 |
 | 7 | 选一个**距现在不足 24 小时**的时段，进入确认 | 显著提示 "This booking cannot be cancelled free of charge."；提交后后台该预约记录"创建时已在取消窗口内" | WEB-009 | 任务 2.2 |

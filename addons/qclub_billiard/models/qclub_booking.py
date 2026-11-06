@@ -253,18 +253,39 @@ class QclubBooking(models.Model):
         if day:
             previous_day = business_date_of_utc(self.start) if self.start else False
             if day != previous_day:
-                candidate = self._first_start_on_date(self.table_id.website_id, day)
-                if candidate:
-                    self.start = candidate
-                    hour = self.start_hour
-                else:
-                    message = _("There is no available opening hour on the selected date.")
+                current_start = False
+                if hour is not False:
+                    calendar_day = day + timedelta(days=int(hour) < BUSINESS_DAY_CUTOFF)
+                    current_start = datetime.combine(calendar_day, time(int(hour))).replace(
+                        tzinfo=ZoneInfo(BUSINESS_TZ), fold=0,
+                    ).astimezone(timezone.utc).replace(tzinfo=None)
+                intervals = self.env["qclub.opening.hours"]._get_business_intervals(
+                    self.table_id.website_id, day,
+                )
+                if not (current_start and current_start > fields.Datetime.now()
+                        and self.duration_hours > 0
+                        and any(start <= current_start < current_start + timedelta(
+                            hours=self.duration_hours,
+                        ) <= stop for start, stop in intervals)):
+                    candidate = self._first_start_on_date(self.table_id.website_id, day)
+                    if candidate:
+                        labels = dict(self._fields["start_hour"]._description_selection(self.env))
+                        old_hour = hour
+                        self.start = candidate
+                        hour = self.start_hour
+                        if old_hour is not False:
+                            message = _(
+                                "Start Time changed to %(new)s: %(old)s is not available on this date.",
+                                new=labels[hour], old=labels[old_hour],
+                            )
+                    else:
+                        message = _("There is no available opening hour on the selected date.")
             if hour is not False:
                 calendar_day = day + timedelta(days=int(hour) < BUSINESS_DAY_CUTOFF)
                 self.start = datetime.combine(calendar_day, time(int(hour))).replace(
                     tzinfo=ZoneInfo(BUSINESS_TZ), fold=0,
                 ).astimezone(timezone.utc).replace(tzinfo=None)
-        if self.start:
+        if self.start and not message:
             if self.start <= fields.Datetime.now():
                 message = _("The booking start must be strictly after now.")
             elif self.duration_hours > 0:

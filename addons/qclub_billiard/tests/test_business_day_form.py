@@ -121,3 +121,72 @@ class TestBusinessDayForm(BilliardCase):
             booking = form.save()
             self.assertEqual(booking.start, datetime(2026, 4, 4, 15, 30))
             self.assertEqual(booking.business_date, date(2026, 4, 4))
+
+    def test_bk_003_date_change_keeps_valid_time(self):
+        form = self._form()
+        form.start_date = date(2026, 6, 5)
+        form.start_hour = "18"
+        saved = form.save()
+        preview = self.Booking.new({
+            "table_id": self.table.id, "start": saved.start, "duration_hours": 2,
+        })
+        preview.start_date = date(2026, 6, 6)
+        self.assertFalse(preview._onchange_start_slot())
+        self.assertEqual(preview.start_hour, "18")
+        self.assertEqual(preview.start, datetime(2026, 6, 6, 8, 30))
+        edit = Form(saved.with_user(self.staff), view="qclub_billiard.qclub_booking_view_form")
+        edit.start_date = date(2026, 6, 6)
+        self.assertEqual(edit.start_hour, "18")
+        self.assertEqual(edit.save().start, datetime(2026, 6, 6, 8, 30))
+
+    def test_bk_003_date_change_next_day_moves_with_exact_warning(self):
+        preview = self.Booking.new({
+            "table_id": self.table.id, "start": datetime(2026, 6, 5, 16, 30),
+            "duration_hours": 1,
+        })
+        self.assertEqual(preview.start_hour, "2")
+        preview.start_date = date(2026, 6, 6)
+        self.assertEqual(preview._onchange_start_slot(), {"warning": {
+            "title": "Booking time",
+            "message": "Start Time changed to 1:00 PM: 2:00 AM (next day) is not available on this date.",
+        }})
+        self.assertEqual(preview.start_hour, "13")
+        self.assertEqual(preview.start, datetime(2026, 6, 6, 3, 30))
+
+    def test_bk_003_date_change_duration_overrun_moves_with_warning(self):
+        preview = self.Booking.new({
+            "table_id": self.table.id, "start": datetime(2026, 6, 5, 14, 30),
+            "duration_hours": 2,
+        })
+        preview.start_date = date(2026, 6, 7)
+        self.assertEqual(preview._onchange_start_slot(), {"warning": {
+            "title": "Booking time",
+            "message": "Start Time changed to 1:00 PM: 12:00 AM (next day) is not available on this date.",
+        }})
+        self.assertEqual(preview.start_hour, "13")
+        self.assertEqual(preview.start, datetime(2026, 6, 7, 3, 30))
+
+    def test_bk_003_date_change_closed_date_message(self):
+        self.Hours.search([("website_id", "=", self.qclub.id), ("weekday", "=", "5")]).unlink()
+        preview = self.Booking.new({
+            "table_id": self.table.id, "start": datetime(2026, 6, 5, 8, 30),
+            "duration_hours": 1,
+        })
+        preview.start_date = date(2026, 6, 6)
+        self.assertEqual(preview._onchange_start_slot(), {"warning": {
+            "title": "Booking time",
+            "message": "There is no available opening hour on the selected date.",
+        }})
+
+    @freeze_time("2026-06-06 06:00:00")
+    def test_bk_003_date_change_past_time_moves_with_warning(self):
+        preview = self.Booking.new({
+            "table_id": self.table.id, "start": datetime(2026, 6, 7, 3, 30),
+            "duration_hours": 1,
+        })
+        preview.start_date = date(2026, 6, 6)
+        self.assertEqual(preview._onchange_start_slot(), {"warning": {
+            "title": "Booking time",
+            "message": "Start Time changed to 4:00 PM: 1:00 PM is not available on this date.",
+        }})
+        self.assertEqual(preview.start, datetime(2026, 6, 6, 6, 30))

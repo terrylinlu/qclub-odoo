@@ -143,7 +143,7 @@ class TestBooking(BilliardCase):
                     booking.action_confirm()
                 form = Form(booking.with_user(self.staff), view="qclub_billiard.qclub_booking_view_form")
                 form.start_date = date(2026, 6, 6)
-                self.assertEqual(form.start_hour, "13")
+                self.assertEqual(form.start_hour, "14")
                 form.start_hour = "15"
                 saved = form.save()
                 self.assertEqual(saved.start, datetime(2026, 6, 6, 5, 30))
