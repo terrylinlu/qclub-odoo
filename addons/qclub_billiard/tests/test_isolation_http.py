@@ -18,5 +18,6 @@ class TestIsolationHttp(HttpCase):
                 self.assertEqual(response.status_code, 200)
                 document = html.fromstring(response.content)
                 self.assertEqual(document.get("data-website-id"), str(website.id))
-                for forbidden in ("Billiard", "qclub", "Booking"):
+                # Avoid generic words: AUSHARE legitimately sells billiard products.
+                for forbidden in ("/billiard/booking", "o_qclub", "qclub_billiard"):
                     self.assertNotIn(forbidden, response.text)
