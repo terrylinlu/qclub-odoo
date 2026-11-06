@@ -335,7 +335,7 @@ class TestBookingConcurrency(TransactionCase):
             hours = env["qclub.opening.hours"]
             if not hours.search_count([("website_id", "=", website.id)]):
                 fixture["hours"] = hours.create([
-                    {"website_id": website.id, "weekday": str(day), "open_hour": 0, "close_hour": 24}
+                    {"website_id": website.id, "weekday": str(day), "open_hour": 6, "close_hour": 30}
                     for day in range(7)
                 ]).ids
             kind = env["qclub.table.type"].create({

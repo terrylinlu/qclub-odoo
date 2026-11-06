@@ -94,9 +94,9 @@ class TestOccupancyHttp(HttpCase):
                 self.assertEqual(self._occupancy(value).json()["result"], {"error": "invalid_date"})
         self.assertEqual(self._occupancy("2026-06-15").json()["result"]["business_date"], "2026-06-15")
 
-    @freeze_time("2026-06-01 15:00:00")
+    @freeze_time("2026-06-01 21:00:00")
     def test_web_007_date_range_uses_adelaide_today(self):
-        # UTC Monday, already Tuesday in Adelaide.
+        # UTC Monday, already Tuesday 6:30 AM in Adelaide (past the 6:00 business-day cutoff).
         self.assertEqual(self._occupancy("2026-06-01").json()["result"], {"error": "invalid_date"})
         result = self._occupancy("2026-06-02").json()["result"]
         self.assertEqual(result["available_dates"], {"min": "2026-06-02", "max": "2026-06-16"})

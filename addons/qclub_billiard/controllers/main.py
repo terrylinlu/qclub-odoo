@@ -1,13 +1,12 @@
 import re
-from datetime import date as calendar_date, timedelta, timezone
-from zoneinfo import ZoneInfo
+from datetime import date as calendar_date, timedelta
 
 from werkzeug.exceptions import NotFound
 
-from odoo import fields, http
+from odoo import http
 from odoo.http import request
 
-from ..models.qclub_opening_hours import BUSINESS_TZ
+from ..models.qclub_opening_hours import business_today
 
 
 class BilliardBooking(http.Controller):
@@ -24,7 +23,7 @@ class BilliardBooking(http.Controller):
         return config
 
     def _date_bounds(self, config):
-        today = fields.Datetime.now().replace(tzinfo=timezone.utc).astimezone(ZoneInfo(BUSINESS_TZ)).date()
+        today = business_today()
         return today, today + timedelta(days=config.max_advance_days)
 
     @http.route("/billiard/booking", type="http", auth="public", website=True, sitemap=False, methods=["GET"])

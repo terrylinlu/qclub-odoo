@@ -5,6 +5,23 @@ from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
 
 BUSINESS_TZ = "Australia/Adelaide"
+BUSINESS_DAY_CUTOFF = 6
+BUSINESS_DAY_HOURS_MESSAGE = (
+    "Opening hours must be within one business day: "
+    "open from 6:00 AM, close by 6:00 AM the next day."
+)
+
+
+def business_date_of_utc(instant):
+    """Return the Adelaide business date of an Odoo UTC datetime."""
+    local = instant.replace(tzinfo=timezone.utc).astimezone(ZoneInfo(BUSINESS_TZ))
+    return local.date() - timedelta(days=local.hour < BUSINESS_DAY_CUTOFF)
+
+
+def business_today():
+    return business_date_of_utc(fields.Datetime.now())
+
+
 WEEKDAYS = [
     ("0", "Monday"), ("1", "Tuesday"), ("2", "Wednesday"), ("3", "Thursday"),
     ("4", "Friday"), ("5", "Saturday"), ("6", "Sunday"),
@@ -24,12 +41,12 @@ class QclubOpeningHours(models.Model):
     close_display = fields.Char(string="Closes", compute="_compute_hour_display")
 
     _open_hour_range = models.Constraint(
-        "CHECK(open_hour >= 0 AND open_hour <= 23)",
-        "Opening hour must be between 0 and 23.",
+        f"CHECK(open_hour >= {BUSINESS_DAY_CUTOFF} AND open_hour <= 23)",
+        BUSINESS_DAY_HOURS_MESSAGE,
     )
     _close_hour_range = models.Constraint(
-        "CHECK(close_hour > open_hour AND close_hour <= open_hour + 24)",
-        "Closing hour must be after opening hour and no more than 24 hours later.",
+        f"CHECK(close_hour > open_hour AND close_hour <= {24 + BUSINESS_DAY_CUTOFF})",
+        BUSINESS_DAY_HOURS_MESSAGE,
     )
 
     @api.depends("open_hour", "close_hour")
@@ -61,10 +78,9 @@ class QclubOpeningHours(models.Model):
     @api.constrains("website_id", "weekday", "open_hour", "close_hour")
     def _check_hours(self):
         for hours in self:
-            if not 0 <= hours.open_hour <= 23:
-                raise ValidationError(_("Opening hour must be between 0 and 23."))
-            if not hours.open_hour < hours.close_hour <= hours.open_hour + 24:
-                raise ValidationError(_("Closing hour must be after opening hour and no more than 24 hours later."))
+            if not (BUSINESS_DAY_CUTOFF <= hours.open_hour <= 23
+                    and hours.open_hour < hours.close_hour <= 24 + BUSINESS_DAY_CUTOFF):
+                raise ValidationError(_(BUSINESS_DAY_HOURS_MESSAGE))
             start = int(hours.weekday) * 24 + hours.open_hour
             end = int(hours.weekday) * 24 + hours.close_hour
             others = self.search([("website_id", "=", hours.website_id.id), ("id", "!=", hours.id)])
