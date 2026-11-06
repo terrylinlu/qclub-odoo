@@ -252,12 +252,22 @@
 
 ### 生产环境运维与安全（穿刺 0 发现；由你决定时间并执行，Claude Code 不操作生产）
 - [x] 🔴 **首次手动备份（2026-11-06）**：`pg_dump`（12.6 MB）+ filestore 打包（87 MB），已拷贝到服务器以外（你本机，不入库）；**已做恢复验证**：本机恢复为 `qclub_prodcopy`，模块 99、网站、公司 3、产品 61 与生产一致，数据库引用的 1182 个附件文件全部存在
-- [ ] 🔴 **设置自动备份**：AWS Data Lifecycle Manager 每日 EBS 快照（保留 7–14 天）；可另加每日 `pg_dump` 上传 S3；之后每季度做一次恢复演练
+- [x] 🔴 **自动备份（2026-11-06）**：AWS Data Lifecycle Manager 默认策略，EBS 快照每天一次、保留 7 天，含启动卷（数据库、filestore、程序都在启动卷上）（快照为崩溃一致，PostgreSQL 可自动恢复）
+- [ ] 确认第一个自动快照已生成（EC2 → 快照）；确认后删除生产服务器上的手动备份 `~/backup`（与数据库同一块磁盘，不起备份作用，且多一份个人信息）；之后每季度做一次恢复演练；可选：另加每日 `pg_dump` 上传 S3
 - [ ] 🟠 禁用数据库管理接口：`/opt/odoo-server/odoo.conf` 加 `list_db = False`、`dbfilter = ^AUSHARE$`，重启 `odoo.service`
-- [ ] 🟠 确认 AWS 安全组只放行 80 / 443（及 SSH）；并在 `odoo.conf` 加 `http_interface = 127.0.0.1`，8069 / 8072 只对本机开放
+- [x] 🟠 **安全组（2026-11-06）**：已删除对外开放的 8069（外网只能经 Nginx / HTTPS 访问 Odoo）；8072 本来未开放。**已接受的风险（你的决定）**：22（SSH）保持对所有 IP 开放（登录 IP 经常变化）；18280 TCP/UDP 保留（偶尔使用）
+- [x] 🟡 SSH 补强（2026-11-06 已核查）：`passwordauthentication no`（只允许密钥登录）；`permitrootlogin without-password`（root 不可用密码登录）。22 端口对所有 IP 开放的风险由此缓解
+- [ ] 🟡 纵深防御：`odoo.conf` 加 `http_interface = 127.0.0.1`（安全组已拦截 8069，此项为第二道防线，可与升级 Odoo 时一并做）
 - [ ] 🟡 **升级生产 Odoo 到最新 19.0**（当前为 2026-03-17 的提交 `203c9270`，缺约 7.5 个月补丁）：先在生产库副本上验证，再安排维护窗口；完成后测试镜像与之对齐
 - [ ] 🟡 Q Club 站点 Nginx（`/etc/nginx/sites-available/odoo`）的 `location /websocket` 加 `proxy_http_version 1.1;`，`sudo nginx -t` 后重载
 - [ ] 🟡 Odoo 改由无 sudo 权限的专用系统用户运行；Odoo 的数据库账号不使用超级用户（上线前）
+
+### 生产数据副本的保管与清理（含 AUSHARE 真实客户数据，按澳洲隐私法要求妥善保管）
+- [ ] 确认 `D:\Project\AUSHARE` 不在云同步目录（OneDrive、Dropbox、Google Drive、网盘）中
+- [ ] 确认本机磁盘已开启 BitLocker；未开启时，用 7-Zip 将两个备份文件压缩为带密码的 AES-256 压缩包后删除原文件
+- [ ] 不通过聊天、邮件、网盘发送备份文件；不放入任何 git 仓库（`D:\Project\AUSHARE` 已确认不是 git 仓库）
+- [ ] **穿刺 1 完成后**：删除本机 Docker 中的 `qclub_prodcopy` 数据库和 `filestore/qclub_prodcopy`（Claude Code 执行）
+- [ ] **生产升级到最新 19.0 并稳定运行一周后**：删除 `D:\Project\AUSHARE\new-aushare-backup\` 中的两个备份文件（`AUSHARE_2026-11-06.dump`、`AUSHARE_filestore_2026-11-06.tar.gz`），在此之前作为不依赖 AWS 的离线基线保留
 
 ### 现在（阶段 2 开工前）
 - [ ] 评审阶段 2 演示脚本与验收标准（第三节草案），定稿后再开始任务 2.1
@@ -295,7 +305,7 @@
 | 两个品牌共用一个公司 | 邮件、支付、发票上可能显示 AUSHARE 而非 Q Club | 穿刺 2，阶段 2 前半段 |
 | 押金支付流程不确定 | Odoo 自带 Stripe 流程未必支持"只收押金" | 穿刺 3，阶段 2 期间 |
 | ~~生产库不支持 `btree_gist`~~ | 排他约束（BK-004）依赖该扩展 | ✅ 穿刺 0 已排除：扩展可用且 `odoo` 账号可启用；模块安装时自动 `CREATE EXTENSION IF NOT EXISTS` |
-| **生产库只有一份手动备份** | 2026-11-06 已有首次手动备份并验证可恢复；尚无自动备份，之后的数据变化仍无保护 | 🔴 第八节待办：设置自动备份 |
+| ~~生产库没有备份~~ | 2026-11-06 已有手动备份（已验证可恢复）+ 每日自动 EBS 快照（保留 7 天） | ✅ 已处理；每季度恢复演练 |
 | 生产代码比测试环境旧约 7.5 个月 | 测试通过不等于生产能装；缺安全补丁 | 穿刺 1 用生产代码版本试装；升级生产 Odoo（第八节待办） |
 | 同一个 AI 既写代码又写测试 | 容易"自己批改自己的作业" | 已改为 Codex 编码、Claude Code 独立审查（阶段 1 审查发现 3 个问题）；演示由你亲手走，是第二道检验 |
 | 单人审核 | main 保护未要求审批，全靠你自己看 diff | 坚持 PR 检查清单；演示验收记录留档 |
