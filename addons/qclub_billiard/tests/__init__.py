@@ -12,3 +12,5 @@ from . import test_booking_list
 from . import test_occupancy
 from . import test_occupancy_http
 from . import test_business_day_form
+from . import test_online_booking
+from . import test_online_booking_http

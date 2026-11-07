@@ -41,7 +41,14 @@ services:
     <<: *odoo
     ports:
       - "127.0.0.1:8069:8069"     # 仅本机可访问；浏览器用 localhost / qclub.localhost / aushare.localhost
-    command: ["odoo", "-d", "qclub_demo", "--db-filter=^qclub_demo$$", "--no-database-list", "--without-demo=True"]
+    command: ["odoo", "-d", "qclub_demo", "--db-filter=^qclub_demo$$", "--smtp=mailpit", "--smtp-port=1025", "--no-database-list", "--without-demo=True"]
+
+  mailpit:
+    image: axllent/mailpit:v1.27.10
+    profiles: ["demo"]
+    ports:
+      - "127.0.0.1:8025:8025"
+      - "127.0.0.1:1025:1025"
 
 volumes:
   pgdata:

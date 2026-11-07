@@ -11,15 +11,16 @@
             <t t-name="qclub_billiard.booking_page" t-call="website.layout">
                 <div id="wrap" class="o_qclub_booking_page container-fluid py-3">
                     <h1>Book a Table</h1>
-                    <div class="o_qclub_booking_grid" t-att-data-login-required="'1' if login_required else '0'">
+                    <div class="o_qclub_booking_grid" t-att-data-public="'1' if is_public else '0'"
+                         t-att-data-csrf-token="csrf_token" t-att-data-max-hours="max_hours" t-att-data-login-required="'1' if login_required else '0'">
                         <div class="o_qclub_date_controls d-flex align-items-center flex-wrap gap-2 mb-2">
                             <label for="qclub_booking_date" class="form-label mb-0">Business date (Adelaide)</label>
                             <input id="qclub_booking_date" type="date" class="o_qclub_booking_date form-control"
-                                   t-att-min="min_date" t-att-max="max_date" t-att-value="min_date"/>
+                                   t-att-min="min_date" t-att-max="max_date" t-att-value="selected_date"/>
                         </div>
-                        <div class="o_qclub_login_prompt alert alert-info" t-att-hidden="not login_required">
+                        <div class="o_qclub_login_prompt alert alert-info" role="status" t-att-hidden="not login_required">
                             Please log in to view availability.
-                            <a href="/web/login?redirect=/billiard/booking">Log in</a>
+                            <a t-att-href="login_url">Log in</a>
                         </div>
                         <p class="o_qclub_grid_message" role="status" aria-live="polite"/>
                         <div class="o_qclub_grid_scroll" role="region" aria-label="Table availability" tabindex="0">
@@ -29,7 +30,64 @@
                                 <tbody/>
                             </table>
                         </div>
+                        <section class="o_qclub_selection alert alert-info mt-3" role="status" hidden="hidden" aria-live="polite">
+                            <h2>Selected booking</h2>
+                            <p class="o_qclub_summary"/>
+                            <p class="o_qclub_cancel_warning alert alert-warning" role="alert" hidden="hidden">This booking cannot be cancelled free of charge.</p>
+                            <p class="o_qclub_selection_error text-danger" role="alert"/>
+                            <button type="button" class="o_qclub_book btn btn-primary">Book</button>
+                            <button type="button" class="o_qclub_clear btn btn-secondary ms-2">Clear</button>
+                        </section>
                     </div>
+                </div>
+            </t>
+        </field>
+    </record>
+    <record id="booking_confirmation" model="ir.ui.view">
+        <field name="name">Booking Confirmation</field>
+        <field name="key">qclub_billiard.booking_confirmation</field>
+        <field name="type">qweb</field>
+        <field name="model">qclub.booking</field>
+        <field name="arch" type="xml">
+            <t t-name="qclub_billiard.booking_confirmation" t-call="website.layout">
+                <div id="wrap" class="container py-4 o_qclub_confirmation">
+                    <h1>Booking received</h1>
+                    <h2 t-out="booking.name"/>
+                    <p t-out="booking.table_id.name"/>
+                    <p t-out="time_label"/>
+                    <p>Table fee: <span t-field="booking.table_fee"/></p>
+                    <p>Deposit: <span t-field="booking.deposit_amount"/></p>
+                    <p t-field="booking.state"/>
+                    <p t-if="booking.created_in_cancel_window" class="alert alert-warning" role="alert">This booking cannot be cancelled free of charge.</p>
+                    <p t-if="booking.state in ('pending', 'expired')" class="o_qclub_hold" t-att-data-remaining="remaining"/>
+                    <p>Online deposit payment is coming soon. Our staff will contact you to confirm.</p>
+                    <a href="/billiard/booking">Book a Table</a>
+                </div>
+            </t>
+        </field>
+    </record>
+    <record id="booking_email" model="ir.ui.view">
+        <field name="name">Q Club Booking Email</field>
+        <field name="key">qclub_billiard.booking_email</field>
+        <field name="type">qweb</field>
+        <field name="model">qclub.booking</field>
+        <field name="arch" type="xml">
+            <t t-name="qclub_billiard.booking_email">
+                <div style="font-family: sans-serif; max-width: 640px; margin: auto; padding: 24px;">
+                    <img t-att-src="domain + '/web/image/website/' + str(booking.website_id.id) + '/logo'" t-att-alt="booking.website_id.name" width="160"/>
+                    <h1 t-out="booking.website_id.name"/>
+                    <h2>Booking received – awaiting deposit</h2>
+                    <p t-out="booking.name"/>
+                    <p t-out="booking.table_id.name"/>
+                    <p t-out="time_label"/>
+                    <p>Table fee: <span t-field="booking.table_fee"/></p>
+                    <p>Deposit: <span t-field="booking.deposit_amount"/></p>
+                    <p>Hold expires: <span t-out="lock_label"/> (Adelaide)</p>
+                    <p t-if="booking.created_in_cancel_window" style="background: #fff3cd; padding: 12px;">This booking cannot be cancelled free of charge.</p>
+                    <p>Online deposit payment is coming soon. Our staff will contact you to confirm.</p>
+                    <a t-att-href="domain + '/billiard/booking/confirmation/' + booking.name">View booking confirmation</a>
+                    <hr/>
+                    <p><span t-out="config.contact_phone"/> <span t-out="config.contact_email"/></p>
                 </div>
             </t>
         </field>

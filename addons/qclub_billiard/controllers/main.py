@@ -1,11 +1,14 @@
 import re
 from datetime import date as calendar_date, timedelta
+from urllib.parse import urlencode
 
 from werkzeug.exceptions import NotFound
 
-from odoo import http
+from odoo import _, fields, http
+from odoo.exceptions import ValidationError
 from odoo.http import request
 
+from ..models.qclub_booking import BookingConflict
 from ..models.qclub_opening_hours import business_today
 
 
@@ -30,7 +33,18 @@ class BilliardBooking(http.Controller):
     def booking_page(self, **kwargs):
         config = self._website_config()
         minimum, maximum = self._date_bounds(config)
+        selected_date = kwargs.get("date", "")
+        try:
+            restored_day = calendar_date.fromisoformat(selected_date)
+            if not minimum <= restored_day <= maximum:
+                raise ValueError
+            selected_date = restored_day.isoformat()
+        except (TypeError, ValueError):
+            selected_date = minimum.isoformat()
         return request.render("qclub_billiard.booking_page", {
+            "selected_date": selected_date, "csrf_token": request.csrf_token(),
+            "max_hours": config.max_consecutive_hours,
+            "login_url": self._login_url(kwargs) if kwargs else "/web/login?redirect=/billiard/booking",
             "min_date": minimum.isoformat(), "max_date": maximum.isoformat(),
             "occupancy_requires_login": config.occupancy_requires_login,
             "is_public": request.env.user._is_public(),
@@ -52,3 +66,64 @@ class BilliardBooking(http.Controller):
         if not minimum <= business_date <= maximum:
             return {"error": "invalid_date"}
         return request.env["qclub.booking"]._get_occupancy(request.website, business_date)
+
+    def _login_url(self, values):
+        params = {key: values[key] for key in ("date", "table", "start", "hours") if values.get(key)}
+        target = "/billiard/booking?" + urlencode(params)
+        return "/web/login?" + urlencode({"redirect": target})
+
+    @http.route("/billiard/booking/quote", type="jsonrpc", auth="public", website=True, methods=["POST"])
+    def quote(self, table=None, start=None, hours=None, **kwargs):
+        config = self._website_config()
+        if config.occupancy_requires_login and request.env.user._is_public():
+            return {"error": "login_required"}
+        return self._online_result(table, start, hours)
+
+    def _online_result(self, table, start, hours, submit=False):
+        Booking = request.env["qclub.booking"].sudo()
+        try:
+            with request.env.cr.savepoint():
+                result = Booking._quote_online(request.website, table, start, hours)
+                if submit:
+                    booking = Booking.create({
+                        "table_id": table, "start": start.replace("T", " ").removesuffix("Z"),
+                        "duration_hours": hours, "partner_id": request.env.user.partner_id.id,
+                        "booking_channel": "online",
+                    })
+                    booking._queue_booking_email()
+                    result.update({"confirmation_url": "/billiard/booking/confirmation/" + booking.name,
+                                   "time_label": booking._time_label()})
+                return result
+        except BookingConflict:
+            return {"error": "conflict", "message": _("This time slot has just been taken. Please choose another.")}
+        except ValidationError as error:
+            return {"error": "validation", "message": str(error)}
+
+    @http.route("/billiard/booking/submit", type="jsonrpc", auth="public", website=True, methods=["POST"])
+    def submit(self, table=None, start=None, hours=None, csrf_token=None, date=None, **kwargs):
+        self._website_config()
+        if request.env.user._is_public():
+            return {"error": "login_required", "login_url": self._login_url({
+                "date": date, "table": table, "start": start, "hours": hours,
+            })}
+        if not isinstance(csrf_token, str) or not request.validate_csrf(csrf_token):
+            return {"error": "csrf", "message": _("Your session has expired. Please reload the page.")}
+        return self._online_result(table, start, hours, submit=True)
+
+    @http.route("/billiard/booking/confirmation/<string:name>", type="http", auth="public",
+                website=True, sitemap=False, methods=["GET"])
+    def confirmation(self, name, **kwargs):
+        self._website_config()
+        if request.env.user._is_public():
+            raise NotFound()
+        booking = request.env["qclub.booking"].sudo().search([
+            ("name", "=", name), ("website_id", "=", request.website.id),
+            ("partner_id", "=", request.env.user.partner_id.id),
+        ], limit=1)
+        if not booking:
+            raise NotFound()
+        return request.render("qclub_billiard.booking_confirmation", {
+            "booking": booking, "time_label": booking._time_label(),
+            "remaining": max(0, int((booking.lock_expire - fields.Datetime.now()).total_seconds()))
+            if booking.state == "pending" and booking.lock_expire else 0,
+        })

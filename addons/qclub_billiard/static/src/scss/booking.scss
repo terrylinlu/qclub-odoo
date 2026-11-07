@@ -83,3 +83,10 @@
         color: #666;
     }
 }
+
+.o_qclub_slot_free { cursor: pointer; touch-action: manipulation; }
+.o_qclub_grid_table .o_qclub_slot.o_qclub_selected {
+    background: #cfe2ff;
+    box-shadow: inset 0 0 0 2px #0a58ca;
+}
+.o_qclub_slot_free:focus-visible { outline: 3px solid #0a58ca; outline-offset: -3px; }
