@@ -63,3 +63,120 @@ test('test_web_006_mobile_selection_clear_and_shorten', async ({ page }) => {
   await expect(row.locator('[aria-pressed="true"]')).toHaveCount(0);
   await expect(page.locator('.o_qclub_selection')).toBeHidden();
 });
+
+test('test_web_005_stale_quote_refreshes_grid_and_clears_loading', async ({ page, browser }, testInfo) => {
+  await page.goto('/billiard/booking');
+  const picker = page.locator('.o_qclub_booking_date');
+  await expect(page.locator('.o_qclub_grid_table')).toBeVisible();
+  const day = new Date(`${await picker.getAttribute('min')}T12:00:00Z`);
+  const mobile = testInfo.project.name === 'mobile-chromium';
+  day.setUTCDate(day.getUTCDate() + (mobile ? 7 : 6));
+  const date = day.toISOString().slice(0, 10);
+  const occupancyResponse = page.waitForResponse(r => r.url().endsWith('/billiard/booking/occupancy'));
+  await picker.fill(date);
+  await picker.dispatchEvent('change');
+  const occupancy = (await (await occupancyResponse).json()).result;
+  await expect(page.locator('.o_qclub_grid_table')).toBeVisible();
+  const cell = page.locator('.o_qclub_table_row').last().locator('.o_qclub_slot_free').first();
+  const table = Number(await cell.getAttribute('data-table-id'));
+  const index = Number(await cell.getAttribute('data-slot-index'));
+  const context = await browser.newContext({ baseURL: testInfo.project.use.baseURL });
+  try {
+    const holder = await context.newPage();
+    await holder.goto('/web/login?redirect=/billiard/booking');
+    await holder.locator('input[name="login"]').fill(mobile ? 'demo-customer-a' : 'demo-customer-b');
+    await holder.locator('input[name="password"]').fill('demo');
+    await holder.getByRole('button', { name: 'Log in', exact: true }).click();
+    await expect(holder.locator('.o_qclub_booking_grid')).toBeVisible();
+    const csrf = await holder.locator('.o_qclub_booking_grid').getAttribute('data-csrf-token');
+    // Submit from the browser page: Node's resolver cannot resolve *.localhost.
+    const held = await holder.evaluate(async (params) => {
+      const response = await fetch('/billiard/booking/submit', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', method: 'call', id: 1, params }),
+      });
+      return response.json();
+    }, { table, start: occupancy.slots[index].start, hours: 1, date, csrf_token: csrf });
+    expect(held.result.confirmation_url).toMatch(/confirmation\/QB/);
+    await cell.click();
+    const alert = page.locator('.o_qclub_alert');
+    await expect(alert).toBeVisible();
+    await expect(alert).toBeInViewport();
+    await expect(alert).toContainText('This time slot has just been taken. Please choose another.');
+    await expect(alert).toContainText('Slots awaiting a deposit are released automatically');
+    await expect(page.locator(`.o_qclub_slot_occupied[data-table-id="${table}"][data-slot-index="${index}"]`)).toBeVisible();
+    await expect(page.locator('[aria-pressed="true"]')).toHaveCount(0);
+    await expect(page.locator('.o_qclub_selection')).toBeHidden();
+    await expect(page.locator('.o_qclub_summary')).not.toContainText('Loading quote…');
+  } finally {
+    await context.close();
+  }
+});
+
+test('test_web_005_bfcache_restore_clears_selection_and_messages', async ({ page }) => {
+  await page.goto('/billiard/booking');
+  await expect(page.locator('.o_qclub_grid_table')).toBeVisible();
+  await page.locator('.o_qclub_slot_free').first().click();
+  await expect(page.locator('.o_qclub_summary')).toContainText('Table fee:');
+  const refreshed = page.waitForResponse(r => r.url().endsWith('/billiard/booking/occupancy'));
+  await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true })));
+  await refreshed;
+  await expect(page.locator('.o_qclub_grid_table')).toBeVisible();
+  await expect(page.locator('[aria-pressed="true"]')).toHaveCount(0);
+  await expect(page.locator('.o_qclub_selection')).toBeHidden();
+  await expect(page.locator('.o_qclub_grid_message')).toBeEmpty();
+});
+
+for (const failure of ['validation', 'network']) {
+  test(`test_web_005_quote_${failure}_leaves_booking_usable`, async ({ page }) => {
+    await page.goto('/billiard/booking');
+    await expect(page.locator('.o_qclub_grid_table')).toBeVisible();
+    await page.route('**/billiard/booking/quote', route => failure === 'network' ? route.abort() :
+      route.fulfill({ json: { jsonrpc: '2.0', id: 1, result: { error: 'validation', message: 'Please try again.' } } }));
+    await page.locator('.o_qclub_slot_free').first().click();
+    await expect(page.locator('.o_qclub_selection_error')).not.toBeEmpty();
+    await expect(page.locator('.o_qclub_summary')).not.toContainText('Loading quote…');
+    await expect(page.locator('.o_qclub_book')).toBeEnabled();
+    await page.unroute('**/billiard/booking/quote');
+    await page.locator('.o_qclub_slot_free').first().click();
+    await page.locator('.o_qclub_slot_free').first().click();
+    await expect(page.locator('.o_qclub_summary')).toContainText('Table fee:');
+  });
+}
+
+for (const routeName of ['quote', 'submit']) {
+  test(`test_web_005_${routeName}_own_hold_alert_has_safe_booking_link`, async ({ page }) => {
+    if (routeName === 'submit') {
+      await page.goto('/web/login?redirect=/billiard/booking');
+      await page.locator('input[name="login"]').fill('demo-customer-a');
+      await page.locator('input[name="password"]').fill('demo');
+      await page.getByRole('button', { name: 'Log in', exact: true }).click();
+    } else {
+      await page.goto('/billiard/booking');
+    }
+    await expect(page.locator('.o_qclub_grid_table')).toBeVisible();
+    const message = 'You already hold this time slot (QB<img src=x>, awaiting deposit).';
+    const confirmation = '/billiard/booking/confirmation/QB-test';
+    await page.route(`**/billiard/booking/${routeName}`, route => route.fulfill({ json: {
+      jsonrpc: '2.0', id: 1, result: { error: 'own_hold', message, confirmation_url: confirmation },
+    } }));
+    await page.locator('.o_qclub_slot_free').first().click();
+    if (routeName === 'submit') {
+      await expect(page.locator('.o_qclub_summary')).toContainText('Table fee:');
+      await page.getByRole('button', { name: 'Book', exact: true }).click();
+    }
+    const alert = page.locator('.o_qclub_alert');
+    await expect(alert).toBeVisible();
+    await expect(alert).toContainText(message);
+    await expect(alert.locator('img')).toHaveCount(0);
+    await expect(alert.getByRole('link', { name: 'View booking' })).toHaveAttribute('href', confirmation);
+    await expect(page).toHaveURL(/\/billiard\/booking$/);
+    await expect(page.locator('.o_qclub_selection')).toBeHidden();
+    const refreshed = page.waitForResponse(r => r.url().endsWith('/billiard/booking/occupancy'));
+    await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true })));
+    await refreshed;
+    await expect(page.locator('.o_qclub_grid_table')).toBeVisible();
+    await expect(page.locator('.o_qclub_grid_message')).toBeEmpty();
+    await expect(page.getByRole('link', { name: 'View booking' })).toHaveCount(0);
+  });
+}

@@ -75,8 +75,12 @@ class TestOnlineBookingHttp(HttpCase):
         self._login()
         self.assertIn("confirmation_url", self._rpc("submit", csrf_token=self.token).json()["result"])
         before = self.env["qclub.booking"].search_count([])
+        self._login(self.other)
         result = self._rpc("submit", csrf_token=self.token).json()["result"]
-        self.assertEqual(result, {"error": "conflict", "message": "This time slot has just been taken. Please choose another."})
+        self.assertEqual(result, {"error": "conflict", "message":
+            "This time slot has just been taken. Please choose another.\n"
+            "Slots awaiting a deposit are released automatically if not paid within "
+            f"{self.config.lock_minutes} minutes."})
         self.assertEqual(self.env["qclub.booking"].search_count([]), before)
 
     def test_iso_002_confirmation_ownership_and_website_routes(self):
@@ -148,3 +152,59 @@ class TestOnlineBookingHttp(HttpCase):
                 result = self._rpc("submit", csrf_token=self.token, **values).json()["result"]
                 self.assertEqual(result["error"], "validation")
         self.assertEqual(self.env["qclub.booking"].search_count([]), before)
+
+    def test_web_005_own_hold_quote_and_submit_no_record(self):
+        self._login()
+        created = self._rpc("submit", csrf_token=self.token).json()["result"]
+        name = created["confirmation_url"].split("/")[-1]
+        before = self.env["qclub.booking"].search_count([])
+        for route in ("quote", "submit"):
+            with self.subTest(route=route):
+                self.assertEqual(self._rpc(route, csrf_token=self.token).json()["result"], {
+                    "error": "own_hold",
+                    "message": f"You already hold this time slot ({name}, awaiting deposit).",
+                    "confirmation_url": created["confirmation_url"],
+                })
+                self.assertEqual(self.env["qclub.booking"].search_count([]), before)
+
+    def test_web_005_other_hold_generic_quote_and_submit_configured_minutes(self):
+        self.config.lock_minutes = 17
+        self.env.flush_all()
+        self._login()
+        created = self._rpc("submit", csrf_token=self.token).json()["result"]
+        name = created["confirmation_url"].split("/")[-1]
+        self._login(self.other)
+        before = self.env["qclub.booking"].search_count([])
+        for route in ("quote", "submit"):
+            with self.subTest(route=route):
+                result = self._rpc(route, csrf_token=self.token).json()["result"]
+                self.assertEqual(result, {"error": "conflict", "message":
+                    "This time slot has just been taken. Please choose another.\n"
+                    "Slots awaiting a deposit are released automatically if not paid within 17 minutes."})
+                self.assertNotIn(name, json.dumps(result))
+                self.assertNotIn(self.portal.partner_id.name, json.dumps(result))
+                self.assertEqual(self.env["qclub.booking"].search_count([]), before)
+
+    def test_web_005_confirmed_own_booking_is_generic_conflict(self):
+        self._login()
+        created = self._rpc("submit", csrf_token=self.token).json()["result"]
+        booking = self.env["qclub.booking"].search([
+            ("name", "=", created["confirmation_url"].split("/")[-1]),
+        ])
+        booking.action_confirm()
+        self.env.flush_all()
+        for route in ("quote", "submit"):
+            result = self._rpc(route, csrf_token=self.token).json()["result"]
+            self.assertEqual(result["error"], "conflict")
+            self.assertNotIn(booking.name, json.dumps(result))
+
+    def test_web_005_expired_own_hold_does_not_block_quote_or_submit(self):
+        self.config.lock_minutes = 1
+        self.env.flush_all()
+        self._login()
+        created = self._rpc("submit", csrf_token=self.token).json()["result"]
+        with freeze_time("2026-11-01 00:02:00"):
+            self.assertNotIn("error", self._rpc("quote").json()["result"])
+            result = self._rpc("submit", csrf_token=self.token).json()["result"]
+            self.assertNotIn("error", result)
+            self.assertNotEqual(result["confirmation_url"], created["confirmation_url"])

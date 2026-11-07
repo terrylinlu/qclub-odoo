@@ -42,17 +42,50 @@ export class BookingGrid extends Interaction {
     }
 
     start() {
+        this.onPageShow = (event) => {
+            if (event.persisted) {
+                this.restore = null;
+                this.loadAvailability();
+            }
+        };
+        window.addEventListener("pageshow", this.onPageShow);
         if (this.el.dataset.loginRequired !== "1") {
             return this.loadAvailability();
         }
     }
 
-    showAlert(text) {
+    destroy() {
+        window.removeEventListener("pageshow", this.onPageShow);
+        super.destroy();
+    }
+
+    showAlert(text, confirmationUrl) {
         // Conflicts happen after scrolling down to Book: make the outcome visible.
-        this.message.textContent = text;
+        this.message.replaceChildren();
+        for (const [index, line] of text.split("\n").entries()) {
+            if (index) {
+                this.message.append(document.createElement("br"));
+            }
+            this.message.append(document.createTextNode(line));
+        }
+        if (confirmationUrl) {
+            const link = document.createElement("a");
+            link.href = confirmationUrl;
+            link.textContent = _t("View booking");
+            this.message.append(document.createTextNode(" "), link);
+        }
         this.message.classList.add("alert", "alert-danger", "o_qclub_alert");
         this.message.setAttribute("role", "alert");
         this.message.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+
+    async showConflict(result) {
+        const loading = this.loadAvailability();
+        const number = this.requestNumber;
+        await loading;
+        if (!this.isDestroyed && number === this.requestNumber) {
+            this.showAlert(result.message, result.error === "own_hold" ? result.confirmation_url : null);
+        }
     }
 
     clearAlert() {
@@ -192,6 +225,8 @@ export class BookingGrid extends Interaction {
         this.selection = null;
         ++this.quoteNumber;
         this.summary.hidden = true;
+        this.el.querySelector(".o_qclub_summary").textContent = "";
+        this.el.querySelector(".o_qclub_cancel_warning").hidden = true;
         this.error.textContent = "";
         this.bookButton.disabled = true;
         for (const cell of this.el.querySelectorAll(".o_qclub_slot_free")) {
@@ -262,9 +297,15 @@ export class BookingGrid extends Interaction {
             if (number !== this.quoteNumber) {
                 return;
             }
+            if (result.error === "conflict" || result.error === "own_hold") {
+                await this.showConflict(result);
+                return;
+            }
             this.protectSyncAfterAsync(() => {
                 if (result.error) {
+                    this.el.querySelector(".o_qclub_summary").textContent = "";
                     this.error.textContent = result.message || _t("Please log in to view availability.");
+                    this.bookButton.disabled = false;
                     return;
                 }
                 const money = (amount) => new Intl.NumberFormat("en-AU", {
@@ -280,7 +321,9 @@ export class BookingGrid extends Interaction {
             })();
         } catch {
             if (!this.isDestroyed && number === this.quoteNumber) {
+                this.el.querySelector(".o_qclub_summary").textContent = "";
                 this.error.textContent = _t("Quote could not be loaded. Please try again.");
+                this.bookButton.disabled = false;
             }
         }
     }
@@ -301,13 +344,12 @@ export class BookingGrid extends Interaction {
             const result = await this.waitFor(rpc("/billiard/booking/submit", {
                 ...params, csrf_token: this.el.dataset.csrfToken,
             }));
-            if (result.confirmation_url) {
+            if (result.error === "conflict" || result.error === "own_hold") {
+                await this.showConflict(result);
+            } else if (result.confirmation_url) {
                 window.location.assign(result.confirmation_url);
             } else if (result.login_url) {
                 window.location.assign(result.login_url);
-            } else if (result.error === "conflict") {
-                await this.loadAvailability();
-                this.showAlert(result.message);
             } else {
                 this.error.textContent = result.message || _t("Please reload the page and try again.");
             }
@@ -318,7 +360,7 @@ export class BookingGrid extends Interaction {
         } finally {
             this.submitting = false;
             if (!this.isDestroyed) {
-                this.bookButton.disabled = false;
+                this.bookButton.disabled = !this.selection;
             }
         }
     }
