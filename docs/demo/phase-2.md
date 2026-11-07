@@ -62,7 +62,7 @@
 6. Table 1 每小时 $20，选两小时应显示台费 $40.00、50% 押金 $20.00；在后台新建同桌台两小时的预约预览金额（不要保存重叠预约），比较两者一致。
 7. 改选一个未来且不足 24 小时的整点，确认摘要黄色警告原文；提交后在后台预约表单查看 **Booked Within Cancellation Window** 已勾选。
 8. 点 **Book**，记录确认页编号。检查时段、$40 / $20（若选择两小时）、Awaiting Deposit、每秒递减的 Held for，以及在线支付尚未开放的说明。后台按编号搜索同一记录，来源应为 Online。
-9. 在另一个无痕会话用 `demo-customer-b` / `demo` 打开相同营业日，原时段置灰。若要验证竞态，先在 B 会话选中空闲两小时，再由 A 会话提交它，最后在尚未刷新的 B 会话点 Book；应提示 **This time slot has just been taken. Please choose another.** 并刷新网格，后台只有 A 的记录。
+9. 在另一个无痕会话用 `demo-customer-b` / `demo` 打开相同营业日，原时段置灰。若要验证竞态，先在 B 会话选中空闲两小时，再由 A 会话提交它，最后在尚未刷新的 B 会话点 Book；应提示 **This time slot has just been taken. Please choose another.** 并刷新网格，后台只有 A 的记录。另应显示第二行 **Slots awaiting a deposit are released automatically if not paid within N minutes.**（N 为 Unpaid Hold 配置）。验证报价竞态：B 先打开空闲网格但不选择，A 提交后，B 再选原时段；应立即显示滚动到可见位置的红色提示、占用网格刷新、清除选择及 Loading quote…。A 在旧网格选自己的待付押金时段，应显示自己的编号和 **View booking** 链接，点链接回到确认页；其他顾客看不到编号。确认页用浏览器后退返回预约页时，应重新加载网格且无旧选择和提示。
 10. 选未来周五 11:00 PM 和下一格 12:00 AM (next day)，摘要和确认页均显示日期与 12 小时制，例如 **Fri 6 Nov, 11:00 PM – Sat 7 Nov, 1:00 AM**（实际日期随所选周五变化）。打开 **http://localhost:8025**，等待 Odoo 邮件队列处理；点击主题含预约编号的 **Booking received – awaiting deposit**，检查 Q Club 标题、发件人、网站 logo、相同时间、台费 / 押金及指向 `qclub.localhost:8069` 的确认链接。邮件不能出现 AUSHARE 或 Powered by Odoo。需要立即处理时，管理员可在 Settings → Technical → Email → Emails 查看 Outgoing 队列并发送该演示邮件。
 12. 在独立后台窗口用 `demo-staff` / `demo` 登录，进入 Billiard → Bookings，按步骤 8 的编号搜索，在锁定过期前点 **Confirm**；状态变 Confirmed，刷新顾客网格仍占用。超过锁定时长的预约需重新下单。
 

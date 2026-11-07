@@ -29,6 +29,10 @@ DERIVED_FIELDS = ("end", "business_date", "table_fee", "deposit_amount")
 class BookingConflict(ValidationError):
     """Stable conflict type for both Python and PostgreSQL overlap checks."""
 
+    def __init__(self, message, booking=None):
+        super().__init__(message)
+        self.booking = booking
+
 
 class QclubBooking(models.Model):
     _name = "qclub.booking"
@@ -393,12 +397,19 @@ class QclubBooking(models.Model):
         if not any(begin <= instant < instant + timedelta(hours=hours) <= end
                    for begin, end in self.env["qclub.opening.hours"]._get_business_intervals(website, day)):
             raise ValidationError(_("The booking must be fully within one business opening interval."))
-        if check_conflicts and self.sudo().search_count([
+        overlaps = self.sudo().search([
             ("table_id", "=", table.id), ("state", "in", ACTIVE_STATES),
             ("start", "<", instant + timedelta(hours=hours)), ("end", ">", instant),
             "|", ("state", "!=", "pending"), ("lock_expire", ">", fields.Datetime.now()),
-        ], limit=1):
-            raise BookingConflict(_("This table is already booked for the selected time. Please choose another time or table."))
+        ]) if check_conflicts else self.browse()
+        if overlaps:
+            own_hold = overlaps.filtered(lambda booking: (
+                not self.env.user._is_public() and booking.partner_id == self.env.user.partner_id
+                and booking.state == "pending" and booking.lock_expire > fields.Datetime.now()
+            ))[:1]
+            raise BookingConflict(_("This table is already booked for the selected time. Please choose another time or table."),
+                                  booking=own_hold)
+
         fee, deposit = self._calculate_amounts(table.hourly_price, hours, config.deposit_ratio,
                                              website.company_id.currency_id)
         return {"table_id": table.id, "table_name": table.name, "table_type": table.type_id.name,

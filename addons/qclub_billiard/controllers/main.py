@@ -94,8 +94,17 @@ class BilliardBooking(http.Controller):
                     result.update({"confirmation_url": "/billiard/booking/confirmation/" + booking.name,
                                    "time_label": booking._time_label()})
                 return result
-        except BookingConflict:
-            return {"error": "conflict", "message": _("This time slot has just been taken. Please choose another.")}
+        except BookingConflict as error:
+            if error.booking:
+                booking = error.booking
+                return {"error": "own_hold",
+                        "message": _("You already hold this time slot (%s, awaiting deposit).", booking.name),
+                        "confirmation_url": "/billiard/booking/confirmation/" + booking.name}
+            config = self._website_config()
+            return {"error": "conflict", "message":
+                    _("This time slot has just been taken. Please choose another.") + "\n" +
+                    _("Slots awaiting a deposit are released automatically if not paid within %s minutes.",
+                      config.lock_minutes)}
         except ValidationError as error:
             return {"error": "validation", "message": str(error)}
 
