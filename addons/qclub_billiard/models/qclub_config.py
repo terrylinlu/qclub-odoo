@@ -37,6 +37,15 @@ class QclubConfig(models.Model):
     max_consecutive_hours = fields.Integer(string="Max Consecutive Hours", default=4, required=True)
     max_advance_days = fields.Integer(string="Max Days in Advance", default=14, required=True)
 
+    max_unpaid_online_bookings = fields.Integer(string="Max Unpaid Online Bookings per Customer", default=2, required=True)
+    booking_email_from = fields.Char(string="Booking Email From")
+    contact_phone = fields.Char(string="Contact Phone")
+    contact_email = fields.Char(string="Contact Email")
+
+    _max_unpaid_min = models.Constraint(
+        "CHECK(max_unpaid_online_bookings >= 1)", "Max unpaid online bookings must be at least 1.",
+    )
+
     _website_uniq = models.Constraint(
         "UNIQUE(website_id)",
         "Each website can only have one billiard settings record.",
@@ -61,7 +70,7 @@ class QclubConfig(models.Model):
 
     @api.constrains(
         "deposit_ratio", "free_cancel_hours", "no_show_wait_minutes",
-        "lock_minutes", "max_consecutive_hours", "max_advance_days",
+        "lock_minutes", "max_consecutive_hours", "max_advance_days", "max_unpaid_online_bookings",
     )
     def _check_values(self):
         labels = {
@@ -76,6 +85,8 @@ class QclubConfig(models.Model):
             for field_name, label in labels.items():
                 if config[field_name] < 0:
                     raise ValidationError(_("%s cannot be negative.", label))
+            if config.max_unpaid_online_bookings < 1:
+                raise ValidationError(_("Max unpaid online bookings must be at least 1."))
             if config.max_consecutive_hours < 1:
                 raise ValidationError(_("Max consecutive hours must be at least 1."))
 

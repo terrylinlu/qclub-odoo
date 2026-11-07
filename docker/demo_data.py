@@ -67,7 +67,13 @@ ensure_user("demo-customer-b", "[Demo] Customer B", ["base.group_portal"])
 
 # ---- 任务 1.1：球厅配置、桌台类型、桌台 ----
 config = env["qclub.config"]._get_for_website(qclub)
-config.online_booking = True
+config.write({
+    "online_booking": True,
+    "booking_email_from": "Q Club Demo <bookings@qclub.localhost>",
+    "contact_phone": "08 0000 0000", "contact_email": "contact@qclub.localhost",
+})
+for login in ("demo-customer-a", "demo-customer-b"):
+    Users.search([("login", "=", login)], limit=1).partner_id.email = login + "@qclub.localhost"
 # 任务 2.1：仅演示库的 Q Club 菜单，模块数据本身不创建网站菜单。
 Menu = env["website.menu"]
 booking_menu = Menu.search([

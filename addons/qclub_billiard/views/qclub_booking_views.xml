@@ -10,6 +10,8 @@
                 <field name="business_date"/>
                 <field name="table_id"/>
                 <field name="partner_id"/>
+                <field name="created_in_cancel_window"/>
+                <field name="booking_channel"/>
                 <field name="start"/>
                 <field name="end"/>
                 <field name="duration_hours"/>
@@ -48,6 +50,8 @@
                         <field name="table_id" domain="[('active', '=', True)]"
                                readonly="state not in ('pending', 'confirmed')"/>
                         <field name="partner_id"/>
+                        <field name="created_in_cancel_window"/>
+                        <field name="booking_channel"/>
                         <field name="start" invisible="True" readonly="True" force_save="1"/>
                         <field name="start_date" string="Business Date" readonly="state not in ('pending', 'confirmed')"/>
                         <field name="start_hour" readonly="state not in ('pending', 'confirmed')"/>

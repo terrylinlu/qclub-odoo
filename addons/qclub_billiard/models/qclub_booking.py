@@ -1,4 +1,6 @@
 import logging
+import re
+from decimal import Decimal
 from datetime import datetime, time, timedelta, timezone
 from zoneinfo import ZoneInfo
 
@@ -22,6 +24,10 @@ ALLOWED_TRANSITIONS = {
 }
 SNAPSHOT_FIELDS = ("hourly_price", "deposit_ratio", "free_cancel_hours", "no_show_wait_minutes")
 DERIVED_FIELDS = ("end", "business_date", "table_fee", "deposit_amount")
+
+
+class BookingConflict(ValidationError):
+    """Stable conflict type for both Python and PostgreSQL overlap checks."""
 
 
 class QclubBooking(models.Model):
@@ -55,6 +61,10 @@ class QclubBooking(models.Model):
     currency_id = fields.Many2one(related="website_id.company_id.currency_id")
     table_fee = fields.Monetary(compute="_compute_amounts", store=True)
     deposit_amount = fields.Monetary(compute="_compute_amounts", store=True)
+
+    created_in_cancel_window = fields.Boolean(string="Booked Within Cancellation Window", readonly=True, copy=False)
+    booking_channel = fields.Selection([("online", "Online"), ("backoffice", "Backoffice")],
+                                       default="backoffice", required=True, readonly=True, copy=False)
 
     _name_unique = models.Constraint("UNIQUE(name)", "Booking numbers must be unique.")
 
@@ -331,9 +341,95 @@ class QclubBooking(models.Model):
     @api.depends("hourly_price", "duration_hours", "deposit_ratio", "currency_id")
     def _compute_amounts(self):
         for booking in self:
-            booking.table_fee = booking.hourly_price * booking.duration_hours
-            amount = booking.table_fee * booking.deposit_ratio / 100
-            booking.deposit_amount = booking.currency_id.round(amount) if booking.currency_id else 0
+            fee, deposit = self._calculate_amounts(
+                booking.hourly_price, booking.duration_hours, booking.deposit_ratio, booking.currency_id,
+            )
+            booking.table_fee = fee
+            booking.deposit_amount = deposit
+
+    @api.model
+    def _calculate_amounts(self, hourly_price, hours, ratio, currency):
+        fee = Decimal(str(hourly_price)) * Decimal(str(hours))
+        deposit = fee * Decimal(str(ratio)) / Decimal("100")
+        return (currency.round(float(fee)), currency.round(float(deposit))) if currency else (0, 0)
+
+    @api.model
+    def _format_booking_time(self, start, end):
+        def label(instant):
+            local = instant.replace(tzinfo=timezone.utc).astimezone(ZoneInfo(BUSINESS_TZ))
+            return (f"{local:%a} {local.day} {local:%b}, "
+                    f"{local.hour % 12 or 12}:{local:%M} {'AM' if local.hour < 12 else 'PM'}")
+        return f"{label(start)} – {label(end)}"
+
+    def _time_label(self):
+        self.ensure_one()
+        return self._format_booking_time(self.start, self.end)
+
+    @api.model
+    def _quote_online(self, website, table_id, start, hours, check_conflicts=True):
+        if type(table_id) is not int or type(hours) is not int:
+            raise ValidationError(_("Please choose a table and a whole number of hours."))
+        table = self.env["qclub.table"].sudo().search([
+            ("id", "=", table_id), ("website_id", "=", website.id), ("active", "=", True),
+        ], limit=1)
+        if not table:
+            raise ValidationError(_("This table is not available on this website."))
+        if not isinstance(start, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z", start):
+            raise ValidationError(_("Please choose a valid start time."))
+        try:
+            instant = datetime.strptime(start, "%Y-%m-%dT%H:%M:%SZ")
+        except ValueError as error:
+            raise ValidationError(_("Please choose a valid start time.")) from error
+        config = self.env["qclub.config"].sudo()._get_for_website(website)
+        if not 1 <= hours <= config.max_consecutive_hours:
+            raise ValidationError(_("The number of hours must be between 1 and %s.", config.max_consecutive_hours))
+        draft = self.sudo().new({"table_id": table.id, "start": instant, "duration_hours": hours})
+        draft._check_future()
+        # Validate against the actual grid (including DST fold and business-day boundaries).
+        day = business_date_of_utc(instant)
+        slots = self._get_occupancy(website, day)["slots"]
+        if start not in {slot["start"] for slot in slots}:
+            raise ValidationError(_("Please choose an available whole hour."))
+        if not any(begin <= instant < instant + timedelta(hours=hours) <= end
+                   for begin, end in self.env["qclub.opening.hours"]._get_business_intervals(website, day)):
+            raise ValidationError(_("The booking must be fully within one business opening interval."))
+        if check_conflicts and self.sudo().search_count([
+            ("table_id", "=", table.id), ("state", "in", ACTIVE_STATES),
+            ("start", "<", instant + timedelta(hours=hours)), ("end", ">", instant),
+            "|", ("state", "!=", "pending"), ("lock_expire", ">", fields.Datetime.now()),
+        ], limit=1):
+            raise BookingConflict(_("This table is already booked for the selected time. Please choose another time or table."))
+        fee, deposit = self._calculate_amounts(table.hourly_price, hours, config.deposit_ratio,
+                                             website.company_id.currency_id)
+        return {"table_id": table.id, "table_name": table.name, "table_type": table.type_id.name,
+                "start": start, "hours": hours, "time_label": draft._time_label(),
+                "table_fee": fee, "deposit_amount": deposit, "deposit_ratio": config.deposit_ratio,
+                "currency": website.company_id.currency_id.name, "lock_minutes": config.lock_minutes,
+                "max_hours": config.max_consecutive_hours,
+                "created_in_cancel_window": instant - fields.Datetime.now() < timedelta(hours=config.free_cancel_hours)}
+
+    def _queue_booking_email(self):
+        self.ensure_one()
+        config = self._config()
+        if self.booking_channel != "online" or not config.booking_email_from or not self.partner_id.email:
+            return
+        try:
+            with self.env.cr.savepoint():
+                domain = (self.website_id.domain or "").rstrip("/")
+                if not domain.startswith(("https://", "http://")):
+                    return  # Never fall back to the shared company/base URL.
+                body = self.env["ir.qweb"]._render("qclub_billiard.booking_email", {
+                    "booking": self, "config": config, "domain": domain,
+                    "time_label": self._time_label(),
+                    "lock_label": self._format_booking_time(self.lock_expire, self.lock_expire).split(" – ")[0],
+                })
+                self.env["mail.mail"].sudo().create({
+                    "subject": _("Booking received – awaiting deposit: %s", self.name),
+                    "email_from": config.booking_email_from, "email_to": self.partner_id.email,
+                    "body_html": body, "auto_delete": False,
+                })
+        except Exception:
+            _logger.exception("Could not queue booking email for booking %s", self.id)
 
     def _config(self):
         self.ensure_one()
@@ -373,7 +469,7 @@ class QclubBooking(models.Model):
                 ("id", "!=", booking.id), ("table_id", "=", booking.table_id.id),
                 ("state", "in", ACTIVE_STATES), ("start", "<", booking.end), ("end", ">", booking.start),
             ], limit=1):
-                raise ValidationError(_(
+                raise BookingConflict(_(
                     "This table is already booked for the selected time. Please choose another time or table."
                 ))
 
@@ -382,6 +478,25 @@ class QclubBooking(models.Model):
         self.check_access("create")
         try:
             with self.env.cr.savepoint():
+                # Always take customer locks before table locks, including multi-create.
+                partners = sorted({vals["partner_id"] for vals in vals_list
+                                   if vals.get("booking_channel") == "online" and vals.get("partner_id")})
+                for partner_id in partners:
+                    self.env.cr.execute("SELECT pg_advisory_xact_lock(%s, %s)",
+                                        (TABLE_LOCK_NAMESPACE + 1, partner_id))
+                online_tables = self.env["qclub.table"].browse([
+                    vals["table_id"] for vals in vals_list
+                    if vals.get("booking_channel") == "online" and vals.get("table_id")
+                ])
+                for website in online_tables.website_id.sorted("id"):
+                    config = self.env["qclub.config"].sudo()._get_for_website(website)
+                    # Odoo uses REPEATABLE READ: an advisory lock alone cannot
+                    # refresh an old snapshot. A real row update forces retry on
+                    # concurrent online creates, so the pending count stays safe.
+                    self.env.cr.execute(
+                        "UPDATE qclub_config SET max_unpaid_online_bookings = max_unpaid_online_bookings WHERE id = %s",
+                        (config.id,),
+                    )
                 table_ids = {vals["table_id"] for vals in vals_list if vals.get("table_id")}
                 self._lock_tables(table_ids)
                 self._expire_stale_locks(table_ids)
@@ -403,6 +518,21 @@ class QclubBooking(models.Model):
                         raise ValidationError(_(
                             "The number of hours must be between 1 and %s.", config.max_consecutive_hours,
                         ))
+                    if vals.get("booking_channel") == "online":
+                        count = self.sudo().search_count([
+                            ("website_id", "=", table.website_id.id),
+                            ("partner_id", "=", vals.get("partner_id")), ("booking_channel", "=", "online"),
+                            ("state", "=", "pending"), ("lock_expire", ">", fields.Datetime.now()),
+                        ])
+                        count += sum(1 for item in prepared if item.get("booking_channel") == "online"
+                                     and item.get("partner_id") == vals.get("partner_id")
+                                     and self.env["qclub.table"].browse(item["table_id"]).website_id == table.website_id)
+                        if count >= config.max_unpaid_online_bookings:
+                            raise ValidationError(_("You already have unpaid bookings. Please wait for them to be confirmed or expire."))
+                    start = fields.Datetime.to_datetime(vals.get("start"))
+                    vals["created_in_cancel_window"] = bool(start) and (
+                        start - fields.Datetime.now() < timedelta(hours=config.free_cancel_hours)
+                    )
                     vals["duration_hours"] = duration
                     vals.update({field: config[field] for field in SNAPSHOT_FIELDS if field != "hourly_price"})
                     vals.update({
@@ -418,13 +548,15 @@ class QclubBooking(models.Model):
                 bookings.flush_recordset()
                 return bookings
         except ExclusionViolation as error:
-            raise ValidationError(_(
+            raise BookingConflict(_(
                 "This table is already booked for the selected time. Please choose another time or table."
             )) from error
 
     def write(self, vals):
         self.check_access("write")
         vals = dict(vals)
+        if {"created_in_cancel_window", "booking_channel"}.intersection(vals):
+            raise ValidationError(_("Booking origin and cancellation-window facts cannot be edited."))
         # Readonly fields must also be protected from direct RPC writes.
         if "lock_expire" in vals or "name" in vals:
             raise ValidationError(_("Booking numbers and lock expiry times cannot be edited directly."))
@@ -471,7 +603,7 @@ class QclubBooking(models.Model):
                 self.flush_recordset()
                 return result
         except ExclusionViolation as error:
-            raise ValidationError(_(
+            raise BookingConflict(_(
                 "This table is already booked for the selected time. Please choose another time or table."
             )) from error
 

@@ -12,6 +12,7 @@
 |---|---|
 | Q Club 预约页 | http://qclub.localhost:8069/billiard/booking |
 | AUSHARE（应看不到预约页） | http://aushare.localhost:8069/billiard/booking |
+| Mailpit 邮件查看 | http://localhost:8025 |
 | 后台 | http://localhost:8069/web/login |
 
 演示账号：`demo-customer-a` / `demo`、`demo-customer-b` / `demo`（门户顾客）；`demo-staff` / `demo`（员工）；`admin` / `admin`。
@@ -37,14 +38,14 @@
 | 4 | 选择本周五，查看网格 | 列一直到 1:00 AM，其中 12:00 AM、1:00 AM 标注 **(next day)**，并排在周五下面，而不是出现在周六 | TBL-006、WEB-007 | ✅ 任务 2.1 |
 | 4a | 后台表单选“周五 + 1:00 AM (next day)”，与网格的同一列对应；从 1:00 AM 开始只能订 1 小时（周五营业到次日 2:00），选 2 小时会提示 "The booking must be fully within one business opening interval."。 | 表单与网格按同一营业日显示，超出营业时段被拒绝 | BK-002、TBL-006 | ✅ 任务 2.1b |
 | 4b | 后台选未来周五 6:00 PM、2 小时，再改为周六；随后选 2:00 AM (next day) 并改到另一个未来营业日 | 有效时间保持且无警告；无效时间移到新营业日首个可预约整点，并提示 "Start Time changed to …: … is not available on this date."；休息日提示 "There is no available opening hour on the selected date." | BK-003 | 待人工验收（2.1b 跟进） |
-| 5 | 未登录状态下选桌台、连续 2 小时，点 **Book** | 跳转登录页；用 `demo-customer-a` 登录后**回到刚才的选择**（日期、桌台、时段都还在） | WEB-006 | 任务 2.2 |
-| 6 | 查看所选时段 | 显示台费、应付押金，与后台同一桌台、同一时长新建预约时的金额一致 | WEB-008 | 任务 2.2 |
-| 7 | 选一个**距现在不足 24 小时**的时段，进入确认 | 显著提示 "This booking cannot be cancelled free of charge."；提交后后台该预约记录"创建时已在取消窗口内" | WEB-009 | 任务 2.2 |
-| 8 | 提交步骤 6 的预约 | 确认页显示编号、时段、押金、锁定剩余时间；后台出现该预约，状态 Awaiting Deposit | WEB-004 | 任务 2.2 |
-| 9 | 另开无痕窗口，用 `demo-customer-b` 登录同一页面 | 该时段已**置灰**；用浏览器开发者工具强行提交同一时段，提示 "This time slot has just been taken. Please choose another."，后台没有新增记录 | WEB-003、WEB-005、WEB-004 | 任务 2.2 |
-| 10 | 周五选 11:00 PM 起 2 小时并提交 | 页面、确认页（及邮件，见问题 3）显示 "Fri 23:00 – Sat 01:00"，押金按 2 小时计算 | WEB-010、WEB-007 | 任务 2.2 |
+| 5 | 未登录状态下选桌台、连续 2 小时，点 **Book** | 跳转登录页；用 `demo-customer-a` 登录后**回到刚才的选择**（日期、桌台、时段都还在） | WEB-006 | ✅ 任务 2.2（待人工验收） |
+| 6 | 查看所选时段 | 显示台费、应付押金，与后台同一桌台、同一时长新建预约时的金额一致 | WEB-008 | ✅ 任务 2.2（待人工验收） |
+| 7 | 选一个**距现在不足 24 小时**的时段，进入确认 | 显著提示 "This booking cannot be cancelled free of charge."；提交后后台该预约记录"创建时已在取消窗口内" | WEB-009 | ✅ 任务 2.2（待人工验收） |
+| 8 | 提交步骤 6 的预约 | 确认页显示编号、时段、押金、锁定剩余时间；后台出现该预约，状态 Awaiting Deposit | WEB-004 | ✅ 任务 2.2（待人工验收） |
+| 9 | 另开无痕窗口，用 `demo-customer-b` 登录同一页面 | 该时段已**置灰**；用浏览器开发者工具强行提交同一时段，提示 "This time slot has just been taken. Please choose another."，后台没有新增记录 | WEB-003、WEB-005、WEB-004 | ✅ 任务 2.2（待人工验收） |
+| 10 | 周五选 11:00 PM 起 2 小时并提交 | 页面、确认页及邮件显示 "Fri 6 Nov, 11:00 PM – Sat 7 Nov, 1:00 AM"，押金按 2 小时计算 | WEB-010、WEB-007 | ✅ 任务 2.2（待人工验收） |
 | 11 | 把 Unpaid Hold 改成 1 分钟，网上提交一个预约，等 1–2 分钟后刷新网格 | 该时段自动变回空闲（预约变 Expired） | WEB-003、BK-008 | ✅ 任务 2.1 |
-| 12 | `demo-staff` 在后台把步骤 8 的预约点 **Confirm** | 状态 Confirmed；网格上该时段仍为占用 | （阶段 1 功能，替代支付） | 任务 2.2 |
+| 12 | `demo-staff` 在后台把步骤 8 的预约点 **Confirm** | 状态 Confirmed；网格上该时段仍为占用 | （阶段 1 功能，替代支付） | ✅ 任务 2.2（待人工验收） |
 
 营业日以 Adelaide 6:00 AM 为分界，凌晨 0:00–5:59 默认仍显示前一营业日。现有演示数据的营业时间已符合 6:00–次日 6:00 的范围，本任务无需新增演示数据。
 
@@ -52,6 +53,20 @@
 步骤 11 在任务 2.1 先通过后台创建 Awaiting Deposit 预约（Unpaid Hold = 1 分钟），
 在网格选择对应营业日并刷新验证释放；网上提交入口在任务 2.2 提供。
 接口会把锁定到期但 cron 尚未处理的预约显示为空闲；后台变为 Expired 由现有每分钟 cron 完成。
+
+## 任务 2.2 具体操作（步骤 5–10、12）
+
+先运行 `make demo`，邮件仅投递到本机 Mailpit，不向外发送。若之前已有未付网上预约，等待其过期，或用员工账号确认 / 取消后再演示。不要修改共用的网站注册设置。
+
+5. 在无痕窗口打开 Q Club 预约页，选未来营业日、[Demo] Table 1 的两个相邻空闲格。摘要出现后点 **Log in to book**，用 `demo-customer-a` / `demo` 登录；确认日期、两个高亮格和摘要恢复。已被抢占的选择应提示不可用。
+6. Table 1 每小时 $20，选两小时应显示台费 $40.00、50% 押金 $20.00；在后台新建同桌台两小时的预约预览金额（不要保存重叠预约），比较两者一致。
+7. 改选一个未来且不足 24 小时的整点，确认摘要黄色警告原文；提交后在后台预约表单查看 **Booked Within Cancellation Window** 已勾选。
+8. 点 **Book**，记录确认页编号。检查时段、$40 / $20（若选择两小时）、Awaiting Deposit、每秒递减的 Held for，以及在线支付尚未开放的说明。后台按编号搜索同一记录，来源应为 Online。
+9. 在另一个无痕会话用 `demo-customer-b` / `demo` 打开相同营业日，原时段置灰。若要验证竞态，先在 B 会话选中空闲两小时，再由 A 会话提交它，最后在尚未刷新的 B 会话点 Book；应提示 **This time slot has just been taken. Please choose another.** 并刷新网格，后台只有 A 的记录。
+10. 选未来周五 11:00 PM 和下一格 12:00 AM (next day)，摘要和确认页均显示日期与 12 小时制，例如 **Fri 6 Nov, 11:00 PM – Sat 7 Nov, 1:00 AM**（实际日期随所选周五变化）。打开 **http://localhost:8025**，等待 Odoo 邮件队列处理；点击主题含预约编号的 **Booking received – awaiting deposit**，检查 Q Club 标题、发件人、网站 logo、相同时间、台费 / 押金及指向 `qclub.localhost:8069` 的确认链接。邮件不能出现 AUSHARE 或 Powered by Odoo。需要立即处理时，管理员可在 Settings → Technical → Email → Emails 查看 Outgoing 队列并发送该演示邮件。
+12. 在独立后台窗口用 `demo-staff` / `demo` 登录，进入 Billiard → Bookings，按步骤 8 的编号搜索，在锁定过期前点 **Confirm**；状态变 Confirmed，刷新顾客网格仍占用。超过锁定时长的预约需重新下单。
+
+邮件测试环境仅在 `make demo` 启动 Mailpit；`make test` 的数据库和 Odoo SMTP 配置不受影响。实际手机的点按、邮件视觉效果及员工确认操作仍需人工验收。自动流程可运行 `make e2e`（先启动 demo；目标会预热预约页与登录页）。
 
 ## 验收标准
 

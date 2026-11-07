@@ -61,6 +61,7 @@ iso-check: guard
 	diff -u --label "$(BASE_DB) (before)" --label "$(DB) (after)" $(REPORTS)/iso-base.txt $(REPORTS)/iso-test.txt
 
 e2e: guard
+	python3 tools/warm_demo.py
 	@if [ ! -f e2e/package.json ]; then echo "e2e 尚未建立（阶段 2 开始），跳过"; exit 0; fi; \
 	docker build -q -t qclub-e2e:1.56.1 e2e && \
 	docker run --rm --network host --ipc=host \
@@ -102,7 +103,7 @@ demo: up
 		$(DEMO_ODOO) -d $(DEMO_DB) -i $(MODULE) --stop-after-init --without-demo=True; \
 	fi
 	$(DEMO_ODOO) shell -d $(DEMO_DB) --no-http < docker/demo_data.py
-	$(COMPOSE) up -d demo
+	$(COMPOSE) --profile demo up -d mailpit demo
 	@for i in $$(seq 1 60); do curl -fs -o /dev/null http://127.0.0.1:8069/web/health && break; \
 		if [ $$i -eq 60 ]; then echo "演示服务 2 分钟内未就绪，最近日志："; $(COMPOSE) logs --tail 40 demo; exit 1; fi; sleep 2; done
 	@echo ""
@@ -111,6 +112,7 @@ demo: up
 	@echo "  Q Club 网站   http://qclub.localhost:8069"
 	@echo "  AUSHARE 网站  http://aushare.localhost:8069"
 	@echo "  演示账号      demo-staff、demo-customer-a、demo-customer-b，密码均为 demo"
+	@echo "  Mailpit 邮件  http://localhost:8025"
 	@echo "  演示脚本      docs/demo/phase-1.md"
 
 demo-reset:

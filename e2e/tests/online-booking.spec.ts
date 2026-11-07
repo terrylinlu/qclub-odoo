@@ -1,0 +1,65 @@
+import { test, expect } from '@playwright/test';
+
+test('test_web_006_web_008_web_004_select_login_restore_submit_confirmation', async ({ page }, testInfo) => {
+  await page.goto('/billiard/booking');
+  await expect(page.locator('.o_qclub_grid_table')).toBeVisible();
+  const picker = page.locator('.o_qclub_booking_date');
+  const minimum = await picker.getAttribute('min');
+  const date = new Date(`${minimum}T12:00:00Z`);
+  // Distinct dates/customer accounts keep the desktop and mobile projects independent.
+  const mobile = testInfo.project.name === 'mobile-chromium';
+  date.setUTCDate(date.getUTCDate() + (mobile ? 3 : 2));
+  const response = page.waitForResponse(r => r.url().endsWith('/billiard/booking/occupancy'));
+  await picker.fill(date.toISOString().slice(0, 10));
+  await picker.dispatchEvent('change');
+  await response;
+  await expect(page.locator('.o_qclub_grid_table')).toBeVisible();
+  const row = page.locator('.o_qclub_table_row').first();
+  const first = row.locator('.o_qclub_slot_free').first();
+  const index = Number(await first.getAttribute('data-slot-index'));
+  await first.click();
+  await row.locator(`.o_qclub_slot_free[data-slot-index="${index + 1}"]`).click();
+  await expect(row.locator('[aria-pressed="true"]')).toHaveCount(2);
+  const summary = page.locator('.o_qclub_summary');
+  await expect(summary).toContainText('Table fee: $40.00 | Deposit: $20.00');
+  const selectedSummary = await summary.textContent();
+  await page.getByRole('button', { name: 'Log in to book', exact: true }).click();
+  await expect(page).toHaveURL(/\/web\/login\?redirect=/);
+  await page.locator('input[name="login"]').fill(mobile ? 'demo-customer-b' : 'demo-customer-a');
+  await page.locator('input[name="password"]').fill('demo');
+  await page.getByRole('button', { name: 'Log in', exact: true }).click();
+  await expect(page).toHaveURL(/\/billiard\/booking\?/);
+  await expect(page.locator('[aria-pressed="true"]')).toHaveCount(2);
+  await expect(summary).toHaveText(selectedSummary!);
+  await page.getByRole('button', { name: 'Book', exact: true }).click();
+  await expect(page).toHaveURL(/\/billiard\/booking\/confirmation\/QB/);
+  await expect(page.locator('.o_qclub_confirmation')).toContainText('Awaiting Deposit');
+  await expect(page.locator('.o_qclub_hold')).toHaveText(/Held for \d+:\d{2}/);
+  await expect(page.locator('.o_qclub_confirmation')).toContainText('Online deposit payment is coming soon. Our staff will contact you to confirm.');
+});
+
+test('test_web_006_mobile_selection_clear_and_shorten', async ({ page }) => {
+  await page.setViewportSize({ width: 393, height: 851 });
+  await page.goto('/billiard/booking');
+  await expect(page.locator('.o_qclub_grid_table')).toBeVisible();
+  const picker = page.locator('.o_qclub_booking_date');
+  const date = new Date(`${await picker.getAttribute('min')}T12:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + 4);
+  const response = page.waitForResponse(r => r.url().endsWith('/billiard/booking/occupancy'));
+  await picker.fill(date.toISOString().slice(0, 10));
+  await picker.dispatchEvent('change');
+  await response;
+  await expect(page.locator('.o_qclub_grid_table')).toBeVisible();
+  const row = page.locator('.o_qclub_table_row').last();
+  const first = row.locator('.o_qclub_slot_free').first();
+  const index = Number(await first.getAttribute('data-slot-index'));
+  await first.click();
+  const second = row.locator(`.o_qclub_slot_free[data-slot-index="${index + 1}"]`);
+  await second.click();
+  await expect(row.locator('[aria-pressed="true"]')).toHaveCount(2);
+  await second.click();
+  await expect(row.locator('[aria-pressed="true"]')).toHaveCount(1);
+  await page.getByRole('button', { name: 'Clear', exact: true }).click();
+  await expect(row.locator('[aria-pressed="true"]')).toHaveCount(0);
+  await expect(page.locator('.o_qclub_selection')).toBeHidden();
+});
