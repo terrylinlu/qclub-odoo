@@ -50,7 +50,7 @@
 | WEB-002 | 提供查询接口：返回指定日期各桌各小时的占用情况；响应中不含其他用户的姓名、电话、邮箱等个人信息；默认允许匿名查看，后台可配置为"登录后才能查看"（CFG-005） |
 | WEB-003 | 页面网格中，已占用时段置灰；处于"待付押金"锁定中的时段同样视为占用 |
 | WEB-004 | 提交预约时，服务端重新校验营业时间、粒度、冲突、时长限制；不信任前端传入的价格、押金、状态 |
-| WEB-005 | 冲突时返回明确提示（"This time slot has just been taken. Please choose another."），不创建任何记录 |
+| WEB-005 | 冲突时返回明确提示（"This time slot has just been taken. Please choose another."），并说明待付押金的保留会自动释放（"Slots awaiting a deposit are released automatically if not paid within N minutes."，N 为锁定时长）；不创建任何记录。冲突时段是当前顾客自己保留中的预约时，改为提示 "You already hold this time slot (<编号>, awaiting deposit)."（2026-11-07 验收后修改） |
 | WEB-006 | 创建预约需要登录；未登录用户跳转到登录页，登录后回到原选择 |
 | WEB-007 | 所有时间按公司时区 `Australia/Adelaide` 显示和计算，数据库存 UTC；必须覆盖夏令时切换日，以及周五、周六跨午夜时段（周六夜至周日凌晨 2 点）的占用判断、冲突检测和过期释放 |
 | WEB-008 | 页面展示每个时段的价格和应付押金，数值与服务端计算（BK-009）一致 |
