@@ -47,7 +47,24 @@ export class BookingGrid extends Interaction {
         }
     }
 
+    showAlert(text) {
+        // Conflicts happen after scrolling down to Book: make the outcome visible.
+        this.message.textContent = text;
+        this.message.classList.add("alert", "alert-danger", "o_qclub_alert");
+        this.message.setAttribute("role", "alert");
+        this.message.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+
+    clearAlert() {
+        if (this.message.classList.contains("o_qclub_alert")) {
+            this.message.classList.remove("alert", "alert-danger", "o_qclub_alert");
+            this.message.setAttribute("role", "status");
+            this.message.textContent = "";
+        }
+    }
+
     async loadAvailability() {
+        this.clearAlert();
         this.clearSelection();
         const requestNumber = ++this.requestNumber;
         this.table.hidden = true;
@@ -225,6 +242,7 @@ export class BookingGrid extends Interaction {
     }
 
     async updateSelection() {
+        this.clearAlert();
         const selected = this.selection;
         const number = ++this.quoteNumber;
         for (const cell of this.el.querySelectorAll(".o_qclub_slot_free")) {
@@ -289,7 +307,7 @@ export class BookingGrid extends Interaction {
                 window.location.assign(result.login_url);
             } else if (result.error === "conflict") {
                 await this.loadAvailability();
-                this.message.textContent = result.message;
+                this.showAlert(result.message);
             } else {
                 this.error.textContent = result.message || _t("Please reload the page and try again.");
             }
