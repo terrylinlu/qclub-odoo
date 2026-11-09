@@ -24,6 +24,18 @@
 1. 运行 `make demo`，用管理员登录后台 Billiard Settings → Q Club → **Online Board** 分组：默认人数 3、频率 5；输入 0 无法保存。
 2. `demo-staff` 不能修改配置。网站菜单中没有 Board，My Account 页面不变。
 
+## 任务 3.2：步骤 1–6 验收说明
+
+- 演示数据不预置帖子；沿用现有桌台、顾客和 Online Board 配置，由顾客手动发帖。无需修改或重建演示数据脚本。
+- 步骤 1：选择未来营业日、空闲桌台和连续两小时，顾客提交后由 `demo-staff` 在后台 Confirm。回到确认页点击 **Find players**，应带日期和 booking 参数回到预约页并展开表单；也可点网格上的 **Yours**。预约已开始、未确认、已有帖子或关闭 Online Board 时，确认页无此入口。
+- 步骤 2：另建待付押金预约，点 **Yours**，只显示确认提示，不能发帖。没有帖子且不属于本人的占用格仍带 aria-disabled，不能点击。
+- 步骤 3：首次发帖显示完整 Community Guidelines，必须勾选同意。之后同一网站无需再次同意；切换网站不会沿用同意记录。
+- 步骤 4：输入消息、Intermediate、2 人，提交后不跳页；占用的每小时都有标记，当日列表出现帖子。点任一标记或列表按钮打开同一帖子；键盘 Tab、Enter、空格可操作。选空闲格时帖子面板关闭，恢复 Selected booking。
+- 步骤 5：无痕窗口打开相同日期及 post 参数，显示 Q Club Player；本任务只提供 **Log in to find players**，点击并登录后返回原日期和帖子，显示服务端决定的姓名。Apply、回复、申请留到 3.3。开启 Login Required to View Board 后，无痕窗口只能看到登录入口，预约网格仍独立受 CFG-005 控制。
+- 步骤 6：检查无帖占用格不可点、AUSHARE 页面和三个 board/post/post/create 接口均为 404。把消息设为 `<script>alert(1)</script>` 和网址，应显示原文、无弹窗、无链接。取消预约或到开始时间后，刷新后无标记／列表项；用 post 地址仍能看到只读内容和 **This post is closed.**
+
+本次 Codex 沙箱的 `make test`、`make lint` 因 Docker socket 权限被拒绝而未运行；`make demo`、`make e2e`、`make iso-check` 和上述桌面／手机人工演示待独立验证，不能视为通过。未生成 docs/reports。
+
 ## 页面草图（文字描述，设计时细化）
 
 留言板全部在预约页 `/billiard/booking` 内，不跳转页面：
@@ -42,7 +54,7 @@
 | 2 | 顾客 A 点一条待付押金的预约的格子 | 没有 Find players，提示需先确认 | BRD-004 |
 | 3 | 顾客 A 点 Find players，首次需同意社区须知 | 同意后在面板内继续发帖，全程不离开预约页 | BRD-029 |
 | 4 | 发帖：消息、Intermediate、需要 2 人 | 该预约占用的每一格显示 "Join · 2"；网格下方当日列表出现这条；时段和桌台来自预约 | BRD-005、BRD-007 |
-| 5 | **不登录**打开预约页对应日期，点带标记的格子 | 面板打开；发帖人和回复者都显示 **Q Club Player**；页面和接口响应中无姓名、电话、邮箱、预约编号；点 Apply 跳转登录，登录后回到预约页并展开原帖，此时显示发帖人的姓名 | BRD-003、BRD-008、BRD-009 |
+| 5 | **不登录**打开预约页对应日期，点带标记的格子 | 面板打开；发帖人和回复者都显示 **Q Club Player**；页面和接口响应中无姓名、电话、邮箱、预约编号；任务 3.2 点 Log in to find players（Apply 在 3.3）跳转登录，登录后回到预约页并展开原帖，此时显示发帖人的姓名 | BRD-003、BRD-008、BRD-009 |
 | 6 | 点一个没有帖子的占用格；打开 AUSHARE 的预约地址 | 占用格不可点；AUSHARE **404** | BRD-008、BRD-027 |
 | 7 | 顾客 B 回复一条内容，其中包含 `<script>alert(1)</script>` 和一个网址 | 按原文显示，不执行、网址不是链接 | BRD-010、BRD-025 |
 | 8 | 顾客 B 点 Apply to join 并附留言 | 顾客 A 在面板看到申请；Mailpit 收到 Q Club 版式邮件，只有姓名、没有联系方式，链接打开预约页并展开该帖 | BRD-008、BRD-011、BRD-018、BRD-019 |

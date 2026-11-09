@@ -12,6 +12,8 @@
                 <div id="wrap" class="o_qclub_booking_page container-fluid py-3">
                     <h1>Book a Table</h1>
                     <div class="o_qclub_booking_grid" t-att-data-public="'1' if is_public else '0'"
+                         t-att-data-board-enabled="'1' if board_enabled else '0'"
+                         t-att-data-board-post="board_post" t-att-data-board-booking="board_booking"
                          t-att-data-csrf-token="csrf_token" t-att-data-max-hours="max_hours" t-att-data-login-required="'1' if login_required else '0'">
                         <div class="o_qclub_date_controls d-flex align-items-center flex-wrap gap-2 mb-2">
                             <label for="qclub_booking_date" class="form-label mb-0">Business date (Adelaide)</label>
@@ -38,6 +40,8 @@
                             <button type="button" class="o_qclub_book btn btn-primary">Book</button>
                             <button type="button" class="o_qclub_clear btn btn-secondary ms-2">Clear</button>
                         </section>
+                        <section class="o_qclub_post_panel alert alert-info mt-3" hidden="hidden" aria-live="polite" aria-label="Players wanted post"/>
+                        <section class="o_qclub_board_list mt-3" aria-label="Players wanted"/>
                     </div>
                 </div>
             </t>
@@ -61,6 +65,7 @@
                     <p t-if="booking.created_in_cancel_window" class="alert alert-warning" role="alert">This booking cannot be cancelled free of charge.</p>
                     <p t-if="booking.state in ('pending', 'expired')" class="o_qclub_hold" t-att-data-remaining="remaining"/>
                     <p>Online deposit payment is coming soon. Our staff will contact you to confirm.</p>
+                    <a t-if="find_players_url" t-att-href="find_players_url" class="btn btn-primary">Find players</a>
                     <a href="/billiard/booking">Book a Table</a>
                 </div>
             </t>

@@ -16,3 +16,5 @@ from . import test_online_booking
 from . import test_online_booking_http
 from . import test_board_display_name
 from . import test_board_config
+
+from . import test_board_posts

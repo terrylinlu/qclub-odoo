@@ -24,4 +24,14 @@
         <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
         <field name="domain_force">[('website_id', '=', website.id)]</field>
     </record>
+    <record id="rule_qclub_board_post_website" model="ir.rule">
+        <field name="name">Board post: current website</field>
+        <field name="model_id" ref="model_qclub_board_post"/>
+        <field name="domain_force">[('website_id', '=', website.id)]</field>
+    </record>
+    <record id="rule_qclub_board_terms_website" model="ir.rule">
+        <field name="name">Board terms: current website</field>
+        <field name="model_id" ref="model_qclub_board_terms"/>
+        <field name="domain_force">[('website_id', '=', website.id)]</field>
+    </record>
 </odoo>
