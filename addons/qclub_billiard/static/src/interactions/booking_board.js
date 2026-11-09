@@ -94,7 +94,9 @@ export class BookingBoard {
                 return;
             }
             this.data = data;
-            this.node("h2", _t("Players wanted on %s", data.date_label), this.list);
+            if (data.posts.length) {
+                this.node("h2", _t("Players wanted on %s", data.date_label), this.list);
+            }
             for (const post of data.posts) {
                 const label = post.remaining ? _t("Join · %s", post.remaining) : _t("Full");
                 this.mark(post, () => this.openPost(post.id), label);
@@ -197,7 +199,7 @@ export class BookingBoard {
             const input = this.node(tag, undefined, form);
             input.id = label.htmlFor;
             input.name = name;
-            input.className = "form-control mb-2";
+            input.className = tag === "select" ? "form-select mb-2" : "form-control mb-2";
             return input;
         };
         const message = field("textarea", _t("Message (Don't share personal contact details)"), "message");
