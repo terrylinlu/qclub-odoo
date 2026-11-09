@@ -1,6 +1,6 @@
 # 阶段 3 演示脚本：约球留言板
 
-状态：**修订待评审**（2026-11-09：留言板并入预约页）
+状态：**修订待评审**（2026-11-09：留言板并入预约页，取消昵称）
 对应规格：BRD-001 至 BRD-029（`docs/spec/phase3.md`）
 
 ## 启动与账号
@@ -19,21 +19,17 @@
 
 ## 任务 3.1 可演示部分
 
-本任务只有昵称（留言板本身在 3.2 并入预约页）。
+本任务只有后台配置，显示名规则由自动测试验证；用户能看到的留言板功能从 3.2 开始。
 
-1. 运行 `make demo`。打开 http://qclub.localhost:8069/billiard/booking/nickname ：跳转登录，用 `demo-customer-a` / `demo` 登录后回到昵称表单。
-2. 输入 `a@b.com`，点击 **Save nickname**：显示 **Nickname cannot be an email address or phone number.**；输入 `CueMaster` 保存后回到预约页。再次打开昵称页，显示已保存的昵称。若该昵称已被占用，改用未占用的名字。
-3. 无痕窗口用顾客 B 输入同一昵称的大小写变体：显示 **This nickname is already taken.**，原昵称不变。
-4. 手机视口重复步骤 1–3，表单和保存按钮可见。
-5. 用管理员登录后台 Billiard Settings → Q Club → **Online Board** 分组：默认人数 3、频率 5；输入 0 无法保存。`demo-staff` 不能修改配置。
-6. 关闭 Q Club 的 **Online Board**，昵称页 404；重新打开。AUSHARE 的 `/billiard/booking/nickname` 始终 404。网站菜单中没有 Board。
+1. 运行 `make demo`，用管理员登录后台 Billiard Settings → Q Club → **Online Board** 分组：默认人数 3、频率 5；输入 0 无法保存。
+2. `demo-staff` 不能修改配置。网站菜单中没有 Board，My Account 页面不变。
 
 ## 页面草图（文字描述，设计时细化）
 
 留言板全部在预约页 `/billiard/booking` 内，不跳转页面：
 
 - **网格**：有开放帖子的预约，占用的每一格在 "Booked" 外显示标记（如 "Join · 2"）；普通占用格仍灰色不可点
-- **帖子面板**（网格下方，位置同 "Selected booking"）：昵称、时段、桌台、技术水平、消息、剩余名额、**Apply to join**、已接受的球友、回复和回复框；每条内容旁有 Report
+- **帖子面板**（网格下方，位置同 "Selected booking"）：显示名（未登录为 Q Club Player，登录后为姓名）、时段、桌台、技术水平、消息、剩余名额、**Apply to join**、已接受的球友、回复和回复框；每条内容旁有 Report
 - **当日列表**（面板下方）："Players wanted on Fri 13 Nov"，随日期切换，点一条等于点对应格子
 - **发帖人视角**：点自己已确认预约的格子，面板显示 **Find players**；发帖后面板多一个申请列表，每条有 Accept / Decline，已接受的可 Remove
 - **后台 Board 菜单**：Posts、Replies、Reports、Banned Customers
@@ -44,13 +40,13 @@
 |---|---|---|---|
 | 1 | 顾客 A 在预约页提交一个未来时段，`demo-staff` 在后台 Confirm | 预约变为 Confirmed；顾客 A 点网格上自己的格子，面板显示 **Find players**；确认页也有该按钮 | BRD-004、BRD-006 |
 | 2 | 顾客 A 点一条待付押金的预约的格子 | 没有 Find players，提示需先确认 | BRD-004 |
-| 3 | 顾客 A 点 Find players，首次在面板内设置昵称并同意社区须知；试填邮箱形式的昵称 | 邮箱形式被拒绝；设置为 `CueMaster` 后继续发帖，全程不离开预约页 | BRD-001、BRD-002、BRD-029 |
+| 3 | 顾客 A 点 Find players，首次需同意社区须知 | 同意后在面板内继续发帖，全程不离开预约页 | BRD-029 |
 | 4 | 发帖：消息、Intermediate、需要 2 人 | 该预约占用的每一格显示 "Join · 2"；网格下方当日列表出现这条；时段和桌台来自预约 | BRD-005、BRD-007 |
-| 5 | **不登录**打开预约页对应日期，点带标记的格子 | 面板打开；只显示昵称；页面和接口响应中无姓名、电话、邮箱、预约编号；点 Apply 跳转登录，登录后回到预约页并展开原帖 | BRD-003、BRD-008、BRD-009 |
+| 5 | **不登录**打开预约页对应日期，点带标记的格子 | 面板打开；发帖人和回复者都显示 **Q Club Player**；页面和接口响应中无姓名、电话、邮箱、预约编号；点 Apply 跳转登录，登录后回到预约页并展开原帖，此时显示发帖人的姓名 | BRD-003、BRD-008、BRD-009 |
 | 6 | 点一个没有帖子的占用格；打开 AUSHARE 的预约地址 | 占用格不可点；AUSHARE **404** | BRD-008、BRD-027 |
-| 7 | 顾客 B 设置昵称、回复一条内容，其中包含 `<script>alert(1)</script>` 和一个网址 | 按原文显示，不执行、网址不是链接 | BRD-010、BRD-025 |
-| 8 | 顾客 B 点 Apply to join 并附留言 | 顾客 A 在面板看到申请；Mailpit 收到 Q Club 版式邮件，只有昵称，链接打开预约页并展开该帖 | BRD-008、BRD-011、BRD-018、BRD-019 |
-| 9 | 顾客 A 接受 B；顾客 C 也申请，A 接受 C | 标记和剩余名额归零，已接受列表显示两个昵称；其他人不能再申请 | BRD-012、BRD-013 |
+| 7 | 顾客 B 回复一条内容，其中包含 `<script>alert(1)</script>` 和一个网址 | 按原文显示，不执行、网址不是链接 | BRD-010、BRD-025 |
+| 8 | 顾客 B 点 Apply to join 并附留言 | 顾客 A 在面板看到申请；Mailpit 收到 Q Club 版式邮件，只有姓名、没有联系方式，链接打开预约页并展开该帖 | BRD-008、BRD-011、BRD-018、BRD-019 |
+| 9 | 顾客 A 接受 B；顾客 C 也申请，A 接受 C | 标记和剩余名额归零，已接受列表显示两人的姓名（未登录时显示 Q Club Player）；其他人不能再申请 | BRD-012、BRD-013 |
 | 10 | 查看后台该预约 | 时段、金额、状态都没有变化；没有新增预约 | BRD-014 |
 | 11 | 员工把该预约改到另一个时段 | 标记和面板显示新时段；B、C 收到时段变更邮件 | BRD-017、BRD-018 |
 | 12 | 顾客 B 举报顾客 C 的一条回复；`demo-staff` 在后台 Reports 隐藏该回复并标记已处理 | 面板显示 "This reply was removed."；后台保留原文和操作记录 | BRD-020、BRD-021、BRD-022 |
