@@ -1,6 +1,6 @@
 # 阶段 3 演示脚本：约球留言板
 
-状态：**已定稿**（2026-11-09 评审通过）
+状态：**修订待评审**（2026-11-09：留言板并入预约页）
 对应规格：BRD-001 至 BRD-029（`docs/spec/phase3.md`）
 
 ## 启动与账号
@@ -9,8 +9,8 @@
 
 | 入口 | 地址 |
 |---|---|
-| Q Club 留言板 | http://qclub.localhost:8069/billiard/board |
-| AUSHARE（应看不到） | http://aushare.localhost:8069/billiard/board |
+| Q Club 预约页（含留言板） | http://qclub.localhost:8069/billiard/booking |
+| AUSHARE（应看不到） | http://aushare.localhost:8069/billiard/booking |
 | 后台 | http://localhost:8069/web/login |
 | 邮件（Mailpit） | http://localhost:8025 |
 
@@ -19,46 +19,48 @@
 
 ## 任务 3.1 可演示部分
 
-本任务只有昵称与留言板占位页。下方完整阶段脚本中的发帖、社区须知、回复、申请、举报、封禁和后台 Board 菜单，等待 3.2–3.4。
+本任务只有昵称（留言板本身在 3.2 并入预约页）。
 
-1. 运行 `make demo`（已有演示库会升级模块并补数据）。未登录打开 Q Club 首页，点击 **Board**：显示 **Player posts are coming soon.**。
-2. 点击 **Set or change nickname**：跳转登录，用 `demo-customer-a` / `demo` 登录后回到昵称表单。
-3. 输入 `a@b.com`，点击 **Save nickname**：显示 **Nickname cannot be an email address or phone number.**；输入 `CueMaster` 保存后回到 Board，显示昵称。若其他账号已占用该昵称，改用未占用的名字。
-4. 再次进入表单修改昵称，刷新 Board 确认新昵称。无痕窗口用顾客 B 输入同一昵称的大小写变体：显示 **This nickname is already taken.**，原昵称不变。每次演示先由 A 设置目标昵称，避免依赖上次状态。
-5. 手机视口重复步骤 2–4，表单和保存按钮可见。顾客 C（`demo-customer-c` / `demo`）也可独立设置昵称。
-6. 用管理员登录后台 Billiard Settings → Q Club → **Online Board** 分组：默认人数 3、频率 5；输入 0 无法保存。打开 **Login Required to View Board**，未登录窗口访问 Board 应跳转登录；关闭后恢复公开浏览。`demo-staff` 不能修改配置。
-7. 关闭 Q Club 的 **Online Board**，Board 和昵称页均应 404；重新打开。AUSHARE 的 `/billiard/board` 与 `/billiard/board/nickname` 始终 404，且没有 Board 菜单。
+1. 运行 `make demo`。打开 http://qclub.localhost:8069/billiard/booking/nickname ：跳转登录，用 `demo-customer-a` / `demo` 登录后回到昵称表单。
+2. 输入 `a@b.com`，点击 **Save nickname**：显示 **Nickname cannot be an email address or phone number.**；输入 `CueMaster` 保存后回到预约页。再次打开昵称页，显示已保存的昵称。若该昵称已被占用，改用未占用的名字。
+3. 无痕窗口用顾客 B 输入同一昵称的大小写变体：显示 **This nickname is already taken.**，原昵称不变。
+4. 手机视口重复步骤 1–3，表单和保存按钮可见。
+5. 用管理员登录后台 Billiard Settings → Q Club → **Online Board** 分组：默认人数 3、频率 5；输入 0 无法保存。`demo-staff` 不能修改配置。
+6. 关闭 Q Club 的 **Online Board**，昵称页 404；重新打开。AUSHARE 的 `/billiard/booking/nickname` 始终 404。网站菜单中没有 Board。
 
 ## 页面草图（文字描述，设计时细化）
 
-- **Board 列表**：卡片按时间排序：时段、桌台、昵称、技术水平、消息摘要、"2 spots left"；顶部按日期和技术水平筛选；"Create post" 按钮
-- **帖子详情**：上方是帖子信息和 **Apply to join** 按钮；中间是已接受的球友；下方是回复和回复框；每条内容旁有 Report
-- **发帖人视角**：多一个申请列表，每条有 Accept / Decline；已接受的可 Remove
+留言板全部在预约页 `/billiard/booking` 内，不跳转页面：
+
+- **网格**：有开放帖子的预约，占用的每一格在 "Booked" 外显示标记（如 "Join · 2"）；普通占用格仍灰色不可点
+- **帖子面板**（网格下方，位置同 "Selected booking"）：昵称、时段、桌台、技术水平、消息、剩余名额、**Apply to join**、已接受的球友、回复和回复框；每条内容旁有 Report
+- **当日列表**（面板下方）："Players wanted on Fri 13 Nov"，随日期切换，点一条等于点对应格子
+- **发帖人视角**：点自己已确认预约的格子，面板显示 **Find players**；发帖后面板多一个申请列表，每条有 Accept / Decline，已接受的可 Remove
 - **后台 Board 菜单**：Posts、Replies、Reports、Banned Customers
 
 ## 演示步骤
 
 | 步骤 | 操作 | 应该看到 | 规格 |
 |---|---|---|---|
-| 1 | 顾客 A 在预约页提交一个未来时段，`demo-staff` 在后台 Confirm | 预约变为 Confirmed；顾客 A 的确认页出现 **Find players** | BRD-004、BRD-006 |
-| 2 | 待付押金的预约打开发帖页（用另一条未确认的预约） | 不能发帖，提示需先确认 | BRD-004 |
-| 3 | 顾客 A 点 Find players，首次需设置昵称并同意社区须知；试填邮箱形式的昵称 | 邮箱形式被拒绝；设置为 `CueMaster` 后进入发帖页 | BRD-001、BRD-002、BRD-029 |
-| 4 | 发帖：消息、Intermediate、需要 2 人 | 帖子出现在留言板；时段和桌台来自预约 | BRD-005、BRD-007 |
-| 5 | **不登录**打开留言板和帖子详情 | 能看；只显示昵称；页面和接口响应中无姓名、电话、邮箱、预约编号；点 Apply 跳转登录，登录后回到原帖 | BRD-003、BRD-008、BRD-009 |
-| 6 | 打开 AUSHARE 的同一地址 | **404** | BRD-027 |
+| 1 | 顾客 A 在预约页提交一个未来时段，`demo-staff` 在后台 Confirm | 预约变为 Confirmed；顾客 A 点网格上自己的格子，面板显示 **Find players**；确认页也有该按钮 | BRD-004、BRD-006 |
+| 2 | 顾客 A 点一条待付押金的预约的格子 | 没有 Find players，提示需先确认 | BRD-004 |
+| 3 | 顾客 A 点 Find players，首次在面板内设置昵称并同意社区须知；试填邮箱形式的昵称 | 邮箱形式被拒绝；设置为 `CueMaster` 后继续发帖，全程不离开预约页 | BRD-001、BRD-002、BRD-029 |
+| 4 | 发帖：消息、Intermediate、需要 2 人 | 该预约占用的每一格显示 "Join · 2"；网格下方当日列表出现这条；时段和桌台来自预约 | BRD-005、BRD-007 |
+| 5 | **不登录**打开预约页对应日期，点带标记的格子 | 面板打开；只显示昵称；页面和接口响应中无姓名、电话、邮箱、预约编号；点 Apply 跳转登录，登录后回到预约页并展开原帖 | BRD-003、BRD-008、BRD-009 |
+| 6 | 点一个没有帖子的占用格；打开 AUSHARE 的预约地址 | 占用格不可点；AUSHARE **404** | BRD-008、BRD-027 |
 | 7 | 顾客 B 设置昵称、回复一条内容，其中包含 `<script>alert(1)</script>` 和一个网址 | 按原文显示，不执行、网址不是链接 | BRD-010、BRD-025 |
-| 8 | 顾客 B 点 Apply to join 并附留言 | 顾客 A 看到申请；Mailpit 收到 Q Club 版式邮件，只有昵称 | BRD-011、BRD-018、BRD-019 |
-| 9 | 顾客 A 接受 B；顾客 C 也申请，A 接受 C | 剩余名额归零，已接受列表显示两个昵称；其他人不能再申请 | BRD-012、BRD-013 |
+| 8 | 顾客 B 点 Apply to join 并附留言 | 顾客 A 在面板看到申请；Mailpit 收到 Q Club 版式邮件，只有昵称，链接打开预约页并展开该帖 | BRD-008、BRD-011、BRD-018、BRD-019 |
+| 9 | 顾客 A 接受 B；顾客 C 也申请，A 接受 C | 标记和剩余名额归零，已接受列表显示两个昵称；其他人不能再申请 | BRD-012、BRD-013 |
 | 10 | 查看后台该预约 | 时段、金额、状态都没有变化；没有新增预约 | BRD-014 |
-| 11 | 员工把该预约改到另一个时段 | 帖子显示新时段；B、C 收到时段变更邮件 | BRD-017、BRD-018 |
-| 12 | 顾客 B 举报顾客 C 的一条回复；`demo-staff` 在后台 Reports 隐藏该回复并标记已处理 | 前台显示 "This reply was removed."；后台保留原文和操作记录 | BRD-020、BRD-021、BRD-022 |
+| 11 | 员工把该预约改到另一个时段 | 标记和面板显示新时段；B、C 收到时段变更邮件 | BRD-017、BRD-018 |
+| 12 | 顾客 B 举报顾客 C 的一条回复；`demo-staff` 在后台 Reports 隐藏该回复并标记已处理 | 面板显示 "This reply was removed."；后台保留原文和操作记录 | BRD-020、BRD-021、BRD-022 |
 | 13 | `admin` 封禁顾客 C；C 尝试回复 | C 能看但不能回复；C 的预约不受影响；`demo-staff` 没有封禁入口 | BRD-023 |
-| 14 | 员工取消该预约 | 帖子立即关闭，从列表消失，详情只读显示 "This post is closed."；B 收到通知 | BRD-015、BRD-016、BRD-018 |
+| 14 | 员工取消该预约 | 帖子立即关闭：标记和当日列表中的条目消失，格子恢复空闲；用邮件里的链接打开，面板只读显示 "This post is closed."；B 收到通知 | BRD-015、BRD-016、BRD-018 |
 
 ## 验收标准
 
 1. 本阶段 29 条规格在 `make report` 中全部有测试且通过；阶段 1–2 的 43 条保持通过
 2. `make lint`、`make test`、`make iso-check`、`make e2e` 通过（AUSHARE 不受影响）
 3. 上述步骤 1–14 由你亲手走通
-4. **人工项**：在手机浏览器上（或 Chrome 手机模拟）查看留言板、发帖和回复是否可用
+4. **人工项**：在手机浏览器上（或 Chrome 手机模拟）查看预约页上的标记、帖子面板、发帖和回复是否可用
 5. 并发接受（BRD-013）、频率限制（BRD-024）由自动测试覆盖，不在演示中手动操作
