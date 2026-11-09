@@ -16,6 +16,26 @@ class QclubConfig(models.Model):
     website_id = fields.Many2one("website", string="Website", required=True, ondelete="cascade")
     online_booking = fields.Boolean(string="Online Booking", default=False)
     occupancy_requires_login = fields.Boolean(string="Login Required to View Availability", default=False)
+    online_board = fields.Boolean(string="Online Board", default=False)
+    board_requires_login = fields.Boolean(string="Login Required to View Board", default=False)
+    board_max_players = fields.Integer(string="Max Players per Post", default=3, required=True)
+    board_rate_limit = fields.Integer(string="Board Actions per Minute", default=5, required=True)
+
+    _board_max_players_min = models.Constraint(
+        "CHECK(board_max_players >= 1)", "Max players per post must be at least 1.",
+    )
+    _board_rate_limit_min = models.Constraint(
+        "CHECK(board_rate_limit >= 1)", "Board actions per minute must be at least 1.",
+    )
+
+    @api.constrains("board_max_players", "board_rate_limit")
+    def _check_board_values(self):
+        for config in self:
+            if config.board_max_players < 1:
+                raise ValidationError(_("Max players per post must be at least 1."))
+            if config.board_rate_limit < 1:
+                raise ValidationError(_("Board actions per minute must be at least 1."))
+
     has_opening_hours = fields.Boolean(compute="_compute_has_opening_hours")
 
     deposit_ratio = fields.Float(

@@ -17,6 +17,20 @@
 演示账号（密码均为 `demo`）：`demo-customer-a`、`demo-customer-b`、`demo-customer-c`（新增）、`demo-staff`；`admin` / `admin`。
 建议用普通窗口和无痕窗口分别登录不同顾客。
 
+## 任务 3.1 可演示部分
+
+本任务只有昵称与留言板占位页。下方完整阶段脚本中的发帖、社区须知、回复、申请、举报、封禁和后台 Board 菜单，等待 3.2–3.4。
+
+1. 运行 `make demo`（已有演示库会升级模块并补数据）。未登录打开 Q Club 首页，点击 **Board**：显示 **Player posts are coming soon.**。
+2. 点击 **Set or change nickname**：跳转登录，用 `demo-customer-a` / `demo` 登录后回到昵称表单。
+3. 输入 `a@b.com`，点击 **Save nickname**：显示 **Nickname cannot be an email address or phone number.**；输入 `CueMaster` 保存后回到 Board，显示昵称。若其他账号已占用该昵称，改用未占用的名字。
+4. 再次进入表单修改昵称，刷新 Board 确认新昵称。无痕窗口用顾客 B 输入同一昵称的大小写变体：显示 **This nickname is already taken.**，原昵称不变。每次演示先由 A 设置目标昵称，避免依赖上次状态。
+5. 手机视口重复步骤 2–4，表单和保存按钮可见。顾客 C（`demo-customer-c` / `demo`）也可独立设置昵称。
+6. 用管理员登录后台 Billiard Settings → Q Club → **Online Board** 分组：默认人数 3、频率 5；输入 0 无法保存。打开 **Login Required to View Board**，未登录窗口访问 Board 应跳转登录；关闭后恢复公开浏览。`demo-staff` 不能修改配置。
+7. 关闭 Q Club 的 **Online Board**，Board 和昵称页均应 404；重新打开。AUSHARE 的 `/billiard/board` 与 `/billiard/board/nickname` 始终 404，且没有 Board 菜单。
+
+验收待在具备 Docker 的本机运行；Codex 沙箱无法连接 Docker，未确认 `make demo`、集成测试和浏览器演示通过。
+
 ## 页面草图（文字描述，设计时细化）
 
 - **Board 列表**：卡片按时间排序：时段、桌台、昵称、技术水平、消息摘要、"2 spots left"；顶部按日期和技术水平筛选；"Create post" 按钮

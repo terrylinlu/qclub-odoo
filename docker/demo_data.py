@@ -64,15 +64,17 @@ def ensure_user(login, name, group_xmlids):
 ensure_user("demo-staff", "[Demo] Staff Wang", ["base.group_user", "qclub_billiard.group_billiard_staff"])
 ensure_user("demo-customer-a", "[Demo] Customer A", ["base.group_portal"])
 ensure_user("demo-customer-b", "[Demo] Customer B", ["base.group_portal"])
+ensure_user("demo-customer-c", "[Demo] Customer C", ["base.group_portal"])
 
 # ---- 任务 1.1：球厅配置、桌台类型、桌台 ----
 config = env["qclub.config"]._get_for_website(qclub)
 config.write({
     "online_booking": True,
+    "online_board": True,
     "booking_email_from": "Q Club Demo <bookings@qclub.localhost>",
     "contact_phone": "08 0000 0000", "contact_email": "contact@qclub.localhost",
 })
-for login in ("demo-customer-a", "demo-customer-b"):
+for login in ("demo-customer-a", "demo-customer-b", "demo-customer-c"):
     Users.search([("login", "=", login)], limit=1).partner_id.email = login + "@qclub.localhost"
 # 任务 2.1：仅演示库的 Q Club 菜单，模块数据本身不创建网站菜单。
 Menu = env["website.menu"]
@@ -87,6 +89,18 @@ if booking_menu:
     booking_menu.write(menu_values)
 else:
     Menu.create(menu_values)
+# Task 3.1: demo-only Board navigation, scoped to Q Club.
+board_menu = Menu.search([
+    ("website_id", "=", qclub.id), ("url", "=", "/billiard/board"),
+], limit=1)
+board_values = {
+    "name": "Board", "url": "/billiard/board",
+    "website_id": qclub.id, "parent_id": qclub.menu_id.id, "sequence": 60,
+}
+if board_menu:
+    board_menu.write(board_values)
+else:
+    Menu.create(board_values)
 summary.append(f"billiard settings for Q Club (deposit {config.deposit_ratio:g}%)")
 
 TableType = env["qclub.table.type"].with_context(active_test=False)
