@@ -199,16 +199,32 @@ export class BookingBoard {
             const input = this.node(tag, undefined, form);
             input.id = label.htmlFor;
             input.name = name;
-            input.className = tag === "select" ? "form-select mb-2" : "form-control mb-2";
+            input.className = "form-control mb-2";
             return input;
         };
         const message = field("textarea", _t("Message (Don't share personal contact details)"), "message");
         message.required = true;
         message.maxLength = 500;
-        const level = field("select", _t("Level"), "level");
-        for (const value of ["any", "beginner", "intermediate", "advanced"]) {
-            const option = this.node("option", value[0].toUpperCase() + value.slice(1), level);
+        // Buttons rather than a native <select>: Chrome clipped the native list on some displays.
+        const levels = this.node("fieldset", undefined, form);
+        levels.className = "mb-2";
+        this.node("legend", _t("Level"), levels).className = "fs-6 mb-1";
+        const group = this.node("div", undefined, levels);
+        group.className = "btn-group flex-wrap";
+        const levelLabels = {
+            any: _t("Any"), beginner: _t("Beginner"), intermediate: _t("Intermediate"), advanced: _t("Advanced"),
+        };
+        for (const [value, text] of Object.entries(levelLabels)) {
+            const option = this.node("input", undefined, group);
+            option.type = "radio";
+            option.name = "level";
             option.value = value;
+            option.id = `o_qclub_post_level_${value}`;
+            option.className = "btn-check";
+            option.checked = value === "any";
+            const optionLabel = this.node("label", text, group);
+            optionLabel.htmlFor = option.id;
+            optionLabel.className = "btn btn-outline-primary";
         }
         const players = field("input", _t("Players wanted"), "players_needed");
         players.type = "number";
@@ -236,7 +252,7 @@ export class BookingBoard {
             const number = this.number;
             try {
                 const result = await rpc("/billiard/booking/post/create", {
-                    booking_id: booking.booking_id, message: message.value, level: level.value,
+                    booking_id: booking.booking_id, message: message.value, level: form.elements.level.value,
                     players_needed: Number(players.value), accept_terms: Boolean(terms?.checked),
                     csrf_token: this.el.dataset.csrfToken, date: this.grid.dateInput.value,
                 });

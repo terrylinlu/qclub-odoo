@@ -83,7 +83,7 @@ test('test_brd_004_brd_006_brd_007_brd_008_brd_009_brd_025_brd_029_posts_in_book
     await ownFirst.click();
     const message = '<script>window.boardXss = true</script> https://example.invalid';
     await panel.getByLabel(/Message/).fill(message);
-    await panel.getByLabel('Level', { exact: true }).selectOption('intermediate');
+    await panel.locator('label', { hasText: 'Intermediate' }).click();
     await panel.getByLabel('Players wanted', { exact: true }).fill('2');
     const terms = panel.getByRole('checkbox', { name: 'I agree to the Community Guidelines' });
     if (await terms.count()) await terms.check();
