@@ -3,6 +3,8 @@ import { registry } from "@web/core/registry";
 import { rpc } from "@web/core/network/rpc";
 import { _t } from "@web/core/l10n/translation";
 
+import { BookingBoard } from "./booking_board";
+
 export class BookingGrid extends Interaction {
     static selector = ".o_qclub_booking_grid";
 
@@ -28,6 +30,7 @@ export class BookingGrid extends Interaction {
     };
 
     setup() {
+        this.board = new BookingBoard(this);
         this.requestNumber = 0;
         this.quoteNumber = 0;
         this.selection = null;
@@ -55,6 +58,7 @@ export class BookingGrid extends Interaction {
     }
 
     destroy() {
+        this.board.close();
         window.removeEventListener("pageshow", this.onPageShow);
         super.destroy();
     }
@@ -97,6 +101,7 @@ export class BookingGrid extends Interaction {
     }
 
     async loadAvailability() {
+        this.board.reset();
         this.clearAlert();
         this.clearSelection();
         const requestNumber = ++this.requestNumber;
@@ -120,6 +125,7 @@ export class BookingGrid extends Interaction {
                     this.dateInput.min = result.available_dates.min;
                     this.dateInput.max = result.available_dates.max;
                     this.renderGrid(result);
+                    this.board.load(requestNumber);
                 }
             })();
         } catch {
@@ -241,6 +247,7 @@ export class BookingGrid extends Interaction {
     }
 
     selectSlot(cell) {
+        this.board.close();
         if (this.submitting) {
             return;
         }

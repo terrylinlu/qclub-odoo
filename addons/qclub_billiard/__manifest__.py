@@ -1,6 +1,6 @@
 {
     "name": "Q Club Billiard Booking",
-    "version": "19.0.3.1.0",
+    "version": "19.0.3.2.0",
     "summary": "台球厅在线预约：桌台、时段预约、押金、约球留言板",
     "category": "Website",
     "author": "Q Club",
@@ -22,6 +22,7 @@
     "assets": {
         "web.assets_frontend": [
             "qclub_billiard/static/src/interactions/booking_grid.js",
+            "qclub_billiard/static/src/interactions/booking_board.js",
             "qclub_billiard/static/src/scss/booking.scss",
         ],
     },

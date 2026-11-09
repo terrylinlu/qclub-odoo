@@ -47,6 +47,9 @@ class BilliardBooking(http.Controller):
             "login_url": self._login_url(kwargs) if kwargs else "/web/login?redirect=/billiard/booking",
             "min_date": minimum.isoformat(), "max_date": maximum.isoformat(),
             "occupancy_requires_login": config.occupancy_requires_login,
+            "board_enabled": config.online_board,
+            "board_post": self._board_parameter(kwargs.get("post")),
+            "board_booking": self._board_parameter(kwargs.get("booking")),
             "is_public": request.env.user._is_public(),
             "login_required": config.occupancy_requires_login and request.env.user._is_public(),
         })
@@ -67,8 +70,26 @@ class BilliardBooking(http.Controller):
             return {"error": "invalid_date"}
         return request.env["qclub.booking"]._get_occupancy(request.website, business_date)
 
+    def _board_parameter(self, value):
+        if isinstance(value, (str, int)) and not isinstance(value, bool) and re.fullmatch(r"[1-9][0-9]{0,9}", str(value)):
+            return str(value)
+        return ""
+
     def _login_url(self, values):
         params = {key: values[key] for key in ("date", "table", "start", "hours") if values.get(key)}
+        for key in ("post", "booking"):
+            value = self._board_parameter(values.get(key))
+            if value:
+                params[key] = value
+        if any(key in params for key in ("post", "booking")) and "date" in params:
+            try:
+                day = calendar_date.fromisoformat(params["date"])
+                minimum, maximum = self._date_bounds(self._website_config())
+                if not minimum <= day <= maximum:
+                    raise ValueError
+                params["date"] = day.isoformat()
+            except (TypeError, ValueError):
+                params.pop("date", None)
         target = "/billiard/booking?" + urlencode(params)
         return "/web/login?" + urlencode({"redirect": target})
 
@@ -131,7 +152,12 @@ class BilliardBooking(http.Controller):
         ], limit=1)
         if not booking:
             raise NotFound()
+        config = self._website_config()
+        find_players = (config.online_board and booking.state == "confirmed"
+                        and booking.start > fields.Datetime.now()
+                        and not request.env["qclub.board.post"].sudo().search_count([("booking_id", "=", booking.id)]))
         return request.render("qclub_billiard.booking_confirmation", {
+            "find_players_url": "/billiard/booking?" + urlencode({"date": booking.business_date.isoformat(), "booking": booking.id}) if find_players else False,
             "booking": booking, "time_label": booking._time_label(),
             "remaining": max(0, int((booking.lock_expire - fields.Datetime.now()).total_seconds()))
             if booking.state == "pending" and booking.lock_expire else 0,
