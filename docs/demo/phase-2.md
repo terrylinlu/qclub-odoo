@@ -1,6 +1,6 @@
 # 阶段 2 演示脚本：顾客在线预约
 
-状态：**已定稿**（2026-11-06 评审通过，5 个待确认问题均按建议方案）
+状态：**已验收**（2026-11-06 评审定稿，2026-11-07 验收通过，结果见 `docs/acceptance/phase-2.md`）
 对应规格（12 条）：WEB-001 至 WEB-010、TBL-006、CFG-005（`docs/spec/phase1-2.md` 第 B、D 节）
 任务：2.1 占用查询与网格（WEB-001/002/003/007、TBL-006、CFG-005）；2.2 提交预约与押金提示（WEB-004/005/006/008/009/010）
 
@@ -37,15 +37,15 @@
 | 3 | 后台 **Configuration → Settings → Q Club** 打开"登录后才能查看占用"，刷新步骤 1 的页面 | 未登录时看不到网格，提示登录；关闭后恢复匿名可看 | CFG-005 | ✅ 任务 2.1 |
 | 4 | 选择本周五，查看网格 | 列一直到 1:00 AM，其中 12:00 AM、1:00 AM 标注 **(next day)**，并排在周五下面，而不是出现在周六 | TBL-006、WEB-007 | ✅ 任务 2.1 |
 | 4a | 后台表单选“周五 + 1:00 AM (next day)”，与网格的同一列对应；从 1:00 AM 开始只能订 1 小时（周五营业到次日 2:00），选 2 小时会提示 "The booking must be fully within one business opening interval."。 | 表单与网格按同一营业日显示，超出营业时段被拒绝 | BK-002、TBL-006 | ✅ 任务 2.1b |
-| 4b | 后台选未来周五 6:00 PM、2 小时，再改为周六；随后选 2:00 AM (next day) 并改到另一个未来营业日 | 有效时间保持且无警告；无效时间移到新营业日首个可预约整点，并提示 "Start Time changed to …: … is not available on this date."；休息日提示 "There is no available opening hour on the selected date." | BK-003 | 待人工验收（2.1b 跟进） |
-| 5 | 未登录状态下选桌台、连续 2 小时，点 **Book** | 跳转登录页；用 `demo-customer-a` 登录后**回到刚才的选择**（日期、桌台、时段都还在） | WEB-006 | ✅ 任务 2.2（待人工验收） |
-| 6 | 查看所选时段 | 显示台费、应付押金，与后台同一桌台、同一时长新建预约时的金额一致 | WEB-008 | ✅ 任务 2.2（待人工验收） |
-| 7 | 选一个**距现在不足 24 小时**的时段，进入确认 | 显著提示 "This booking cannot be cancelled free of charge."；提交后后台该预约记录"创建时已在取消窗口内" | WEB-009 | ✅ 任务 2.2（待人工验收） |
-| 8 | 提交步骤 6 的预约 | 确认页显示编号、时段、押金、锁定剩余时间；后台出现该预约，状态 Awaiting Deposit | WEB-004 | ✅ 任务 2.2（待人工验收） |
-| 9 | 另开无痕窗口，用 `demo-customer-b` 登录同一页面 | 该时段已**置灰**；用浏览器开发者工具强行提交同一时段，提示 "This time slot has just been taken. Please choose another."，后台没有新增记录 | WEB-003、WEB-005、WEB-004 | ✅ 任务 2.2（待人工验收） |
-| 10 | 周五选 11:00 PM 起 2 小时并提交 | 页面、确认页及邮件显示 "Fri 6 Nov, 11:00 PM – Sat 7 Nov, 1:00 AM"，押金按 2 小时计算 | WEB-010、WEB-007 | ✅ 任务 2.2（待人工验收） |
+| 4b | 后台选未来周五 6:00 PM、2 小时，再改为周六；随后选 2:00 AM (next day) 并改到另一个未来营业日 | 有效时间保持且无警告；无效时间移到新营业日首个可预约整点，并提示 "Start Time changed to …: … is not available on this date."；休息日提示 "There is no available opening hour on the selected date." | BK-003 | ✅ 任务 2.1b |
+| 5 | 未登录状态下选桌台、连续 2 小时，点 **Book** | 跳转登录页；用 `demo-customer-a` 登录后**回到刚才的选择**（日期、桌台、时段都还在） | WEB-006 | ✅ 任务 2.2 |
+| 6 | 查看所选时段 | 显示台费、应付押金，与后台同一桌台、同一时长新建预约时的金额一致 | WEB-008 | ✅ 任务 2.2 |
+| 7 | 选一个**距现在不足 24 小时**的时段，进入确认 | 显著提示 "This booking cannot be cancelled free of charge."；提交后后台该预约记录"创建时已在取消窗口内" | WEB-009 | ✅ 任务 2.2 |
+| 8 | 提交步骤 6 的预约 | 确认页显示编号、时段、押金、锁定剩余时间；后台出现该预约，状态 Awaiting Deposit | WEB-004 | ✅ 任务 2.2 |
+| 9 | 另开无痕窗口，用 `demo-customer-b` 登录同一页面 | 该时段已**置灰**；用浏览器开发者工具强行提交同一时段，提示 "This time slot has just been taken. Please choose another."，后台没有新增记录 | WEB-003、WEB-005、WEB-004 | ✅ 任务 2.2 |
+| 10 | 周五选 11:00 PM 起 2 小时并提交 | 页面、确认页及邮件显示 "Fri 6 Nov, 11:00 PM – Sat 7 Nov, 1:00 AM"，押金按 2 小时计算 | WEB-010、WEB-007 | ✅ 任务 2.2 |
 | 11 | 把 Unpaid Hold 改成 1 分钟，网上提交一个预约，等 1–2 分钟后刷新网格 | 该时段自动变回空闲（预约变 Expired） | WEB-003、BK-008 | ✅ 任务 2.1 |
-| 12 | `demo-staff` 在后台把步骤 8 的预约点 **Confirm** | 状态 Confirmed；网格上该时段仍为占用 | （阶段 1 功能，替代支付） | ✅ 任务 2.2（待人工验收） |
+| 12 | `demo-staff` 在后台把步骤 8 的预约点 **Confirm** | 状态 Confirmed；网格上该时段仍为占用 | （阶段 1 功能，替代支付） | ✅ 任务 2.2 |
 
 营业日以 Adelaide 6:00 AM 为分界，凌晨 0:00–5:59 默认仍显示前一营业日。现有演示数据的营业时间已符合 6:00–次日 6:00 的范围，本任务无需新增演示数据。
 
