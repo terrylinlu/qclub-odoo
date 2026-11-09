@@ -54,6 +54,12 @@
                             <field name="max_unpaid_online_bookings"/>
                         </group>
                     </group>
+                    <group string="Online Board">
+                        <field name="online_board"/>
+                        <field name="board_requires_login"/>
+                        <field name="board_max_players"/>
+                        <field name="board_rate_limit"/>
+                    </group>
                     <group string="Booking Email and Contact">
                         <field name="booking_email_from"/>
                         <div class="alert alert-warning" role="status" invisible="booking_email_from">Set Booking Email From to enable booking emails. No emails are sent when empty.</div>
