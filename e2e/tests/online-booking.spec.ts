@@ -1,4 +1,25 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
+
+// Late in the day today has no bookable slot left, so walk forward to the first day that has one.
+async function showDayWithFreeSlot(page: Page) {
+  await expect(page.locator('.o_qclub_grid_table')).toBeVisible();
+  const picker = page.locator('.o_qclub_booking_date');
+  const maximum = await picker.getAttribute('max');
+  const day = new Date(`${await picker.getAttribute('min')}T12:00:00Z`);
+  while (day.toISOString().slice(0, 10) <= maximum!) {
+    const value = day.toISOString().slice(0, 10);
+    if (await picker.inputValue() !== value) {
+      const response = page.waitForResponse(r => r.url().endsWith('/billiard/booking/occupancy'));
+      await picker.fill(value);
+      await picker.dispatchEvent('change');
+      await response;
+      await expect(page.locator('.o_qclub_grid_table')).toBeVisible();
+    }
+    if (await page.locator('.o_qclub_slot_free').count()) return;
+    day.setUTCDate(day.getUTCDate() + 1);
+  }
+  throw new Error('No free slot in the booking window; run make demo-reset');
+}
 
 test('test_web_006_web_008_web_004_select_login_restore_submit_confirmation', async ({ page }, testInfo) => {
   await page.goto('/billiard/booking');
@@ -115,7 +136,7 @@ test('test_web_005_stale_quote_refreshes_grid_and_clears_loading', async ({ page
 
 test('test_web_005_bfcache_restore_clears_selection_and_messages', async ({ page }) => {
   await page.goto('/billiard/booking');
-  await expect(page.locator('.o_qclub_grid_table')).toBeVisible();
+  await showDayWithFreeSlot(page);
   await page.locator('.o_qclub_slot_free').first().click();
   await expect(page.locator('.o_qclub_summary')).toContainText('Table fee:');
   const refreshed = page.waitForResponse(r => r.url().endsWith('/billiard/booking/occupancy'));
@@ -130,7 +151,7 @@ test('test_web_005_bfcache_restore_clears_selection_and_messages', async ({ page
 for (const failure of ['validation', 'network']) {
   test(`test_web_005_quote_${failure}_leaves_booking_usable`, async ({ page }) => {
     await page.goto('/billiard/booking');
-    await expect(page.locator('.o_qclub_grid_table')).toBeVisible();
+    await showDayWithFreeSlot(page);
     await page.route('**/billiard/booking/quote', route => failure === 'network' ? route.abort() :
       route.fulfill({ json: { jsonrpc: '2.0', id: 1, result: { error: 'validation', message: 'Please try again.' } } }));
     await page.locator('.o_qclub_slot_free').first().click();
@@ -154,7 +175,7 @@ for (const routeName of ['quote', 'submit']) {
     } else {
       await page.goto('/billiard/booking');
     }
-    await expect(page.locator('.o_qclub_grid_table')).toBeVisible();
+    await showDayWithFreeSlot(page);
     const message = 'You already hold this time slot (QB<img src=x>, awaiting deposit).';
     const confirmation = '/billiard/booking/confirmation/QB-test';
     await page.route(`**/billiard/booking/${routeName}`, route => route.fulfill({ json: {
