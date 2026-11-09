@@ -29,8 +29,6 @@
 6. 用管理员登录后台 Billiard Settings → Q Club → **Online Board** 分组：默认人数 3、频率 5；输入 0 无法保存。打开 **Login Required to View Board**，未登录窗口访问 Board 应跳转登录；关闭后恢复公开浏览。`demo-staff` 不能修改配置。
 7. 关闭 Q Club 的 **Online Board**，Board 和昵称页均应 404；重新打开。AUSHARE 的 `/billiard/board` 与 `/billiard/board/nickname` 始终 404，且没有 Board 菜单。
 
-验收待在具备 Docker 的本机运行；Codex 沙箱无法连接 Docker，未确认 `make demo`、集成测试和浏览器演示通过。
-
 ## 页面草图（文字描述，设计时细化）
 
 - **Board 列表**：卡片按时间排序：时段、桌台、昵称、技术水平、消息摘要、"2 spots left"；顶部按日期和技术水平筛选；"Create post" 按钮
