@@ -89,18 +89,6 @@ if booking_menu:
     booking_menu.write(menu_values)
 else:
     Menu.create(menu_values)
-# Task 3.1: demo-only Board navigation, scoped to Q Club.
-board_menu = Menu.search([
-    ("website_id", "=", qclub.id), ("url", "=", "/billiard/board"),
-], limit=1)
-board_values = {
-    "name": "Board", "url": "/billiard/board",
-    "website_id": qclub.id, "parent_id": qclub.menu_id.id, "sequence": 60,
-}
-if board_menu:
-    board_menu.write(board_values)
-else:
-    Menu.create(board_values)
 summary.append(f"billiard settings for Q Club (deposit {config.deposit_ratio:g}%)")
 
 TableType = env["qclub.table.type"].with_context(active_test=False)

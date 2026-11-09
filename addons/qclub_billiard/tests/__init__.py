@@ -14,5 +14,5 @@ from . import test_occupancy_http
 from . import test_business_day_form
 from . import test_online_booking
 from . import test_online_booking_http
-from . import test_board_profile
-from . import test_board_http
+from . import test_board_display_name
+from . import test_board_config

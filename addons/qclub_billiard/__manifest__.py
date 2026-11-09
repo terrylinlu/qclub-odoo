@@ -18,7 +18,6 @@
         "views/qclub_booking_views.xml",
         "views/qclub_menus.xml",
         "views/booking_templates.xml",
-        "views/board_templates.xml",
     ],
     "assets": {
         "web.assets_frontend": [

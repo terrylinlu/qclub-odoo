@@ -13,5 +13,3 @@ access_qclub_booking_portal,qclub.booking portal,model_qclub_booking,base.group_
 access_qclub_table_portal,qclub.table portal,model_qclub_table,base.group_portal,1,0,0,0
 access_qclub_table_type_portal,qclub.table.type portal,model_qclub_table_type,base.group_portal,1,0,0,0
 access_qclub_opening_hours_portal,qclub.opening.hours portal,model_qclub_opening_hours,base.group_portal,1,0,0,0
-access_qclub_board_profile_staff,qclub.board.profile staff,model_qclub_board_profile,group_billiard_staff,1,0,0,0
-access_qclub_board_profile_manager,qclub.board.profile manager,model_qclub_board_profile,group_billiard_manager,1,1,0,0
