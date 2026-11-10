@@ -434,11 +434,13 @@ class QclubBooking(models.Model):
                     "time_label": self._time_label(),
                     "lock_label": self._format_booking_time(self.lock_expire, self.lock_expire).split(" – ")[0],
                 })
-                self.env["mail.mail"].sudo().create({
+                mail = self.env["mail.mail"].sudo().create({
                     "subject": _("Booking received – awaiting deposit: %s", self.name),
                     "email_from": config.booking_email_from, "email_to": self.partner_id.email,
                     "body_html": body, "auto_delete": False,
                 })
+                # The mail queue cron only runs hourly: send this email as soon as the transaction commits.
+                mail.send_after_commit()
         except Exception:
             _logger.exception("Could not queue booking email for booking %s", self.id)
 
@@ -578,6 +580,15 @@ class QclubBooking(models.Model):
         try:
             with self.env.cr.savepoint():
                 slot_changed = bool({"start", "duration_hours", "table_id"}.intersection(vals))
+                board_changed_ids = []
+                if slot_changed:
+                    for booking in self:
+                        if any(
+                            (fields.Datetime.to_datetime(vals[key]) if key == "start" else vals[key])
+                            != (booking.table_id.id if key == "table_id" else booking[key])
+                            for key in ("start", "duration_hours", "table_id") if key in vals
+                        ):
+                            board_changed_ids.append(booking.id)
                 if slot_changed or vals.get("state") in ACTIVE_STATES:
                     table_ids = set(self.table_id.ids)
                     if vals.get("table_id"):
@@ -612,6 +623,16 @@ class QclubBooking(models.Model):
                 if "start" in vals:
                     self._check_future()
                 self.flush_recordset()
+                if slot_changed or vals.get("state") in ("cancelled", "expired", "no_show"):
+                    posts = self.env["qclub.board.post"].sudo().search([
+                        ("booking_id", "in", self.ids), ("state", "=", "open"),
+                    ])
+                    if posts:
+                        if vals.get("state") in ("cancelled", "expired", "no_show"):
+                            posts.write({"state": "closed"})
+                            posts._notify_accepted("closed")
+                        elif slot_changed:
+                            posts.filtered(lambda post: post.booking_id.id in board_changed_ids)._notify_accepted("changed")
                 return result
         except ExclusionViolation as error:
             raise BookingConflict(_(

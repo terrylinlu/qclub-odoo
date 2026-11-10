@@ -1,7 +1,11 @@
 """Shared board models and privacy rules."""
 
+import logging
+
 from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
+
+_logger = logging.getLogger(__name__)
 
 BOARD_DISPLAY_NAME = "Q Club Player"
 
@@ -74,8 +78,70 @@ class BoardPost(models.Model):
             "start": booking.start.isoformat() + "Z", "hours": booking.duration_hours,
             "time_label": booking._time_label(), "table_name": booking.table_id.name,
             "display_name": board_display_name(self.partner_id, viewer_is_public),
-            "level": self.level, "remaining": self.players_needed,
+            "level": self.level, "remaining": self._remaining(),
         }
+
+    def _remaining(self):
+        self.ensure_one()
+        return max(0, self.players_needed - self.env["qclub.board.application"].search_count([
+            ("post_id", "=", self.id), ("state", "=", "accepted"),
+        ]))
+
+    def _update_join_row(self):
+        """A real row version serializes capacity decisions under REPEATABLE READ.
+
+        Do not catch SerializationFailure here: Odoo's HTTP transaction retry must
+        restart the entire request with a new snapshot.
+        """
+        self.ensure_one()
+        self.flush_recordset()
+        self.env.cr.execute("UPDATE qclub_board_post SET write_date = clock_timestamp() WHERE id = %s", [self.id])
+        self.invalidate_recordset()
+        self.booking_id.invalidate_recordset()
+        if not self._is_open():
+            raise ValidationError(_("This post is closed."))
+
+    def _queue_email(self, event, recipient, actor):
+        self.ensure_one()
+        booking = self.booking_id
+        config = booking._config()
+        if not config.booking_email_from or not recipient.email:
+            return
+        labels = {
+            "new": _("New application"), "accepted": _("Application accepted"),
+            "declined": _("Application declined"), "removed": _("Removed from the post"),
+            "closed": _("This post is closed."), "changed": _("Booking time or table changed"),
+        }
+        try:
+            with self.env.cr.savepoint():
+                domain = (self.website_id.domain or "").rstrip("/")
+                if not domain.startswith(("https://", "http://")):
+                    return
+                body = self.env["ir.qweb"]._render("qclub_billiard.board_email", {
+                    "booking": booking, "domain": domain, "event_label": labels[event],
+                    "actor_name": board_display_name(actor, False),
+                    "time_label": booking._time_label(),
+                    "post_url": "%s/billiard/booking?date=%s&post=%s" % (
+                        domain, booking.business_date.isoformat(), self.id,
+                    ),
+                })
+                mail = self.env["mail.mail"].sudo().create({
+                    "subject": _("Q Club – %s", labels[event]),
+                    "email_from": config.booking_email_from, "email_to": recipient.email,
+                    "body_html": body, "auto_delete": False,
+                })
+                # The mail queue cron only runs hourly: send this email as soon as the transaction commits.
+                mail.send_after_commit()
+        except Exception:
+            _logger.exception("Could not queue board email for post %s", self.id)
+
+    def _notify_accepted(self, event):
+        for post in self:
+            applications = self.env["qclub.board.application"].sudo().search([
+                ("post_id", "=", post.id), ("state", "=", "accepted"),
+            ])
+            for application in applications:
+                post._queue_email(event, application.partner_id, post.partner_id)
 
 
 class BoardTerms(models.Model):
@@ -89,3 +155,99 @@ class BoardTerms(models.Model):
     _website_partner_unique = models.Constraint(
         "UNIQUE(website_id, partner_id)", "Community guidelines have already been accepted.",
     )
+
+
+class BoardReply(models.Model):
+    _name = "qclub.board.reply"
+    _description = "Booking board reply"
+    _order = "id"
+
+    post_id = fields.Many2one("qclub.board.post", required=True, ondelete="restrict", index=True)
+    partner_id = fields.Many2one("res.partner", required=True, ondelete="restrict", index=True)
+    website_id = fields.Many2one(related="post_id.website_id", store=True, index=True)
+    message = fields.Text(required=True)
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        self.check_access("create")
+        for values in vals_list:
+            post = self.env["qclub.board.post"].browse(values.get("post_id")).exists()
+            if not post:
+                raise ValidationError(_("This post is unavailable."))
+            post._update_join_row()
+            if isinstance(values.get("message"), str):
+                values["message"] = values["message"].strip()
+        return super().create(vals_list)
+
+    @api.constrains("message")
+    def _check_message(self):
+        for reply in self:
+            if not reply.message or not 1 <= len(reply.message.strip()) <= 500:
+                raise ValidationError(_("Message must contain 1 to 500 characters."))
+
+
+class BoardApplication(models.Model):
+    _name = "qclub.board.application"
+    _description = "Booking board application"
+    _order = "id"
+
+    post_id = fields.Many2one("qclub.board.post", required=True, ondelete="restrict", index=True)
+    partner_id = fields.Many2one("res.partner", required=True, ondelete="restrict", index=True)
+    website_id = fields.Many2one(related="post_id.website_id", store=True, index=True)
+    message = fields.Text()
+    state = fields.Selection([
+        ("pending", "Waiting"), ("accepted", "Accepted"), ("declined", "Declined"),
+        ("withdrawn", "Withdrawn"), ("removed", "Removed"),
+    ], required=True, default="pending")
+
+    def init(self):
+        self.env.cr.execute("""
+            CREATE UNIQUE INDEX IF NOT EXISTS qclub_board_application_active_unique
+            ON qclub_board_application (post_id, partner_id)
+            WHERE state IN ('pending', 'accepted', 'declined', 'removed')
+        """)
+
+    @api.constrains("message")
+    def _check_message(self):
+        for application in self:
+            if len(application.message or "") > 200:
+                raise ValidationError(_("Application message must contain at most 200 characters."))
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        self.check_access("create")
+        for values in vals_list:
+            post = self.env["qclub.board.post"].browse(values.get("post_id")).exists()
+            if not post:
+                raise ValidationError(_("This post is unavailable."))
+            post._update_join_row()
+            if values.get("partner_id") == post.partner_id.id:
+                raise ValidationError(_("You cannot apply to your own post."))
+            if not post._remaining():
+                raise ValidationError(_("No spots left."))
+            if isinstance(values.get("message"), str):
+                values["message"] = values["message"].strip()
+        applications = super().create(vals_list)
+        for application in applications:
+            application.post_id._queue_email("new", application.post_id.partner_id, application.partner_id)
+        return applications
+
+    def _transition(self, action, actor):
+        self.ensure_one()
+        self.post_id._update_join_row()
+        self.invalidate_recordset()
+        if action == "withdraw":
+            allowed = actor == self.partner_id and self.state in ("pending", "accepted")
+            target = "withdrawn"
+        else:
+            transitions = {"accept": ("pending", "accepted"), "decline": ("pending", "declined"),
+                           "remove": ("accepted", "removed")}
+            source, target = transitions.get(action, (None, None))
+            allowed = actor == self.post_id.partner_id and self.state == source
+        if not allowed:
+            raise ValidationError(_("This application cannot be changed."))
+        if action == "accept" and not self.post_id._remaining():
+            raise ValidationError(_("No spots left."))
+        self.write({"state": target})
+        if action != "withdraw":
+            self.post_id._queue_email(target, self.partner_id, self.post_id.partner_id)

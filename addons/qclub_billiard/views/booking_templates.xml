@@ -97,4 +97,24 @@
             </t>
         </field>
     </record>
+    <record id="board_email" model="ir.ui.view">
+        <field name="name">Q Club board email</field>
+        <field name="key">qclub_billiard.board_email</field>
+        <field name="type">qweb</field>
+        <field name="model">qclub.booking</field>
+        <field name="arch" type="xml">
+            <t t-name="qclub_billiard.board_email">
+                <div style="font-family: sans-serif; max-width: 640px; margin: auto; padding: 24px;">
+                    <img t-att-src="domain + '/web/image/website/' + str(booking.website_id.id) + '/logo'" t-att-alt="booking.website_id.name" width="160"/>
+                    <h1 t-out="booking.website_id.name"/>
+                    <h2 t-out="event_label"/>
+                    <p t-out="actor_name"/>
+                    <p t-out="time_label"/>
+                    <p t-out="booking.table_id.name"/>
+                    <p><a t-att-href="post_url">View post</a></p>
+                    <p>Meet at Q Club during this booking. Don't share personal contact details.</p>
+                </div>
+            </t>
+        </field>
+    </record>
 </odoo>

@@ -18,3 +18,6 @@ from . import test_board_display_name
 from . import test_board_config
 
 from . import test_board_posts
+
+from . import test_board_join
+from . import test_board_join_concurrency

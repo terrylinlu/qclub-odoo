@@ -91,7 +91,9 @@
 }
 .o_qclub_slot_free:focus-visible { outline: 3px solid #0a58ca; outline-offset: -3px; }
 
-.o_qclub_terms, .o_qclub_post_message { white-space: pre-wrap; }
+.o_qclub_terms, .o_qclub_post_message, .o_qclub_reply_message, .o_qclub_application_message {
+    white-space: pre-wrap;
+}
 // Occupied cells disable pointer events (WEB-003); only cells with a post or the
 // customer's own booking are clickable, so re-enable them with higher specificity.
 .o_qclub_booking_grid .o_qclub_slot_occupied.o_qclub_board_marker {

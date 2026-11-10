@@ -17,3 +17,7 @@ access_qclub_board_post_staff,qclub.board.post staff,model_qclub_board_post,grou
 access_qclub_board_post_manager,qclub.board.post manager,model_qclub_board_post,group_billiard_manager,1,1,1,0
 access_qclub_board_terms_staff,qclub.board.terms staff,model_qclub_board_terms,group_billiard_staff,1,0,0,0
 access_qclub_board_terms_manager,qclub.board.terms manager,model_qclub_board_terms,group_billiard_manager,1,1,1,0
+access_qclub_board_reply_staff,qclub.board.reply staff,model_qclub_board_reply,group_billiard_staff,1,0,0,0
+access_qclub_board_reply_manager,qclub.board.reply manager,model_qclub_board_reply,group_billiard_manager,1,1,1,0
+access_qclub_board_application_staff,qclub.board.application staff,model_qclub_board_application,group_billiard_staff,1,0,0,0
+access_qclub_board_application_manager,qclub.board.application manager,model_qclub_board_application,group_billiard_manager,1,1,1,0

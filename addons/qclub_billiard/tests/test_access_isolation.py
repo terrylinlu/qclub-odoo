@@ -11,9 +11,11 @@ from .common import BilliardCase
 
 OWN_MODELS = frozenset({
     "qclub.booking", "qclub.table", "qclub.table.type", "qclub.opening.hours", "qclub.config",
-    "qclub.board.post", "qclub.board.terms",
+    "qclub.board.post", "qclub.board.terms", "qclub.board.reply", "qclub.board.application",
 })
-PORTAL_MODELS = OWN_MODELS - {"qclub.config", "qclub.board.post", "qclub.board.terms"}
+PORTAL_MODELS = OWN_MODELS - {
+    "qclub.config", "qclub.board.post", "qclub.board.terms", "qclub.board.reply", "qclub.board.application",
+}
 DATA_MODELS = OWN_MODELS | {
     "ir.model", "ir.model.fields", "ir.model.constraint", "ir.model.access", "ir.rule",
     "res.groups", "res.groups.privilege", "ir.ui.view", "ir.ui.menu", "ir.actions.act_window",
