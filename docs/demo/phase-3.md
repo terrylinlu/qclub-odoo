@@ -104,7 +104,7 @@
 - 运行 `make demo` 升级模块；仅演示库 Q Club 的 Board Actions per Minute 设为 100，正式模块默认仍为 5。每轮使用新建帖子和回复。
 - 步骤 12：C 回复，B 点该回复旁 **Report**，选择 Spam / Abuse / Personal information / Other，可填最多 500 字符说明；提交显示 **Report submitted.**，重复提交显示已举报。未登录点击 Report 应登录后返回原帖。举报不会自动隐藏内容。
 - 员工从 Billiards → Board → Reports（默认 New）打开举报，查看原文、原因及举报人，点 **Hide and resolve**、**Dismiss report**。刷新顾客页面，回复只显示 **This reply was removed.**，无原文或作者姓名；My Account 不显示该回复。后台仍保留原文、隐藏人／时间、处理人／时间。Posts、Replies 可 **Hide** / **Restore**，员工不能直接编辑内容或删除。
-- 隐藏帖子后，标记及当日列表消失，格子显示普通 Booked；旧 post 地址显示 **This post is unavailable.**，My Account 不显示相关帖子、申请和回复。恢复后重新显示。
+- 隐藏帖子后，Join 标记及当日列表保留，详情文字显示 **This post was removed.**；原文不得出现在页面源码、JSON 或邮件。另一顾客仍可申请、撤回和回复，发帖人仍可接受、拒绝或移除球友；My Account 保留帖子、申请、相关可见回复和帖子链接，帖子文字显示移除提示。隐藏帖子无 Report 按钮，但可见回复仍可举报。Restore 恢复原文；发帖人不能为同一预约再发帖。
 - 步骤 13：管理员在 Board → Banned Customers 按 Q Club、C 新增封禁，填写原因，可不填到期时间（永久）。C 可浏览，但发帖／回复／申请／举报都提示 **Your account can't post on the board. Please contact Q Club.**；预约及已有申请的处理／撤回不受影响。员工看不到封禁菜单，也不能通过 RPC 操作封禁。
 - 管理员取消 Active 后立即解除；填写过去的到期时间也应立即解除。每轮结束务必解除 C 的封禁，避免影响后续演示。举报说明、举报人、封禁原因不发送给顾客。
 - 桌面和手机均以真实点击验证举报表单；频率统计四种操作合计、60 秒窗口由新增自动测试验证。

@@ -177,12 +177,18 @@ class TestBoardModeration(HttpCase):
         self.assertEqual(reply.message, "SECRET REPLY")
         self.post_record.with_user(self.staff).action_hide()
         board = self.rpc("board", date="2026-11-06").json()["result"]
-        self.assertEqual(board["posts"], [])
-        self.assertEqual(board["own_bookings"], [])
-        self.assertEqual(self.rpc("post", post=self.post_record.id).json()["result"],
-                         {"error": "not_found", "message": "This post is unavailable."})
+        self.assertEqual(board["posts"][0]["remaining"], 2)
+        self.assertNotIn(self.values["message"], json.dumps(board))
+        self.assertEqual(board["own_bookings"][0]["post_id"], self.post_record.id)
+        detail = self.rpc("post", post=self.post_record.id).json()["result"]
+        self.assertEqual(detail["message"], "This post was removed.")
+        self.assertTrue(detail["hidden"])
+        self.assertNotIn(self.values["message"], json.dumps(detail))
         self.assertNotIn("Find players", self.url_open("/billiard/booking/confirmation/" + self.booking.name).text)
-        self.assertNotIn("post=" + str(self.post_record.id), self.url_open("/my/billiard").text)
+        page = self.url_open("/my/billiard").text
+        self.assertIn("post=" + str(self.post_record.id), page)
+        self.assertIn("This post was removed.", page)
+        self.assertNotIn(self.values["message"], page)
         self.post_record.with_user(self.staff).action_restore()
         self.assertEqual(self.rpc("post", post=self.post_record.id).json()["result"]["message"], self.values["message"])
 
@@ -290,3 +296,78 @@ class TestBoardModeration(HttpCase):
         menu = self.env.ref("qclub_billiard.menu_billiard_board_ban")
         self.assertNotIn(menu.id, self.env["ir.ui.menu"].with_user(self.staff)._visible_menu_ids())
         self.assertIn(menu.id, self.env["ir.ui.menu"].with_user(self.manager)._visible_menu_ids())
+
+    def test_brd_022_hidden_post_actions_reports_and_email(self):
+        from unittest.mock import patch
+
+        self.post_record.message = "PRIVATE ORIGINAL POST"
+        self.config.booking_email_from = "board@example.invalid"
+        self.other.partner_id.email = "player@example.invalid"
+        previous = self.env["mail.mail"].search([])
+        self.post_record.with_user(self.staff).action_hide()
+        token = self.login(other=True)
+        with patch.object(type(self.env["mail.mail"]), "send_after_commit"):
+            application = self.rpc("post/apply", post=self.post_record.id, accept_terms=True,
+                                   csrf_token=token).json()["result"]
+            self.assertIn("id", application)
+            mails = self.env["mail.mail"].search([]) - previous
+            self.assertTrue(mails)
+            for mail in mails:
+                self.assertNotIn("PRIVATE ORIGINAL POST", mail.body_html)
+        reply = self.rpc("post/reply", post=self.post_record.id, message="Still playing",
+                         csrf_token=token).json()["result"]
+        self.assertIn("id", reply)
+        result = self.rpc("post/report", post=self.post_record.id, reason="spam", csrf_token=token).json()["result"]
+        self.assertEqual(result["message"], "This content is unavailable.")
+        self.assertNotIn("PRIVATE ORIGINAL POST", json.dumps(result))
+        self.assertIn("id", self.rpc("post/report", reply=reply["id"], reason="spam",
+                                     csrf_token=token).json()["result"])
+        page = self.url_open("/my/billiard").text
+        self.assertIn("Still playing", page)
+        self.assertIn("This post was removed.", page)
+        self.assertNotIn("PRIVATE ORIGINAL POST", page)
+        token = self.login()
+        with patch.object(type(self.env["mail.mail"]), "send_after_commit"):
+            self.assertEqual(self.rpc("application/decide", application=application["id"], action="accept",
+                                      csrf_token=token).json()["result"], {"ok": True})
+        detail = self.rpc("post", post=self.post_record.id).json()["result"]
+        self.assertEqual(detail["remaining"], 1)
+        self.assertNotIn("PRIVATE ORIGINAL POST", json.dumps(detail))
+        duplicate = self.rpc("post/create", booking_id=self.booking.id, message="Replacement", level="any",
+                             players_needed=1, accept_terms=True, csrf_token=token).json()["result"]
+        self.assertEqual(duplicate["error"], "duplicate")
+        with patch.object(type(self.env["mail.mail"]), "send_after_commit"):
+            for event in ("new", "accepted", "declined", "removed", "closed", "changed"):
+                before = self.env["mail.mail"].search([])
+                self.post_record._queue_email(event, self.other.partner_id, self.customer.partner_id)
+                queued = self.env["mail.mail"].search([]) - before
+                self.assertEqual(len(queued), 1)
+                self.assertNotIn("PRIVATE ORIGINAL POST", queued.body_html)
+        self.post_record.invalidate_recordset()
+        self.assertEqual(self.post_record.message, "PRIVATE ORIGINAL POST")
+        self.post_record.with_user(self.staff).action_restore()
+        self.assertEqual(self.rpc("post", post=self.post_record.id).json()["result"]["message"], "PRIVATE ORIGINAL POST")
+
+    def test_brd_022_hidden_post_existing_application_transitions(self):
+        application = self.Application.create({"post_id": self.post_record.id,
+                                               "partner_id": self.other.partner_id.id})
+        self.post_record.with_user(self.staff).action_hide()
+        self.assertEqual(application.state, "pending")
+        application._transition("accept", self.customer.partner_id)
+        application._transition("remove", self.customer.partner_id)
+        self.assertEqual(application.state, "removed")
+        third = new_test_user(self.env, login="hidden-third", groups="base.group_portal")
+        declined = self.Application.create({"post_id": self.post_record.id, "partner_id": third.partner_id.id})
+        declined._transition("decline", self.customer.partner_id)
+        self.assertEqual(declined.state, "declined")
+        fourth = new_test_user(self.env, login="hidden-fourth", groups="base.group_portal")
+        withdrawn = self.Application.create({"post_id": self.post_record.id, "partner_id": fourth.partner_id.id})
+        withdrawn._transition("withdraw", fourth.partner_id)
+        self.assertEqual(withdrawn.state, "withdrawn")
+        self.booking.action_cancel()
+        self.post_record.invalidate_recordset()
+        self.assertFalse(self.post_record._is_open())
+        detail = self.rpc("post", post=self.post_record.id).json()["result"]
+        self.assertEqual(detail["state"], "closed")
+        self.assertEqual(detail["message"], "This post was removed.")
+        self.assertNotIn(self.values["message"], json.dumps(detail))

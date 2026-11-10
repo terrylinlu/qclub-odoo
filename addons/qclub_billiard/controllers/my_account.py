@@ -45,9 +45,9 @@ class BilliardAccount(BilliardBooking):
         history = bookings.filtered(lambda booking: booking.start < now)
         bookings = sorted(upcoming, key=lambda booking: booking.start) + list(history)
         posts = request.env["qclub.board.post"].sudo().search(
-            own_domain + [("hidden", "=", False)], order="id desc", limit=50)
+            own_domain, order="id desc", limit=50)
         applications = request.env["qclub.board.application"].sudo().search(
-            own_domain + [("post_id.hidden", "=", False)], order="id desc", limit=50)
+            own_domain, order="id desc", limit=50)
         # The relation domains keep the customer predicate even for other authors' replies.
         relevant = site_domain + ["|", "|", ("post_id.partner_id", "=", partner),
                                   ("post_id", "in", request.env["qclub.board.reply"].sudo().search(
@@ -55,7 +55,7 @@ class BilliardAccount(BilliardBooking):
                                   ("post_id", "in", request.env["qclub.board.application"].sudo().search(
                                       own_domain).post_id.ids)]
         replies = request.env["qclub.board.reply"].sudo().search(
-            relevant + [("hidden", "=", False), ("post_id.hidden", "=", False)], order="id desc", limit=50)
+            relevant + [("hidden", "=", False)], order="id desc", limit=50)
 
         def link(booking, post=None, find=False):
             params = {"date": booking.business_date.isoformat()}
@@ -73,7 +73,7 @@ class BilliardAccount(BilliardBooking):
                 site_domain + [("partner_id", "=", partner), ("booking_id", "=", booking.id)], limit=1)
             booking_rows.append({
                 "number": booking.name, "time": booking._time_label(), "table": booking.table_id.name,
-                "state": booking_labels[booking.state], "url": link(booking, post if not post.hidden else None),
+                "state": booking_labels[booking.state], "url": link(booking, post),
                 "confirmation": "/billiard/booking/confirmation/" + booking.name,
                 "find": link(booking, find=True) if config.online_board and not post
                 and booking.state == "confirmed" and booking.start > now else None,
@@ -86,7 +86,7 @@ class BilliardAccount(BilliardBooking):
                 "time": post.booking_id._time_label(), "table": post.booking_id.table_id.name,
                 "state": _("Open") if post._is_open() else _("Closed"),
                 "accepted": Application.search_count(counts + [("state", "=", "accepted")]),
-                "needed": post.players_needed,
+                "needed": post.players_needed, "message": post._customer_message(),
                 "pending": Application.search_count(counts + [("state", "=", "pending")]),
                 "url": link(post.booking_id, post),
             })
@@ -96,6 +96,7 @@ class BilliardAccount(BilliardBooking):
                               "time": item.post_id.booking_id._time_label(),
                               "table": item.post_id.booking_id.table_id.name,
                               "state": application_labels[item.state],
+                              "message": item.post_id._customer_message(),
                               "url": link(item.post_id.booking_id, item.post_id)} for item in applications],
             "messages": [{"name": board_display_name(item.partner_id, False), "message": item.message,
                           "time": item.post_id.booking_id._time_label(),

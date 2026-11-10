@@ -156,3 +156,73 @@ test('test_brd_020_brd_021_brd_022_brd_023_report_hide_ban_real_clicks', async (
     }
   }
 });
+
+test('test_brd_022_hidden_post_keeps_join_marker_and_application', async ({ page, browser }, info) => {
+  test.setTimeout(120000);
+  const staffContext = await browser.newContext({ baseURL: info.project.use.baseURL, viewport: { width: 1280, height: 800 } });
+  const customerContext = await browser.newContext({ ...info.project.use, baseURL: info.project.use.baseURL });
+  const staff = await staffContext.newPage();
+  const customer = await customerContext.newPage();
+  const original = `Private post ${info.project.name} ${Date.now()}`;
+  let booking: number | undefined;
+  try {
+    await login(staff, 'demo-staff');
+    await login(page, info.project.name === 'mobile-chromium' ? 'demo-customer-c' : 'demo-customer-a');
+    await login(customer, 'demo-customer-b');
+    const owner = (await rpc(page, '/web/session/get_session_info', {})).partner_id;
+    const minimum = await page.locator('.o_qclub_booking_date').getAttribute('min');
+    const maximum = await page.locator('.o_qclub_booking_date').getAttribute('max');
+    let chosen: { date: string; table: number; start: string } | undefined;
+    for (let offset = info.project.name === 'mobile-chromium' ? 2 : 1; !chosen; offset += 2) {
+      const day = new Date(`${minimum}T12:00:00Z`);
+      day.setUTCDate(day.getUTCDate() + offset);
+      const date = day.toISOString().slice(0, 10);
+      if (date > maximum!) break;
+      const data = await rpc(page, '/billiard/booking/occupancy', { date });
+      for (const table of data.tables) {
+        const index = table.slots.findIndex((state: string, index: number) => state === 'free' && table.slots[index + 1] === 'free');
+        if (index >= 0) { chosen = { date, table: table.id, start: data.slots[index].start }; break; }
+      }
+    }
+    expect(chosen, 'Need free adjacent future slots').toBeTruthy();
+    const slot = chosen!;
+    booking = await orm(staff, 'qclub.booking', 'create', [{ table_id: slot.table, partner_id: owner,
+      start: slot.start.replace('T', ' ').replace('Z', ''), duration_hours: 2 }]);
+    await orm(staff, 'qclub.booking', 'action_confirm', [[booking]]);
+    await page.goto(`/billiard/booking?date=${slot.date}&booking=${booking}`);
+    const panel = page.locator('.o_qclub_post_panel');
+    await panel.getByLabel(/Message/).fill(original);
+    const terms = panel.getByRole('checkbox');
+    if (await terms.count()) await terms.check();
+    await panel.getByRole('button', { name: 'Find players', exact: true }).click();
+    await expect(panel.locator('.o_qclub_post_message')).toHaveText(original);
+    const board = await rpc(page, '/billiard/booking/board', { date: slot.date });
+    const post = board.own_bookings.find((item: any) => item.booking_id === booking).post_id;
+    const loaded = await rpc(staff, '/web/action/load', { action_id: 'qclub_billiard.qclub_board_post_action' });
+    await staff.goto(`/odoo/action-${loaded.id}/${post}`);
+    await staff.getByRole('button', { name: 'Hide', exact: true }).click();
+    await expect(staff.getByRole('button', { name: 'Restore', exact: true })).toBeVisible();
+    await customer.goto(`/billiard/booking?date=${slot.date}`);
+    const marker = customer.locator('.o_qclub_grid_table').getByRole('button', { name: /Join/ }).first();
+    await expect(marker).toBeVisible();
+    // Identify the booked table and UTC slot index, even when other posts share the day.
+    const occupancy = await rpc(customer, "/billiard/booking/occupancy", { date: slot.date });
+    const index = occupancy.slots.findIndex((item: any) => item.start === slot.start);
+    const marks = customer.locator(`.o_qclub_grid_table td[data-table-id="${slot.table}"][data-slot-index="${index}"]`);
+    await marks.first().click();
+    const cp = customer.locator('.o_qclub_post_panel');
+    await expect(cp.locator('.o_qclub_post_message')).toHaveText('This post was removed.');
+    await expect(cp).not.toContainText(original);
+    expect(await customer.content()).not.toContain(original);
+    await expect(cp.getByRole('button', { name: 'Report', exact: true })).toHaveCount(0);
+    const apply = cp.locator('form').filter({ has: customer.getByRole('button', { name: 'Apply to join', exact: true }) });
+    const consent = apply.getByRole('checkbox');
+    if (await consent.count()) await consent.check();
+    await apply.getByRole('button', { name: 'Apply to join', exact: true }).click();
+    await expect(cp).toContainText('Waiting');
+  } finally {
+    if (booking) await orm(staff, 'qclub.booking', 'action_cancel', [[booking]]);
+    await staffContext.close();
+    await customerContext.close();
+  }
+});

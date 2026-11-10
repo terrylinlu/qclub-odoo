@@ -80,7 +80,7 @@ class BilliardBoard(BilliardBooking):
         public = request.env.user._is_public()
         posts = request.env["qclub.board.post"].sudo().search([
             ("website_id", "=", request.website.id), ("booking_id.business_date", "=", day),
-            ("hidden", "=", False), ("state", "=", "open"), ("booking_id.state", "=", "confirmed"),
+            ("state", "=", "open"), ("booking_id.state", "=", "confirmed"),
             ("booking_id.start", ">", fields.Datetime.now()),
         ], order="id")
         own = []
@@ -92,8 +92,6 @@ class BilliardBoard(BilliardBooking):
             ])
             for booking in bookings:
                 post = request.env["qclub.board.post"].sudo().search([("booking_id", "=", booking.id)], limit=1)
-                if post.hidden:
-                    continue
                 own.append({"booking_id": booking.id, "table_id": booking.table_id.id,
                             "start": booking.start.isoformat() + "Z", "hours": booking.duration_hours,
                             "state": booking.state, "post_id": post.id or None,
@@ -110,11 +108,11 @@ class BilliardBoard(BilliardBooking):
             return {"error": "login_required"}
         identifier = positive_id(post)
         record = request.env["qclub.board.post"].sudo().search([
-            ("id", "=", identifier), ("website_id", "=", request.website.id), ("hidden", "=", False),
+            ("id", "=", identifier), ("website_id", "=", request.website.id),
         ], limit=1) if identifier else request.env["qclub.board.post"].sudo().browse()
         if not record:
             return {"error": "not_found", "message": _("This post is unavailable.")}
-        return dict(record._summary(request.env.user._is_public()), message=record.message,
+        return dict(record._summary(request.env.user._is_public()), message=record._customer_message(), hidden=record.hidden,
                     state="open" if record._is_open() else "closed",
                     date=record.booking_id.business_date.isoformat(), **self._join_detail(record))
 
@@ -207,7 +205,7 @@ class BilliardBoard(BilliardBooking):
                 if operation in ("reply", "apply"):
                     identifier = positive_id(post)
                     record = request.env["qclub.board.post"].sudo().search([
-                        ("id", "=", identifier), ("website_id", "=", request.website.id), ("hidden", "=", False),
+                        ("id", "=", identifier), ("website_id", "=", request.website.id),
                     ], limit=1) if identifier else None
                     if not record:
                         raise ValidationError(_("This post is unavailable."))
@@ -280,8 +278,6 @@ class BilliardBoard(BilliardBooking):
         model = "qclub.board.post" if post else "qclub.board.reply"
         identifier = positive_id(post if post else reply)
         domain = [("id", "=", identifier), ("website_id", "=", request.website.id), ("hidden", "=", False)]
-        if reply:
-            domain.append(("post_id.hidden", "=", False))
         target = request.env[model].sudo().search(domain, limit=1) if identifier else None
         if not target:
             return {"error": "validation", "message": _("This content is unavailable.")}

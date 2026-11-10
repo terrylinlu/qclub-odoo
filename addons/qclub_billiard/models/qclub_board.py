@@ -89,9 +89,14 @@ class BoardPost(models.Model):
             if not 1 <= post.players_needed <= config.board_max_players:
                 raise ValidationError(_("Please choose a valid number of players."))
 
+    def _customer_message(self):
+        """Customer surfaces must never expose moderated original text."""
+        self.ensure_one()
+        return self.env._("This post was removed.") if self.hidden else self.message
+
     def _is_open(self):
         self.ensure_one()
-        return not self.hidden and self.state == "open" and self.booking_id.state == "confirmed" and self.booking_id.start > fields.Datetime.now()
+        return self.state == "open" and self.booking_id.state == "confirmed" and self.booking_id.start > fields.Datetime.now()
 
     def _summary(self, viewer_is_public):
         self.ensure_one()

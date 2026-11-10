@@ -218,7 +218,9 @@ export class BookingBoard {
             pending: _t("Waiting"), accepted: _t("Accepted"), declined: _t("Declined"),
             withdrawn: _t("Withdrawn"), removed: _t("Removed"),
         };
-        this.renderReport(post, { post: post.id }, this.panel);
+        if (!post.hidden) {
+            this.renderReport(post, { post: post.id }, this.panel);
+        }
         this.node("p", _t("Accepted players")).className = "fw-bold mt-3 mb-1";
         for (const player of post.accepted) {
             this.node("p", player.display_name);
