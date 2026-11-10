@@ -41,7 +41,7 @@
                             <button type="button" class="o_qclub_book btn btn-primary">Book</button>
                             <button type="button" class="o_qclub_clear btn btn-secondary ms-2">Clear</button>
                         </section>
-                        <section class="o_qclub_post_panel alert alert-info mt-3" hidden="hidden" aria-live="polite" aria-label="Players wanted post"/>
+                        <section class="o_qclub_post_panel mt-3" hidden="hidden" aria-live="polite" aria-label="Players wanted post"/>
                         <section class="o_qclub_board_list mt-3" aria-label="Players wanted"/>
                     </div>
                 </div>

@@ -8,6 +8,14 @@ from .main import BilliardBooking
 from ..models.qclub_board import board_display_name
 
 
+def _status_class(state):
+    if state in {"confirmed", "arrived", "open", "accepted"}:
+        return "text-bg-success"
+    if state in {"pending", "waiting"}:
+        return "text-bg-warning"
+    return "text-bg-secondary"
+
+
 class BilliardAccount(BilliardBooking):
     def _own_domain(self):
         return [("website_id", "=", request.website.id),
@@ -73,7 +81,7 @@ class BilliardAccount(BilliardBooking):
                 site_domain + [("partner_id", "=", partner), ("booking_id", "=", booking.id)], limit=1)
             booking_rows.append({
                 "number": booking.name, "time": booking._time_label(), "table": booking.table_id.name,
-                "state": booking_labels[booking.state], "url": link(booking, post),
+                "state": booking_labels[booking.state], "state_class": _status_class(booking.state), "url": link(booking, post),
                 "confirmation": "/billiard/booking/confirmation/" + booking.name,
                 "find": link(booking, find=True) if config.online_board and not post
                 and booking.state == "confirmed" and booking.start > now else None,
@@ -85,6 +93,7 @@ class BilliardAccount(BilliardBooking):
             post_rows.append({
                 "time": post.booking_id._time_label(), "table": post.booking_id.table_id.name,
                 "state": _("Open") if post._is_open() else _("Closed"),
+                "state_class": _status_class("open" if post._is_open() else "closed"),
                 "accepted": Application.search_count(counts + [("state", "=", "accepted")]),
                 "needed": post.players_needed, "message": post._customer_message(),
                 "pending": Application.search_count(counts + [("state", "=", "pending")]),
@@ -96,6 +105,7 @@ class BilliardAccount(BilliardBooking):
                               "time": item.post_id.booking_id._time_label(),
                               "table": item.post_id.booking_id.table_id.name,
                               "state": application_labels[item.state],
+                              "state_class": _status_class(item.state),
                               "message": item.post_id._customer_message(),
                               "url": link(item.post_id.booking_id, item.post_id)} for item in applications],
             "messages": [{"name": board_display_name(item.partner_id, False), "message": item.message,

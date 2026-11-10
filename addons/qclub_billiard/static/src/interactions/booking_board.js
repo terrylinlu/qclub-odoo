@@ -152,10 +152,7 @@ export class BookingBoard {
                 await this.grid.loadAvailability();
                 return;
             }
-            this.node("h2", post.display_name);
-            this.node("p", `${post.table_name} · ${post.time_label}`);
-            this.node("p", _t("Level: %(level)s · Players wanted: %(players)s", { level: post.level[0].toUpperCase() + post.level.slice(1), players: post.remaining }));
-            this.node("p", post.message).className = "o_qclub_post_message text-break";
+            this.renderHeading(post);
             if (post.state === "closed") {
                 // Refresh stale markers, while keeping the closed panel visible.
                 const refreshing = this.grid.loadAvailability();
@@ -165,10 +162,7 @@ export class BookingBoard {
                     return;
                 }
                 this.show();
-                this.node("h2", post.display_name);
-                this.node("p", `${post.table_name} · ${post.time_label}`);
-                this.node("p", _t("Level: %(level)s · Players wanted: %(players)s", { level: post.level[0].toUpperCase() + post.level.slice(1), players: post.remaining }));
-                this.node("p", post.message).className = "o_qclub_post_message text-break";
+                this.renderHeading(post);
                 this.node("p", _t("This post is closed."));
             }
             this.renderJoin(post);
@@ -178,6 +172,18 @@ export class BookingBoard {
                 this.node("p", _t("This post could not be loaded. Please try again."));
             }
         }
+    }
+
+    renderHeading(post) {
+        const heading = this.node("div");
+        heading.className = "o_qclub_post_heading";
+        this.node("h2", post.display_name, heading);
+        if (!post.hidden) {
+            this.renderReport(post, { post: post.id }, heading);
+        }
+        this.node("p", `${post.table_name} · ${post.time_label}`).className = "o_qclub_post_details";
+        this.node("p", _t("Level: %(level)s · Players wanted: %(players)s", { level: post.level[0].toUpperCase() + post.level.slice(1), players: post.remaining })).className = "o_qclub_post_details";
+        this.node("p", post.message).className = "o_qclub_post_message text-break";
     }
 
     async joinAction(post, route, params, error, button) {
@@ -218,16 +224,14 @@ export class BookingBoard {
             pending: _t("Waiting"), accepted: _t("Accepted"), declined: _t("Declined"),
             withdrawn: _t("Withdrawn"), removed: _t("Removed"),
         };
-        if (!post.hidden) {
-            this.renderReport(post, { post: post.id }, this.panel);
-        }
-        this.node("p", _t("Accepted players")).className = "fw-bold mt-3 mb-1";
+        this.node("p", _t("Accepted players")).className = "o_qclub_post_section";
         for (const player of post.accepted) {
             this.node("p", player.display_name);
         }
-        this.node("p", _t("Replies")).className = "fw-bold mt-3 mb-1";
+        this.node("p", _t("Replies")).className = "o_qclub_post_section";
         for (const reply of post.replies) {
             const row = this.node("div");
+            row.className = "o_qclub_reply_row";
             this.node("strong", reply.display_name, row);
             if (reply.display_name) {
                 this.renderReport(post, { reply: reply.id }, row);
@@ -247,9 +251,10 @@ export class BookingBoard {
             return button;
         };
         if (post.is_owner) {
-            this.node("p", _t("Applications")).className = "fw-bold mt-3 mb-1";
+            this.node("p", _t("Applications")).className = "o_qclub_post_section";
             for (const application of post.applications) {
                 const row = this.node("div");
+                row.className = "o_qclub_application_row";
                 this.node("strong", application.display_name, row);
                 this.node("p", states[application.state], row);
                 this.node("p", application.message, row).className = "o_qclub_application_message text-break";
@@ -280,18 +285,22 @@ export class BookingBoard {
             label.htmlFor = "o_qclub_public_reply";
             const reply = this.node("textarea");
             reply.id = label.htmlFor;
+            reply.rows = 2;
             reply.className = "form-control";
             reply.onclick = () => window.location.assign(this.login(post.id));
             reply.onfocus = () => window.location.assign(this.login(post.id));
             return;
         }
+        const actions = this.node("div");
+        actions.className = "o_qclub_post_actions";
         const messageForm = (label, submitText, route, maximum, required) => {
-            const form = this.node("form");
+            const form = this.node("form", undefined, actions);
             const fieldLabel = this.node("label", label, form);
             const input = this.node("textarea", undefined, form);
             input.id = required ? "o_qclub_reply" : "o_qclub_application";
             fieldLabel.htmlFor = input.id;
             input.className = "form-control mb-2";
+            input.rows = 2;
             input.maxLength = maximum;
             input.required = required;
             let terms;
@@ -327,7 +336,7 @@ export class BookingBoard {
     renderReport(post, target, parent) {
         const button = this.node("button", _t("Report"), parent);
         button.type = "button";
-        button.className = "btn btn-link";
+        button.className = "btn btn-link o_qclub_report_control";
         const form = this.node("form", undefined, parent);
         form.className = "o_qclub_report_form";
         form.hidden = true;
@@ -362,6 +371,7 @@ export class BookingBoard {
         const label = this.node("label", _t("Report note (optional, maximum 500 characters)"), form);
         const note = this.node("textarea", undefined, label);
         note.className = "form-control";
+        note.rows = 2;
         note.maxLength = 500;
         const status = this.node("p", "", form);
         status.setAttribute("role", "status");
@@ -420,6 +430,7 @@ export class BookingBoard {
             return input;
         };
         const message = field("textarea", _t("Message (Don't share personal contact details)"), "message");
+        message.rows = 2;
         message.required = true;
         message.maxLength = 500;
         // Buttons rather than a native <select>: Chrome clipped the native list on some displays.

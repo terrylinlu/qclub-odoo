@@ -102,3 +102,93 @@
     text-decoration: underline;
 }
 .o_qclub_board_marker:focus-visible { outline: 3px solid #0d6efd; outline-offset: -3px; }
+
+.o_qclub_my_account {
+    min-width: 0;
+    max-width: 100%;
+
+    .nav-tabs { max-width: 100%; }
+    .nav-link { flex-shrink: 0; }
+    .tab-pane { padding-top: 0.75rem; }
+    .o_qclub_account_row {
+        padding: 0.75rem 0;
+        border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+        overflow-wrap: anywhere;
+
+        p { margin: 0; }
+    }
+    .o_qclub_row_heading, .o_qclub_booking_details {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 0.5rem 1rem;
+    }
+    .o_qclub_row_heading .badge { flex-shrink: 0; }
+    // The site theme makes "secondary" orange; finished states should read as neutral.
+    .o_qclub_row_heading .badge.text-bg-secondary {
+        background-color: #e9ecef !important;
+        border-color: #dee2e6;
+        color: #495057 !important;
+    }
+    .o_qclub_booking_details { flex-wrap: wrap; }
+    .o_qclub_row_actions { font-size: 0.875rem; }
+    .o_qclub_user_text { white-space: pre-wrap; }
+}
+
+.o_qclub_post_panel {
+    background: #fff;
+    border: 1px solid var(--bs-border-color, #dee2e6);
+    border-radius: 0.5rem;
+    box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.06);
+    padding: 1.25rem;
+    min-width: 0;
+    overflow-wrap: anywhere;
+
+    h2 { font-size: 1.25rem; margin-bottom: 0.375rem; }
+    p { margin-bottom: 0.375rem; }
+    .o_qclub_post_heading, .o_qclub_reply_row {
+        display: flex;
+        align-items: baseline;
+        flex-wrap: wrap;
+        gap: 0.25rem 0.75rem;
+    }
+    .o_qclub_post_heading h2 { margin-right: auto; }
+    .o_qclub_post_details {
+        font-size: 0.875rem;
+        color: var(--bs-secondary-color, #6c757d);
+        margin-bottom: 0.25rem;
+    }
+    .o_qclub_post_message {
+        margin-top: 0.75rem;
+        padding: 0.75rem;
+        background: var(--bs-tertiary-bg, #f5f5f5);
+        border-left: 3px solid var(--primary, var(--bs-primary, #714b67));
+        border-radius: 0.25rem;
+    }
+    .o_qclub_post_section {
+        border-top: 1px solid var(--bs-border-color, #dee2e6);
+        padding-top: 0.75rem;
+        margin-top: 1rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+    .o_qclub_report_control {
+        color: var(--bs-secondary-color, #6c757d);
+        font-size: 0.75rem;
+        padding: 0;
+        margin-left: auto;
+    }
+    .o_qclub_reply_row, .o_qclub_application_row { padding: 0.375rem 0; }
+    .o_qclub_reply_message, .o_qclub_report_form { width: 100%; }
+    .o_qclub_post_actions {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 1rem;
+        margin-top: 1rem;
+
+        form { min-width: 0; }
+        label { font-size: 0.875rem; }
+        @media (min-width: 768px) { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+    }
+    @media (max-width: 767.98px) { padding: 0.75rem; }
+}

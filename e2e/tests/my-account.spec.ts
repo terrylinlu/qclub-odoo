@@ -87,6 +87,7 @@ test('test_brd_030_brd_031_brd_032_brd_033_brd_034_account_links_date_click_and_
     await applicantPanel.getByRole('button', { name: 'Apply to join', exact: true }).click();
     await expect(applicantPanel).toContainText('Waiting');
     await applicant.goto('/my/billiard');
+    await applicant.getByRole('tab', { name: /^My join requests/ }).click();
     const request = applicant.locator('#qclub_my_applications article').filter({
       has: applicant.locator(`a[href$="post=${post}"]`),
     });
@@ -94,6 +95,7 @@ test('test_brd_030_brd_031_brd_032_brd_033_brd_034_account_links_date_click_and_
     await request.getByRole('link').click();
     await expect(applicantPanel.locator('.o_qclub_post_message')).toHaveText(message);
     await page.goto('/my/billiard');
+    await page.getByRole('tab', { name: /^Messages/ }).click();
     const reply = page.locator('#qclub_my_messages article').filter({ hasText: payload });
     await expect(reply).toHaveCount(1);
     await expect(reply.locator('script')).toHaveCount(0);
@@ -101,6 +103,7 @@ test('test_brd_030_brd_031_brd_032_brd_033_brd_034_account_links_date_click_and_
     await reply.getByRole('link').click();
     await expect(panel.locator('.o_qclub_post_message')).toHaveText(message);
     await page.goto('/my/billiard');
+    await page.getByRole('tab', { name: /^My posts/ }).click();
     await page.locator(`#qclub_my_posts a[href$="post=${post}"]`).click();
     await expect(panel.locator('.o_qclub_post_message')).toHaveText(message);
     const button = page.locator(`.o_qclub_date_button[data-date="${slot.date}"]`);
