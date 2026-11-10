@@ -95,6 +95,7 @@
                 <field name="reply_id" />
                 <field name="reason" />
                 <field name="state" />
+                <field name="create_date" string="Reported At" />
             </list>
         </field>
     </record>
@@ -104,8 +105,8 @@
         <field name="arch" type="xml">
             <form delete="false" create="false" edit="false">
                 <header>
-                    <button name="action_hide_content" string="Hide content" type="object" />
-                    <button name="action_resolve" string="Mark resolved" type="object" invisible="state == 'resolved'" />
+                    <button name="action_hide_and_resolve" string="Hide and resolve" type="object" class="btn-primary" invisible="content_hidden" />
+                    <button name="action_dismiss" string="Dismiss report" type="object" invisible="state == 'resolved'" />
                 </header>
                 <sheet>
                     <group>
@@ -116,6 +117,8 @@
                         <field name="reason" readonly="1" />
                         <field name="state" readonly="1" />
                         <field name="content" readonly="1" />
+                        <field name="content_hidden" readonly="1" />
+                        <field name="create_date" string="Reported At" readonly="1" />
                         <field name="note" readonly="1" />
                         <field name="resolved_by" readonly="1" />
                         <field name="resolved_at" readonly="1" />

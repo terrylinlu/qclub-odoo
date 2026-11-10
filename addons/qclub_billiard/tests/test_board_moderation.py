@@ -66,6 +66,20 @@ class TestBoardModeration(HttpCase):
             "website_id": self.website.id, "partner_id": self.other.partner_id.id, "reason": "Private reason", **values,
         })
 
+    def test_brd_021_dismiss_closes_report_without_hiding(self):
+        reply = self.env["qclub.board.reply"].create({
+            "post_id": self.post_record.id, "partner_id": self.other.partner_id.id, "message": "Fine reply",
+        })
+        report = self.env["qclub.board.report"].create({
+            "website_id": self.website.id, "reporter_id": self.customer.partner_id.id,
+            "reply_id": reply.id, "reason": "other",
+        })
+        report.with_user(self.staff).action_dismiss()
+        self.assertEqual(report.state, "resolved")
+        self.assertEqual(report.resolved_by, self.staff)
+        self.assertFalse(reply.hidden)
+        self.assertTrue(report.create_date)
+
     def test_brd_020_database_xor_unique_reasons_and_note(self):
         for reason in ("spam", "abuse", "personal_information", "other"):
             with self.env.cr.savepoint() as sp:
@@ -126,10 +140,15 @@ class TestBoardModeration(HttpCase):
             record.with_user(self.staff).action_restore()
             self.assertFalse(record.hidden)
             self.assertEqual(record.hidden_by, self.staff)
-        report.with_user(self.staff).action_hide_content()
-        report.with_user(self.staff).action_resolve()
         with self.assertRaises(AccessError):
-            report.with_user(self.other).action_resolve()
+            report.with_user(self.other).action_hide_and_resolve()
+        with self.assertRaises(AccessError):
+            report.with_user(self.other).action_dismiss()
+        self.assertFalse(report.content_hidden)
+        report.with_user(self.staff).action_hide_and_resolve()
+        report.invalidate_recordset()
+        self.assertTrue(report.content_hidden)
+        self.assertTrue((report.post_id or report.reply_id).hidden)
         self.assertEqual(report.state, "resolved")
         self.assertEqual(report.resolved_by, self.staff)
         self.assertTrue(report.resolved_at)

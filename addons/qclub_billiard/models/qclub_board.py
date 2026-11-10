@@ -45,6 +45,7 @@ def moderate_content(records, hidden):
 class BoardPost(models.Model):
     _name = "qclub.board.post"
     _description = "Booking player wanted post"
+    _rec_name = "message"
 
     booking_id = fields.Many2one("qclub.booking", required=True, ondelete="restrict", index=True)
     website_id = fields.Many2one(related="booking_id.website_id", store=True, index=True)
@@ -182,6 +183,7 @@ class BoardTerms(models.Model):
 class BoardReply(models.Model):
     _name = "qclub.board.reply"
     _description = "Booking board reply"
+    _rec_name = "message"
     _order = "id"
 
     post_id = fields.Many2one("qclub.board.post", required=True, ondelete="restrict", index=True)
@@ -287,6 +289,7 @@ class BoardApplication(models.Model):
 class BoardReport(models.Model):
     _name = "qclub.board.report"
     _description = "Board content report"
+    _rec_name = "reason"
     _order = "id desc"
 
     website_id = fields.Many2one("website", required=True, ondelete="restrict", index=True)
@@ -297,6 +300,7 @@ class BoardReport(models.Model):
                                ("personal_information", "Personal information"), ("other", "Other")], required=True)
     note = fields.Text()
     content = fields.Text(compute="_compute_content")
+    content_hidden = fields.Boolean(compute="_compute_content")
     state = fields.Selection([("new", "New"), ("resolved", "Resolved")], required=True, default="new")
     resolved_by = fields.Many2one("res.users", readonly=True)
     resolved_at = fields.Datetime(readonly=True)
@@ -315,10 +319,12 @@ class BoardReport(models.Model):
             ON qclub_board_report (reporter_id, reply_id) WHERE reply_id IS NOT NULL
         """)
 
-    @api.depends("post_id.message", "reply_id.message")
+    @api.depends("post_id.message", "post_id.hidden", "reply_id.message", "reply_id.hidden")
     def _compute_content(self):
         for report in self:
-            report.content = (report.post_id or report.reply_id).message
+            target = report.post_id or report.reply_id
+            report.content = target.message
+            report.content_hidden = target.hidden
 
     @api.constrains("note", "website_id", "post_id", "reply_id")
     def _check_report(self):
@@ -329,14 +335,19 @@ class BoardReport(models.Model):
             if target and target.website_id != report.website_id:
                 raise ValidationError(_("This content is unavailable."))
 
-    def action_hide_content(self):
+    def action_hide_and_resolve(self):
+        """Hide the reported content and close the report in one step."""
         check_board_staff(self)
         for report in self:
             (report.post_id or report.reply_id).action_hide()
-        return True
+        return self._resolve()
 
-    def action_resolve(self):
+    def action_dismiss(self):
+        """Close the report without changing the content."""
         check_board_staff(self)
+        return self._resolve()
+
+    def _resolve(self):
         self.sudo().write({"state": "resolved", "resolved_by": self.env.uid,
                            "resolved_at": fields.Datetime.now()})
         return True
