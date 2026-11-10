@@ -434,11 +434,13 @@ class QclubBooking(models.Model):
                     "time_label": self._time_label(),
                     "lock_label": self._format_booking_time(self.lock_expire, self.lock_expire).split(" – ")[0],
                 })
-                self.env["mail.mail"].sudo().create({
+                mail = self.env["mail.mail"].sudo().create({
                     "subject": _("Booking received – awaiting deposit: %s", self.name),
                     "email_from": config.booking_email_from, "email_to": self.partner_id.email,
                     "body_html": body, "auto_delete": False,
                 })
+                # The mail queue cron only runs hourly: send this email as soon as the transaction commits.
+                mail.send_after_commit()
         except Exception:
             _logger.exception("Could not queue booking email for booking %s", self.id)
 

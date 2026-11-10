@@ -125,11 +125,13 @@ class BoardPost(models.Model):
                         domain, booking.business_date.isoformat(), self.id,
                     ),
                 })
-                self.env["mail.mail"].sudo().create({
+                mail = self.env["mail.mail"].sudo().create({
                     "subject": _("Q Club – %s", labels[event]),
                     "email_from": config.booking_email_from, "email_to": recipient.email,
                     "body_html": body, "auto_delete": False,
                 })
+                # The mail queue cron only runs hourly: send this email as soon as the transaction commits.
+                mail.send_after_commit()
         except Exception:
             _logger.exception("Could not queue board email for post %s", self.id)
 

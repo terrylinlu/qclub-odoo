@@ -20,6 +20,7 @@ class TestBoardPosts(HttpCase):
         self.website = self.env["website"].search([("name", "=", "Q Club")], limit=1)
         self.other_site = self.env["website"].search([("name", "=", "AUSHARE")], limit=1)
         self.env["website"].search([("domain", "=", self.base_url())]).write({"domain": False})
+        self.env.flush_all()  # Clear first: website domains are unique row by row.
         self.website.domain = self.base_url()
         self.env.registry.clear_cache()
         self.config = self.env["qclub.config"]._get_for_website(self.website)

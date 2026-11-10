@@ -31,6 +31,7 @@ class TestOnlineBookingHttp(HttpCase):
 
     def _website(self, website):
         self.env["website"].search([("domain", "=", self.base_url())]).write({"domain": False})
+        self.env.flush_all()  # Clear first: website domains are unique row by row.
         website.domain = self.base_url()
         self.env.flush_all()
         self.env.registry.clear_cache()

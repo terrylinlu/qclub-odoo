@@ -25,6 +25,7 @@ class TestBoardJoin(HttpCase):
         self.website = self.env["website"].search([("name", "=", "Q Club")], limit=1)
         self.other_site = self.env["website"].search([("name", "=", "AUSHARE")], limit=1)
         self.env["website"].search([("domain", "=", self.base_url())]).write({"domain": False})
+        self.env.flush_all()  # Clear first: website domains are unique row by row.
         self.website.domain = self.base_url()
         self.env.registry.clear_cache()
         self.config = self.env["qclub.config"]._get_for_website(self.website)
@@ -266,6 +267,20 @@ class TestBoardJoin(HttpCase):
         self.env.registry.clear_cache()
         for route in ("post/reply", "post/apply", "post/withdraw", "application/decide"):
             self.assertEqual(self.rpc(route).status_code, 404)
+
+    def test_brd_019_email_is_sent_after_commit_not_queued_for_cron(self):
+        self.config.booking_email_from = "Q Club <board@example.invalid>"
+        self.other.partner_id.email = "applicant@example.invalid"
+        self.post_record.partner_id.email = "owner@example.invalid"
+        with patch.object(type(self.env["mail.mail"]), "send_after_commit") as send:
+            self.apply()
+        send.assert_called_once()
+
+    def test_brd_019_no_sender_sends_nothing(self):
+        self.config.booking_email_from = False
+        with patch.object(type(self.env["mail.mail"]), "send_after_commit") as send:
+            self.apply()
+        send.assert_not_called()
 
     def test_brd_017_brd_018_brd_019_all_events_recipients_text_and_no_reply_mail(self):
         self.config.booking_email_from = "Q Club <board@example.invalid>"
