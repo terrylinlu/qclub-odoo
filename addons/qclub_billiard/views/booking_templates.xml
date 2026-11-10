@@ -15,6 +15,7 @@
                          t-att-data-board-enabled="'1' if board_enabled else '0'"
                          t-att-data-board-post="board_post" t-att-data-board-booking="board_booking"
                          t-att-data-csrf-token="csrf_token" t-att-data-max-hours="max_hours" t-att-data-login-required="'1' if login_required else '0'">
+                        <div class="o_qclub_date_strip d-flex gap-2 overflow-auto mb-2" role="group" aria-label="Booking dates"/>
                         <div class="o_qclub_date_controls d-flex align-items-center flex-wrap gap-2 mb-2">
                             <label for="qclub_booking_date" class="form-label mb-0">Business date (Adelaide)</label>
                             <input id="qclub_booking_date" type="date" class="o_qclub_booking_date form-control"

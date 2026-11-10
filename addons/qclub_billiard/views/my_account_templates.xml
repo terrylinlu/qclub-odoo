@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="portal_my_home_billiard" inherit_id="portal.portal_my_home">
+        <xpath expr="//div[@id='portal_common_category']" position="inside">
+            <t t-if="request.env['qclub.config'].sudo().search_count([('website_id', '=', request.website.id), ('online_booking', '=', True)])" t-call="portal.portal_docs_entry">
+                <t t-set="title">My Bookings &amp; Players</t>
+                <t t-set="text">View your bookings, posts, join requests and messages</t>
+                <t t-set="url" t-value="'/my/billiard'"/>
+                <t t-set="config_card" t-value="True"/>
+            </t>
+        </xpath>
+    </template>
+    <record id="my_billiard" model="ir.ui.view">
+        <field name="name">My Bookings and Players</field>
+        <field name="key">qclub_billiard.my_billiard</field>
+        <field name="type">qweb</field>
+        <field name="model">qclub.booking</field>
+        <field name="arch" type="xml">
+            <t t-name="qclub_billiard.my_billiard" t-call="portal.portal_layout">
+                <div class="o_qclub_my_account">
+                    <h1>My Bookings &amp; Players</h1>
+                    <section id="qclub_my_bookings" class="mb-4">
+                        <h2>My bookings</h2>
+                        <p t-if="not bookings">No bookings yet.</p>
+                        <article t-foreach="bookings" t-as="item" class="border-bottom py-2">
+                            <a t-att-href="item['confirmation']" t-out="item['number']"/>
+                            <p><span t-out="item['time']"/> · <span t-out="item['table']"/> · <span t-out="item['state']"/></p>
+                            <a t-att-href="item['url']">View booking date</a>
+                            <a t-if="item['find']" t-att-href="item['find']" class="ms-3">Find players</a>
+                        </article>
+                    </section>
+                    <section id="qclub_my_posts" class="mb-4">
+                        <h2>My posts</h2>
+                        <p t-if="not posts">No posts yet.</p>
+                        <article t-foreach="posts" t-as="item" class="border-bottom py-2">
+                            <a t-att-href="item['url']" t-out="item['time']"/>
+                            <p><span t-out="item['table']"/> · <span t-out="item['state']"/></p>
+                            <p>Accepted: <span t-out="item['accepted']"/> / <span t-out="item['needed']"/> · Waiting: <span t-out="item['pending']"/></p>
+                        </article>
+                    </section>
+                    <section id="qclub_my_applications" class="mb-4">
+                        <h2>My join requests</h2>
+                        <p t-if="not applications">No join requests yet.</p>
+                        <article t-foreach="applications" t-as="item" class="border-bottom py-2">
+                            <a t-att-href="item['url']" t-out="item['time']"/>
+                            <p><span t-out="item['name']"/> · <span t-out="item['table']"/> · <span t-out="item['state']"/></p>
+                        </article>
+                    </section>
+                    <section id="qclub_my_messages" class="mb-4">
+                        <h2>Messages</h2>
+                        <p t-if="not messages">No messages yet.</p>
+                        <article t-foreach="messages" t-as="item" class="border-bottom py-2">
+                            <a t-att-href="item['url']" t-out="item['time']"/>
+                            <p t-out="item['name']"/>
+                            <p class="text-break" style="white-space: pre-wrap" t-out="item['message']"/>
+                        </article>
+                    </section>
+                </div>
+            </t>
+        </field>
+    </record>
+</odoo>

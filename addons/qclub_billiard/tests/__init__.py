@@ -21,3 +21,4 @@ from . import test_board_posts
 
 from . import test_board_join
 from . import test_board_join_concurrency
+from . import test_my_account

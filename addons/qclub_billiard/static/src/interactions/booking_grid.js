@@ -11,6 +11,12 @@ export class BookingGrid extends Interaction {
     dynamicContent = {
         _root: {
             "t-on-click": (ev) => {
+                const day = ev.target.closest(".o_qclub_date_button");
+                if (day && this.el.contains(day)) {
+                    this.dateInput.value = day.dataset.date;
+                    this.loadAvailability();
+                    return;
+                }
                 const cell = ev.target.closest(".o_qclub_slot_free");
                 if (cell && this.el.contains(cell)) {
                     this.selectSlot(cell);
@@ -45,6 +51,8 @@ export class BookingGrid extends Interaction {
     }
 
     start() {
+        this.renderDates();
+        this.loadReminders();
         this.onPageShow = (event) => {
             if (event.persisted) {
                 this.restore = null;
@@ -100,7 +108,73 @@ export class BookingGrid extends Interaction {
         }
     }
 
+    renderDates() {
+        const strip = this.el.querySelector(".o_qclub_date_strip");
+        const minimum = this.dateInput.min;
+        const maximum = this.dateInput.max;
+        if (strip.dataset.minimum === minimum && strip.dataset.maximum === maximum) {
+            this.syncDates();
+            return;
+        }
+        strip.dataset.minimum = minimum;
+        strip.dataset.maximum = maximum;
+        strip.replaceChildren();
+        // UTC is only calendar arithmetic here: the input already supplies Adelaide dates.
+        const day = new Date(`${minimum}T12:00:00Z`);
+        const weekdays = [_t("Sun"), _t("Mon"), _t("Tue"), _t("Wed"), _t("Thu"), _t("Fri"), _t("Sat")];
+        while (Number.isFinite(day.getTime()) && day.toISOString().slice(0, 10) <= maximum) {
+            const date = day.toISOString().slice(0, 10);
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "o_qclub_date_button btn btn-outline-primary flex-shrink-0";
+            button.dataset.date = date;
+            button.setAttribute("aria-label", date);
+            const weekday = document.createElement("span");
+            weekday.className = "d-block";
+            weekday.textContent = weekdays[day.getUTCDay()];
+            const number = document.createElement("span");
+            number.className = "d-block";
+            number.textContent = String(day.getUTCDate());
+            const dot = document.createElement("span");
+            dot.className = "o_qclub_date_dot d-block";
+            dot.textContent = "•";
+            dot.setAttribute("aria-label", _t("You have a booking"));
+            // visibility keeps every day the same height, whether or not it has a dot.
+            dot.style.visibility = this.reminderDates?.has(date) ? "visible" : "hidden";
+            button.append(weekday, number, dot);
+            strip.append(button);
+            day.setUTCDate(day.getUTCDate() + 1);
+        }
+        this.syncDates();
+    }
+
+    syncDates() {
+        for (const button of this.el.querySelectorAll(".o_qclub_date_button")) {
+            const selected = button.dataset.date === this.dateInput.value;
+            if (selected) {
+                button.setAttribute("aria-current", "date");
+            } else {
+                button.removeAttribute("aria-current");
+            }
+            button.classList.toggle("active", selected);
+            button.querySelector(".o_qclub_date_dot").style.visibility = this.reminderDates?.has(button.dataset.date) ? "visible" : "hidden";
+        }
+    }
+
+    async loadReminders() {
+        try {
+            const result = await rpc("/billiard/booking/reminders", {});
+            if (!this.isDestroyed) {
+                this.reminderDates = new Set(result.dates || []);
+                this.syncDates();
+            }
+        } catch {
+            // Reminders are optional; availability and date selection stay independent.
+        }
+    }
+
     async loadAvailability() {
+        this.syncDates();
         this.board.reset();
         this.clearAlert();
         this.clearSelection();
@@ -124,6 +198,7 @@ export class BookingGrid extends Interaction {
                 } else {
                     this.dateInput.min = result.available_dates.min;
                     this.dateInput.max = result.available_dates.max;
+                    this.renderDates();
                     this.renderGrid(result);
                     this.board.load(requestNumber);
                 }
