@@ -340,12 +340,22 @@ class BoardReport(models.Model):
         check_board_staff(self)
         for report in self:
             (report.post_id or report.reply_id).action_hide()
-        return self._resolve()
+        self._resolve()
+        return self._done_notification(_("Content hidden and report resolved."))
 
     def action_dismiss(self):
         """Close the report without changing the content."""
         check_board_staff(self)
-        return self._resolve()
+        self._resolve()
+        return self._done_notification(_("Report dismissed. The content is still visible."))
+
+    def _done_notification(self, message):
+        """Confirm the action on screen and reload the form so its state updates."""
+        return {
+            "type": "ir.actions.client", "tag": "display_notification",
+            "params": {"message": message, "type": "success", "sticky": False,
+                       "next": {"type": "ir.actions.client", "tag": "soft_reload"}},
+        }
 
     def _resolve(self):
         self.sudo().write({"state": "resolved", "resolved_by": self.env.uid,

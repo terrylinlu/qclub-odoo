@@ -115,6 +115,8 @@ test('test_brd_020_brd_021_brd_022_brd_023_report_hide_ban_real_clicks', async (
     await expect(staff.locator('.o_field_widget[name="note"]')).toContainText(`<script>${unique}</script>`);
     await expect(staff.locator('.o_field_widget[name="note"] script')).toHaveCount(0);
     await staff.getByRole('button', { name: 'Hide and resolve', exact: true }).click();
+    await expect(staff.locator('.o_notification')).toContainText('Content hidden and report resolved.');
+    await expect(staff.locator('.ribbon')).toContainText('Hidden');
     // Staff get visible feedback: the action disappears once the content is hidden.
     await expect(staff.getByRole('button', { name: 'Hide and resolve', exact: true })).toHaveCount(0);
     await expect(staff.getByRole('button', { name: 'Dismiss report', exact: true })).toHaveCount(0);

@@ -4,6 +4,8 @@ export default defineConfig({
   testDir: './tests',
   fullyParallel: true,
   // The demo Odoo server is a single process; more browsers at once causes spurious timeouts.
+  // Multi-customer flows share one single-process demo server.
+  timeout: 60000,
   workers: 2,
   // First back-office login builds a large asset bundle and briefly stalls the single-process demo.
   expect: { timeout: 15000 },

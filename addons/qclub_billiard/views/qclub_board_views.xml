@@ -109,6 +109,7 @@
                     <button name="action_dismiss" string="Dismiss report" type="object" invisible="state == 'resolved'" />
                 </header>
                 <sheet>
+                    <widget name="web_ribbon" title="Hidden" bg_color="text-bg-danger" invisible="not content_hidden" />
                     <group>
                         <field name="website_id" readonly="1" />
                         <field name="reporter_id" readonly="1" />

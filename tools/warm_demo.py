@@ -12,6 +12,9 @@ from urllib.parse import urlsplit, urlunsplit
 from urllib.request import Request, urlopen
 
 PAGES = ("/billiard/booking", "/web/login")
+# The back-office bundles are not referenced by public pages, but the first staff login
+# would otherwise build them while other browser tests are waiting on the same process.
+BACKEND_BUNDLES = ("/web/assets/_/web.assets_web.min.js", "/web/assets/_/web.assets_web.min.css")
 ASSET_RE = re.compile(r'(?:src|href)="(/web/assets/[^"]+)"')
 
 
@@ -46,6 +49,10 @@ def main():
         for asset in assets:
             _fetch_with_retry(base, asset, deadline)
         print(f"Demo ready: {page} ({len(assets)} asset bundles)")
+    for bundle in BACKEND_BUNDLES:
+        started = time.monotonic()
+        _fetch_with_retry(base, bundle, deadline)
+        print(f"Demo ready: {bundle} ({time.monotonic() - started:.1f}s)")
 
 
 if __name__ == "__main__":

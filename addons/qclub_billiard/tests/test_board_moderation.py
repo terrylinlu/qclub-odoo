@@ -74,7 +74,8 @@ class TestBoardModeration(HttpCase):
             "website_id": self.website.id, "reporter_id": self.customer.partner_id.id,
             "reply_id": reply.id, "reason": "other",
         })
-        report.with_user(self.staff).action_dismiss()
+        result = report.with_user(self.staff).action_dismiss()
+        self.assertEqual(result["params"]["message"], "Report dismissed. The content is still visible.")
         self.assertEqual(report.state, "resolved")
         self.assertEqual(report.resolved_by, self.staff)
         self.assertFalse(reply.hidden)
@@ -145,7 +146,8 @@ class TestBoardModeration(HttpCase):
         with self.assertRaises(AccessError):
             report.with_user(self.other).action_dismiss()
         self.assertFalse(report.content_hidden)
-        report.with_user(self.staff).action_hide_and_resolve()
+        result = report.with_user(self.staff).action_hide_and_resolve()
+        self.assertEqual(result["params"]["message"], "Content hidden and report resolved.")
         report.invalidate_recordset()
         self.assertTrue(report.content_hidden)
         self.assertTrue((report.post_id or report.reply_id).hidden)
