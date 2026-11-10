@@ -354,7 +354,7 @@ class BoardReport(models.Model):
         return {
             "type": "ir.actions.client", "tag": "display_notification",
             "params": {"message": message, "type": "success", "sticky": False,
-                       "next": {"type": "ir.actions.client", "tag": "soft_reload"}},
+                       "next": {"type": "ir.actions.act_window_close"}},
         }
 
     def _resolve(self):
