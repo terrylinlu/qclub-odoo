@@ -96,6 +96,9 @@ export class BookingBoard {
             this.data = data;
             if (data.posts.length) {
                 this.node("h2", _t("Players wanted on %s", data.date_label), this.list);
+            } else {
+                this.node("p", _t("No one is looking for players on %s yet.", data.date_label), this.list)
+                    .className = "text-muted mb-0 small o_qclub_board_empty";
             }
             for (const post of data.posts) {
                 const label = post.remaining ? _t("Join · %s", post.remaining) : _t("Full");
