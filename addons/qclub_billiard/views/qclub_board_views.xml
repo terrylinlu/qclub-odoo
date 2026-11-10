@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="qclub_board_post_view_list" model="ir.ui.view">
+        <field name="name">qclub.board.post.list</field>
+        <field name="model">qclub.board.post</field>
+        <field name="arch" type="xml">
+            <list delete="false" create="false" edit="false">
+                <field name="website_id" />
+                <field name="partner_id" />
+                <field name="booking_id" />
+                <field name="message" />
+                <field name="state" />
+                <field name="hidden" />
+            </list>
+        </field>
+    </record>
+    <record id="qclub_board_post_view_form" model="ir.ui.view">
+        <field name="name">qclub.board.post.form</field>
+        <field name="model">qclub.board.post</field>
+        <field name="arch" type="xml">
+            <form delete="false" create="false" edit="false">
+                <header>
+                    <button name="action_hide" string="Hide" type="object" invisible="hidden" />
+                    <button name="action_restore" string="Restore" type="object" invisible="not hidden" />
+                </header>
+                <sheet>
+                    <group>
+                        <field name="website_id" readonly="1" />
+                        <field name="partner_id" readonly="1" />
+                        <field name="booking_id" readonly="1" />
+                        <field name="message" readonly="1" />
+                        <field name="state" readonly="1" />
+                        <field name="hidden" readonly="1" />
+                        <field name="hidden_by" readonly="1" />
+                        <field name="hidden_at" readonly="1" />
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <record id="qclub_board_post_action" model="ir.actions.act_window">
+        <field name="name">Posts</field>
+        <field name="res_model">qclub.board.post</field>
+        <field name="view_mode">list,form</field>
+    </record>
+    <record id="qclub_board_reply_view_list" model="ir.ui.view">
+        <field name="name">qclub.board.reply.list</field>
+        <field name="model">qclub.board.reply</field>
+        <field name="arch" type="xml">
+            <list delete="false" create="false" edit="false">
+                <field name="website_id" />
+                <field name="partner_id" />
+                <field name="post_id" />
+                <field name="message" />
+                <field name="hidden" />
+            </list>
+        </field>
+    </record>
+    <record id="qclub_board_reply_view_form" model="ir.ui.view">
+        <field name="name">qclub.board.reply.form</field>
+        <field name="model">qclub.board.reply</field>
+        <field name="arch" type="xml">
+            <form delete="false" create="false" edit="false">
+                <header>
+                    <button name="action_hide" string="Hide" type="object" invisible="hidden" />
+                    <button name="action_restore" string="Restore" type="object" invisible="not hidden" />
+                </header>
+                <sheet>
+                    <group>
+                        <field name="website_id" readonly="1" />
+                        <field name="partner_id" readonly="1" />
+                        <field name="post_id" readonly="1" />
+                        <field name="message" readonly="1" />
+                        <field name="hidden" readonly="1" />
+                        <field name="hidden_by" readonly="1" />
+                        <field name="hidden_at" readonly="1" />
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <record id="qclub_board_reply_action" model="ir.actions.act_window">
+        <field name="name">Replies</field>
+        <field name="res_model">qclub.board.reply</field>
+        <field name="view_mode">list,form</field>
+    </record>
+    <record id="qclub_board_report_view_list" model="ir.ui.view">
+        <field name="name">qclub.board.report.list</field>
+        <field name="model">qclub.board.report</field>
+        <field name="arch" type="xml">
+            <list delete="false" create="false" edit="false">
+                <field name="website_id" />
+                <field name="reporter_id" />
+                <field name="post_id" />
+                <field name="reply_id" />
+                <field name="reason" />
+                <field name="state" />
+            </list>
+        </field>
+    </record>
+    <record id="qclub_board_report_view_form" model="ir.ui.view">
+        <field name="name">qclub.board.report.form</field>
+        <field name="model">qclub.board.report</field>
+        <field name="arch" type="xml">
+            <form delete="false" create="false" edit="false">
+                <header>
+                    <button name="action_hide_content" string="Hide content" type="object" />
+                    <button name="action_resolve" string="Mark resolved" type="object" invisible="state == 'resolved'" />
+                </header>
+                <sheet>
+                    <group>
+                        <field name="website_id" readonly="1" />
+                        <field name="reporter_id" readonly="1" />
+                        <field name="post_id" readonly="1" />
+                        <field name="reply_id" readonly="1" />
+                        <field name="reason" readonly="1" />
+                        <field name="state" readonly="1" />
+                        <field name="content" readonly="1" />
+                        <field name="note" readonly="1" />
+                        <field name="resolved_by" readonly="1" />
+                        <field name="resolved_at" readonly="1" />
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <record id="qclub_board_report_view_search" model="ir.ui.view">
+        <field name="name">qclub.board.report.search</field>
+        <field name="model">qclub.board.report</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="reporter_id" />
+                <field name="website_id" />
+                <filter name="new" string="New" domain="[('state', '=', 'new')]" />
+                <filter name="resolved" string="Resolved" domain="[('state', '=', 'resolved')]" />
+            </search>
+        </field>
+    </record>
+    <record id="qclub_board_report_action" model="ir.actions.act_window">
+        <field name="name">Reports</field>
+        <field name="res_model">qclub.board.report</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{"search_default_new": 1}</field>
+    </record>
+    <record id="qclub_board_ban_view_list" model="ir.ui.view">
+        <field name="name">qclub.board.ban.list</field>
+        <field name="model">qclub.board.ban</field>
+        <field name="arch" type="xml">
+            <list delete="false">
+                <field name="website_id" />
+                <field name="partner_id" />
+                <field name="reason" />
+                <field name="until" />
+                <field name="active" />
+            </list>
+        </field>
+    </record>
+    <record id="qclub_board_ban_view_form" model="ir.ui.view">
+        <field name="name">qclub.board.ban.form</field>
+        <field name="model">qclub.board.ban</field>
+        <field name="arch" type="xml">
+            <form delete="false">
+                <header />
+                <sheet>
+                    <group>
+                        <field name="website_id" />
+                        <field name="partner_id" />
+                        <field name="reason" />
+                        <field name="until" />
+                        <field name="active" />
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <record id="qclub_board_ban_action" model="ir.actions.act_window">
+        <field name="name">Banned Customers</field>
+        <field name="res_model">qclub.board.ban</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{"active_test": False}</field>
+    </record>
+</odoo>

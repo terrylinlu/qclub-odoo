@@ -71,6 +71,7 @@ config = env["qclub.config"]._get_for_website(qclub)
 config.write({
     "online_booking": True,
     "online_board": True,
+    "board_rate_limit": 100,  # Demo only: moderation tests verify the default limit.
     "booking_email_from": "Q Club Demo <bookings@qclub.localhost>",
     "contact_phone": "08 0000 0000", "contact_email": "contact@qclub.localhost",
 })

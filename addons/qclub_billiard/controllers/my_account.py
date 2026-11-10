@@ -44,15 +44,18 @@ class BilliardAccount(BilliardBooking):
         upcoming = bookings.filtered(lambda booking: booking.start >= now)
         history = bookings.filtered(lambda booking: booking.start < now)
         bookings = sorted(upcoming, key=lambda booking: booking.start) + list(history)
-        posts = request.env["qclub.board.post"].sudo().search(own_domain, order="id desc", limit=50)
-        applications = request.env["qclub.board.application"].sudo().search(own_domain, order="id desc", limit=50)
+        posts = request.env["qclub.board.post"].sudo().search(
+            own_domain + [("hidden", "=", False)], order="id desc", limit=50)
+        applications = request.env["qclub.board.application"].sudo().search(
+            own_domain + [("post_id.hidden", "=", False)], order="id desc", limit=50)
         # The relation domains keep the customer predicate even for other authors' replies.
         relevant = site_domain + ["|", "|", ("post_id.partner_id", "=", partner),
                                   ("post_id", "in", request.env["qclub.board.reply"].sudo().search(
                                       own_domain).post_id.ids),
                                   ("post_id", "in", request.env["qclub.board.application"].sudo().search(
                                       own_domain).post_id.ids)]
-        replies = request.env["qclub.board.reply"].sudo().search(relevant, order="id desc", limit=50)
+        replies = request.env["qclub.board.reply"].sudo().search(
+            relevant + [("hidden", "=", False), ("post_id.hidden", "=", False)], order="id desc", limit=50)
 
         def link(booking, post=None, find=False):
             params = {"date": booking.business_date.isoformat()}
@@ -70,7 +73,7 @@ class BilliardAccount(BilliardBooking):
                 site_domain + [("partner_id", "=", partner), ("booking_id", "=", booking.id)], limit=1)
             booking_rows.append({
                 "number": booking.name, "time": booking._time_label(), "table": booking.table_id.name,
-                "state": booking_labels[booking.state], "url": link(booking, post),
+                "state": booking_labels[booking.state], "url": link(booking, post if not post.hidden else None),
                 "confirmation": "/billiard/booking/confirmation/" + booking.name,
                 "find": link(booking, find=True) if config.online_board and not post
                 and booking.state == "confirmed" and booking.start > now else None,

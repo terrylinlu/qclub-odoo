@@ -46,4 +46,14 @@
               action="qclub_table_type_action"
               groups="group_billiard_manager"
               sequence="20"/>
+    <menuitem id="menu_billiard_board" name="Board" parent="menu_billiard_root"
+              groups="group_billiard_staff" sequence="30"/>
+    <menuitem id="menu_billiard_board_report" name="Reports" parent="menu_billiard_board"
+              action="qclub_board_report_action" groups="group_billiard_staff" sequence="10"/>
+    <menuitem id="menu_billiard_board_post" name="Posts" parent="menu_billiard_board"
+              action="qclub_board_post_action" groups="group_billiard_staff" sequence="20"/>
+    <menuitem id="menu_billiard_board_reply" name="Replies" parent="menu_billiard_board"
+              action="qclub_board_reply_action" groups="group_billiard_staff" sequence="30"/>
+    <menuitem id="menu_billiard_board_ban" name="Banned Customers" parent="menu_billiard_board"
+              action="qclub_board_ban_action" groups="group_billiard_manager" sequence="40"/>
 </odoo>

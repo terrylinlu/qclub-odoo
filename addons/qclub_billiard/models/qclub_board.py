@@ -3,7 +3,7 @@
 import logging
 
 from odoo import _, api, fields, models
-from odoo.exceptions import ValidationError
+from odoo.exceptions import AccessError, ValidationError
 
 _logger = logging.getLogger(__name__)
 
@@ -29,6 +29,19 @@ Q Club may remove content or restrict access to the board at any time.
 Meeting other players is at your own risk. Q Club is not responsible for arrangements between players."""
 
 
+def check_board_staff(records):
+    if not records.env.user.has_group("qclub_billiard.group_billiard_staff"):
+        raise AccessError(records.env._("Only billiard staff may moderate board content."))
+    records.check_access("read")
+
+
+def moderate_content(records, hidden):
+    check_board_staff(records)
+    records.sudo().write({"hidden": hidden, "hidden_by": records.env.uid,
+                          "hidden_at": fields.Datetime.now()})
+    return True
+
+
 class BoardPost(models.Model):
     _name = "qclub.board.post"
     _description = "Booking player wanted post"
@@ -36,6 +49,9 @@ class BoardPost(models.Model):
     booking_id = fields.Many2one("qclub.booking", required=True, ondelete="restrict", index=True)
     website_id = fields.Many2one(related="booking_id.website_id", store=True, index=True)
     partner_id = fields.Many2one(related="booking_id.partner_id", store=True, index=True)
+    hidden = fields.Boolean(default=False, index=True)
+    hidden_by = fields.Many2one("res.users", readonly=True)
+    hidden_at = fields.Datetime(readonly=True)
     message = fields.Text(required=True)
     level = fields.Selection([
         ("any", "Any"), ("beginner", "Beginner"),
@@ -43,6 +59,12 @@ class BoardPost(models.Model):
     ], required=True, default="any")
     players_needed = fields.Integer(required=True, default=1)
     state = fields.Selection([("open", "Open"), ("closed", "Closed")], required=True, default="open")
+
+    def action_hide(self):
+        return moderate_content(self, True)
+
+    def action_restore(self):
+        return moderate_content(self, False)
 
     _booking_unique = models.Constraint("UNIQUE(booking_id)", "A post already exists for this booking.")
 
@@ -68,7 +90,7 @@ class BoardPost(models.Model):
 
     def _is_open(self):
         self.ensure_one()
-        return self.state == "open" and self.booking_id.state == "confirmed" and self.booking_id.start > fields.Datetime.now()
+        return not self.hidden and self.state == "open" and self.booking_id.state == "confirmed" and self.booking_id.start > fields.Datetime.now()
 
     def _summary(self, viewer_is_public):
         self.ensure_one()
@@ -165,7 +187,16 @@ class BoardReply(models.Model):
     post_id = fields.Many2one("qclub.board.post", required=True, ondelete="restrict", index=True)
     partner_id = fields.Many2one("res.partner", required=True, ondelete="restrict", index=True)
     website_id = fields.Many2one(related="post_id.website_id", store=True, index=True)
+    hidden = fields.Boolean(default=False, index=True)
+    hidden_by = fields.Many2one("res.users", readonly=True)
+    hidden_at = fields.Datetime(readonly=True)
     message = fields.Text(required=True)
+
+    def action_hide(self):
+        return moderate_content(self, True)
+
+    def action_restore(self):
+        return moderate_content(self, False)
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -251,3 +282,86 @@ class BoardApplication(models.Model):
         self.write({"state": target})
         if action != "withdraw":
             self.post_id._queue_email(target, self.partner_id, self.post_id.partner_id)
+
+
+class BoardReport(models.Model):
+    _name = "qclub.board.report"
+    _description = "Board content report"
+    _order = "id desc"
+
+    website_id = fields.Many2one("website", required=True, ondelete="restrict", index=True)
+    reporter_id = fields.Many2one("res.partner", required=True, ondelete="restrict", index=True)
+    post_id = fields.Many2one("qclub.board.post", ondelete="restrict", index=True)
+    reply_id = fields.Many2one("qclub.board.reply", ondelete="restrict", index=True)
+    reason = fields.Selection([("spam", "Spam"), ("abuse", "Abuse"),
+                               ("personal_information", "Personal information"), ("other", "Other")], required=True)
+    note = fields.Text()
+    content = fields.Text(compute="_compute_content")
+    state = fields.Selection([("new", "New"), ("resolved", "Resolved")], required=True, default="new")
+    resolved_by = fields.Many2one("res.users", readonly=True)
+    resolved_at = fields.Datetime(readonly=True)
+
+    _target_xor = models.Constraint(
+        "CHECK ((post_id IS NOT NULL) <> (reply_id IS NOT NULL))", "Choose either a post or a reply.",
+    )
+
+    def init(self):
+        self.env.cr.execute("""
+            CREATE UNIQUE INDEX IF NOT EXISTS qclub_board_report_post_unique
+            ON qclub_board_report (reporter_id, post_id) WHERE post_id IS NOT NULL
+        """)
+        self.env.cr.execute("""
+            CREATE UNIQUE INDEX IF NOT EXISTS qclub_board_report_reply_unique
+            ON qclub_board_report (reporter_id, reply_id) WHERE reply_id IS NOT NULL
+        """)
+
+    @api.depends("post_id.message", "reply_id.message")
+    def _compute_content(self):
+        for report in self:
+            report.content = (report.post_id or report.reply_id).message
+
+    @api.constrains("note", "website_id", "post_id", "reply_id")
+    def _check_report(self):
+        for report in self:
+            if len(report.note or "") > 500:
+                raise ValidationError(_("Report notes must contain at most 500 characters."))
+            target = report.post_id or report.reply_id
+            if target and target.website_id != report.website_id:
+                raise ValidationError(_("This content is unavailable."))
+
+    def action_hide_content(self):
+        check_board_staff(self)
+        for report in self:
+            (report.post_id or report.reply_id).action_hide()
+        return True
+
+    def action_resolve(self):
+        check_board_staff(self)
+        self.sudo().write({"state": "resolved", "resolved_by": self.env.uid,
+                           "resolved_at": fields.Datetime.now()})
+        return True
+
+
+class BoardBan(models.Model):
+    _name = "qclub.board.ban"
+    _description = "Board customer ban"
+    _order = "id desc"
+
+    website_id = fields.Many2one("website", required=True, ondelete="restrict", index=True)
+    partner_id = fields.Many2one("res.partner", required=True, ondelete="restrict", index=True)
+    reason = fields.Text(required=True)
+    until = fields.Datetime()
+    active = fields.Boolean(default=True)
+
+    def init(self):
+        self.env.cr.execute("""
+            CREATE UNIQUE INDEX IF NOT EXISTS qclub_board_ban_active_unique
+            ON qclub_board_ban (website_id, partner_id) WHERE active
+        """)
+
+    @api.model
+    def _is_banned(self, website, partner):
+        return bool(self.search_count([
+            ("website_id", "=", website.id), ("partner_id", "=", partner.id), ("active", "=", True),
+            "|", ("until", "=", False), ("until", ">", fields.Datetime.now()),
+        ], limit=1))

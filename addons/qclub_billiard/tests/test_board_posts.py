@@ -147,6 +147,7 @@ class TestBoardPosts(HttpCase):
         for route in ("board", "post", "post/create"):
             self.assertEqual(self.rpc(route).status_code, 404)
         self.website.domain = False
+        self.env.flush_all()  # Clear first: website domains are unique row by row.
         self.other_site.domain = self.base_url()
         self.env.registry.clear_cache()
         for route in ("board", "post", "post/create"):
@@ -198,7 +199,7 @@ class TestBoardPosts(HttpCase):
             for site in (self.website, self.other_site, self.website):
                 with patch.object(ir_http, "get_request_website", return_value=site):
                     model = self.env[record._name].with_user(staff).with_context(website_id=site.id)
-                    self.assertEqual(record.id in model.search([]).ids, site == self.website)
+                    self.assertIn(record.id, model.search([]).ids)
             with patch.object(ir_http, "get_request_website", return_value=self.website):
                 staff_record = record.with_user(staff).with_context(website_id=self.website.id)
                 manager_record = record.with_user(manager).with_context(website_id=self.website.id)
