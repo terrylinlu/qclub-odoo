@@ -16,10 +16,12 @@ class BilliardAccount(BilliardBooking):
     @http.route("/billiard/booking/reminders", type="jsonrpc", auth="public", website=True, methods=["POST"])
     def reminders(self, **kwargs):
         config = self._website_config()
-        if request.env.user._is_public():
+        # Same visibility as the public occupancy grid; only dates leave the server.
+        if config.occupancy_requires_login and request.env.user._is_public():
             return {"dates": []}
         minimum, maximum = self._date_bounds(config)
-        domain = self._own_domain() + [
+        domain = [
+            ("website_id", "=", request.website.id),
             ("business_date", ">=", minimum), ("business_date", "<=", maximum),
             "|", ("state", "in", ["confirmed", "arrived"]),
             "&", ("state", "=", "pending"), ("lock_expire", ">", fields.Datetime.now()),

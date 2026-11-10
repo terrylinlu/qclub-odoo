@@ -24,6 +24,7 @@ async function login(page: Page, user: string) {
 }
 
 test('test_brd_030_brd_031_brd_032_brd_033_brd_034_account_links_date_click_and_reminders', async ({ page, browser }, info) => {
+  test.setTimeout(60000); // Longest flow: several customers and page visits.
   const staffContext = await browser.newContext({ baseURL: info.project.use.baseURL });
   const staff = await staffContext.newPage();
   const applicantContext = await browser.newContext({ ...info.project.use, baseURL: info.project.use.baseURL });
@@ -124,7 +125,7 @@ test('test_brd_030_brd_031_brd_032_brd_033_brd_034_account_links_date_click_and_
   }
 });
 
-test('test_brd_030_brd_034_anonymous_login_return_and_date_strip_without_dots', async ({ page }) => {
+test('test_brd_030_brd_034_anonymous_login_return_and_public_date_dots', async ({ page }) => {
   await page.goto('/my/billiard');
   await expect(page).toHaveURL(/\/web\/login\?redirect=/);
   await page.goto('/billiard/booking');
@@ -134,8 +135,12 @@ test('test_brd_030_brd_034_anonymous_login_return_and_date_strip_without_dots', 
   await expect(page.locator('.o_qclub_date_button')).toHaveCount(
     (Date.parse(maximum) - Date.parse(minimum)) / 86400000 + 1,
   );
-  await expect.poll(() => rpc(page, '/billiard/booking/reminders', {})).toEqual({ dates: [] });
-  await expect(page.locator('.o_qclub_date_dot:visible')).toHaveCount(0);
+  const reminders = await rpc(page, '/billiard/booking/reminders', {});
+  expect(Object.keys(reminders)).toEqual(['dates']);
+  expect(reminders.dates.length, 'Demo data has bookings; run make demo-reset').toBeGreaterThan(0);
+  expect(reminders.dates.every((day: string) => /^\d{4}-\d{2}-\d{2}$/.test(day))).toBe(true);
+  // Earliest date is a demo booking, not one a parallel test may cancel.
+  await expect(page.locator(`.o_qclub_date_button[data-date="${reminders.dates[0]}"] .o_qclub_date_dot`)).toBeVisible();
   await page.locator(`.o_qclub_date_button[data-date="${maximum}"]`).click();
   await expect(input).toHaveValue(maximum);
   await expect(page.locator(`.o_qclub_date_button[data-date="${maximum}"]`)).toHaveAttribute('aria-current', 'date');

@@ -138,7 +138,7 @@ export class BookingGrid extends Interaction {
             const dot = document.createElement("span");
             dot.className = "o_qclub_date_dot d-block";
             dot.textContent = "•";
-            dot.setAttribute("aria-label", _t("You have a booking"));
+            dot.setAttribute("aria-label", _t("Has bookings"));
             // visibility keeps every day the same height, whether or not it has a dot.
             dot.style.visibility = this.reminderDates?.has(date) ? "visible" : "hidden";
             button.append(weekday, number, dot);

@@ -94,13 +94,20 @@ class TestMyAccount(HttpCase):
         self.env.invalidate_all()
         self.assertEqual(before, {model: self.env[model].search([]).read(["write_date"]) for model in models})
 
-    def test_brd_034_own_business_dates_only_no_accepted_application(self):
-        self.assertEqual(self.reminders().json()["result"], {"dates": []})
-        self.application._transition("accept", self.other.partner_id)
+    def test_brd_034_every_viewer_sees_only_dates_of_any_active_booking(self):
+        own, foreign = self.own.business_date.isoformat(), self.foreign.business_date.isoformat()
+        result = self.reminders().json()["result"]
+        self.assertEqual(result, {"dates": [own, foreign]})
         self.authenticate("account-customer", "account-test")
-        self.assertEqual(self.reminders().json()["result"], {"dates": [self.own.business_date.isoformat()]})
+        self.assertEqual(self.reminders().json()["result"], {"dates": [own, foreign]})
         self.own.action_cancel()
+        self.assertEqual(self.reminders().json()["result"], {"dates": [foreign]})
+
+    def test_brd_034_login_required_setting_hides_dates_from_visitors(self):
+        self.env["qclub.config"]._get_for_website(self.site).occupancy_requires_login = True
         self.assertEqual(self.reminders().json()["result"], {"dates": []})
+        self.authenticate("account-customer", "account-test")
+        self.assertEqual(len(self.reminders().json()["result"]["dates"]), 2)
 
     def test_brd_031_brd_032_latest_fifty_messages_and_own_post_counts(self):
         own_post = self.env["qclub.board.post"].create({
@@ -137,10 +144,13 @@ class TestMyAccount(HttpCase):
         })
         self.own.action_arrive()
         self.authenticate("account-customer", "account-test")
-        expected = sorted([self.own.business_date.isoformat(), pending.business_date.isoformat()])
+        expected = sorted([self.own.business_date.isoformat(), self.foreign.business_date.isoformat(),
+                           pending.business_date.isoformat()])
         self.assertEqual(self.reminders().json()["result"], {"dates": expected})
         with freeze_time("2026-11-01 00:11:00"):
-            self.assertEqual(self.reminders().json()["result"], {"dates": [self.own.business_date.isoformat()]})
+            self.assertEqual(self.reminders().json()["result"], {"dates": sorted([
+                self.own.business_date.isoformat(), self.foreign.business_date.isoformat(),
+            ])})
         self.website(self.other_site)
         other_config = self.env["qclub.config"]._get_for_website(self.other_site)
         other_config.online_booking = True
