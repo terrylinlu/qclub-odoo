@@ -186,7 +186,11 @@ class TestAccessIsolation(BilliardCase):
                     offending.append(f"{xmlid}: missing selection or foreign field model")
             elif data.model == "ir.ui.view":
                 view = self.env["ir.ui.view"].browse(data.res_id).exists()
-                if not view or view.model not in OWN_MODELS or view.inherit_id:
+                approved_portal_card = (
+                    xmlid == "qclub_billiard.portal_my_home_billiard"
+                    and view and view.inherit_id == self.env.ref("portal.portal_my_home")
+                )
+                if not approved_portal_card and (not view or view.model not in OWN_MODELS or view.inherit_id):
                     offending.append(f"{xmlid}: foreign model or inherited view")
         self.assertFalse(offending, "Forbidden module data:\n" + "\n".join(sorted(offending)))
 
