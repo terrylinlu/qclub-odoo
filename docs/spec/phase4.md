@@ -2,7 +2,7 @@
 
 放置路径：`docs/spec/phase4.md`　状态：**已定稿**（2026-11-11 评审通过，第 H 节 9 个决定均按建议批准）
 每条需求必须有至少一个测试，测试名或 docstring 中带编号（如 `test_pay_004_webhook_confirms_once`）。
-本阶段新增前缀 PAY 和 CO（第 J 节，2026-11-11 增补，待你审阅），并启用 `docs/spec/phase1-2.md` 第 F 节预留的 RF、NS、ST；第一个编码任务把 CO、PAY、RF、NS、ST 加入 `tools/make_report.py` 的覆盖检查。
+本阶段新增前缀 PAY 和 CO（第 J 节，2026-11-11 增补并批准），并启用 `docs/spec/phase1-2.md` 第 F 节预留的 RF、NS、ST；第一个编码任务把 CO、PAY、RF、NS、ST 加入 `tools/make_report.py` 的覆盖检查。
 界面文字为英语，示例文字以本文件为准。金额统一用 AUD 和 Odoo 货币舍入（AGENTS.md）。
 
 **一句话**：顾客在网上提交预约后用 Stripe 付押金，付款成功预约自动变为已确认；之后按规则取消退款、未到场没收、到店后现场结算余额；员工每天能核对当天的资金。
