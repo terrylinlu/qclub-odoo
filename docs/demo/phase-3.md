@@ -21,7 +21,7 @@
 
 本任务只有后台配置，显示名规则由自动测试验证；用户能看到的留言板功能从 3.2 开始。
 
-1. 运行 `make demo`，用管理员登录后台 Billiard Settings → Q Club → **Online Board** 分组：默认人数 3、频率 5；输入 0 无法保存。
+1. 运行 `make demo`，用管理员登录后台 Billiard Settings → Q Club → **Online Board** 分组：默认人数 3、演示库频率 100（模块默认 5）；输入 0 无法保存。
 2. `demo-staff` 不能修改配置。网站菜单中没有 Board，My Account 页面不变。
 
 ## 任务 3.2：步骤 1–6 验收说明
@@ -98,3 +98,15 @@
 6. 当天已有有效预约的日期下有提示点，登录和未登录都能看到；已取消的预约不产生点。手机上左右滑动日期条并真实点击，重复检查账户页链接。
 7. 切到 AUSHARE 的 `/my`，确认没有此卡片或链接；访问 `/my/billiard` 返回 404。Q Club 退出后访问此地址，应登录并返回账户页。
 8. 查看账户页前后核对预约、帖子、申请及回复未改变。阻断 reminders 请求后，日期按钮和预约网格仍可正常使用。
+
+## 任务 3.4：步骤 12–13 验收说明
+
+- 运行 `make demo` 升级模块；仅演示库 Q Club 的 Board Actions per Minute 设为 100，正式模块默认仍为 5。每轮使用新建帖子和回复。
+- 步骤 12：C 回复，B 点该回复旁 **Report**，选择 Spam / Abuse / Personal information / Other，可填最多 500 字符说明；提交显示 **Report submitted.**，重复提交显示已举报。未登录点击 Report 应登录后返回原帖。举报不会自动隐藏内容。
+- 员工从 Billiards → Board → Reports（默认 New）打开举报，查看原文、原因及举报人，点 **Hide and resolve**、**Dismiss report**。刷新顾客页面，回复只显示 **This reply was removed.**，无原文或作者姓名；My Account 不显示该回复。后台仍保留原文、隐藏人／时间、处理人／时间。Posts、Replies 可 **Hide** / **Restore**，员工不能直接编辑内容或删除。
+- 隐藏帖子后，Join 标记及当日列表保留，详情文字显示 **This post was removed.**；原文不得出现在页面源码、JSON 或邮件。另一顾客仍可申请、撤回和回复，发帖人仍可接受、拒绝或移除球友；My Account 保留帖子、申请、相关可见回复和帖子链接，帖子文字显示移除提示。隐藏帖子无 Report 按钮，但可见回复仍可举报。Restore 恢复原文；发帖人不能为同一预约再发帖。
+- 步骤 13：管理员在 Board → Banned Customers 按 Q Club、C 新增封禁，填写原因，可不填到期时间（永久）。C 可浏览，但发帖／回复／申请／举报都提示 **Your account can't post on the board. Please contact Q Club.**；预约及已有申请的处理／撤回不受影响。员工看不到封禁菜单，也不能通过 RPC 操作封禁。
+- 管理员取消 Active 后立即解除；填写过去的到期时间也应立即解除。每轮结束务必解除 C 的封禁，避免影响后续演示。举报说明、举报人、封禁原因不发送给顾客。
+- 桌面和手机均以真实点击验证举报表单；频率统计四种操作合计、60 秒窗口由新增自动测试验证。
+
+本次沙箱 `make test`、`make lint` 均因 Docker socket 权限被拒绝而未执行。Python／XML 解析、前端 JS 语法、Playwright 桌面／手机测试发现检查及 `git diff --check` 已通过；这些静态检查不能替代运行测试。`make demo`、浏览器 e2e、`make iso-check` 和人工流程仍需独立验收。按任务要求不生成 docs/reports 文件。

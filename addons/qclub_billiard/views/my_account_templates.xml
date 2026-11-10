@@ -35,6 +35,7 @@
                         <article t-foreach="posts" t-as="item" class="border-bottom py-2">
                             <a t-att-href="item['url']" t-out="item['time']"/>
                             <p><span t-out="item['table']"/> · <span t-out="item['state']"/></p>
+                            <p class="text-break" style="white-space: pre-wrap" t-out="item['message']"/>
                             <p>Accepted: <span t-out="item['accepted']"/> / <span t-out="item['needed']"/> · Waiting: <span t-out="item['pending']"/></p>
                         </article>
                     </section>
@@ -44,6 +45,7 @@
                         <article t-foreach="applications" t-as="item" class="border-bottom py-2">
                             <a t-att-href="item['url']" t-out="item['time']"/>
                             <p><span t-out="item['name']"/> · <span t-out="item['table']"/> · <span t-out="item['state']"/></p>
+                            <p class="text-break" style="white-space: pre-wrap" t-out="item['message']"/>
                         </article>
                     </section>
                     <section id="qclub_my_messages" class="mb-4">

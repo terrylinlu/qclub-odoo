@@ -1,5 +1,5 @@
 import re
-from datetime import date as calendar_date
+from datetime import date as calendar_date, timedelta
 
 from psycopg2.errors import UniqueViolation
 from werkzeug.exceptions import NotFound
@@ -45,6 +45,23 @@ class BilliardBoard(BilliardBooking):
         return request.env["qclub.board.terms"].sudo().search([
             ("website_id", "=", request.website.id), ("partner_id", "=", request.env.user.partner_id.id),
         ], limit=1)
+
+    def _board_action_guard(self):
+        """Called after login/CSRF, before any of the four actions validate content."""
+        partner = request.env.user.partner_id
+        if request.env["qclub.board.ban"].sudo()._is_banned(request.website, partner):
+            return {"error": "banned", "message": _("Your account can't post on the board. Please contact Q Club.")}
+        since = fields.Datetime.now() - timedelta(seconds=60)
+        total = 0
+        for model, customer_field in (("qclub.board.post", "partner_id"), ("qclub.board.reply", "partner_id"),
+                                      ("qclub.board.application", "partner_id"), ("qclub.board.report", "reporter_id")):
+            total += request.env[model].sudo().search_count([
+                ("website_id", "=", request.website.id), (customer_field, "=", partner.id),
+                ("create_date", ">=", since),
+            ])
+        if total >= self._board_config().board_rate_limit:
+            return {"error": "rate_limit", "message": _("You're doing that too often. Please try again shortly.")}
+        return None
 
     @http.route("/billiard/booking/board", type="jsonrpc", auth="public", website=True, methods=["POST"])
     def board(self, date=None, **kwargs):
@@ -95,7 +112,7 @@ class BilliardBoard(BilliardBooking):
         ], limit=1) if identifier else request.env["qclub.board.post"].sudo().browse()
         if not record:
             return {"error": "not_found", "message": _("This post is unavailable.")}
-        return dict(record._summary(request.env.user._is_public()), message=record.message,
+        return dict(record._summary(request.env.user._is_public()), message=record._customer_message(), hidden=record.hidden,
                     state="open" if record._is_open() else "closed",
                     date=record.booking_id.business_date.isoformat(), **self._join_detail(record))
 
@@ -107,6 +124,9 @@ class BilliardBoard(BilliardBooking):
             return {"error": "login_required", "login_url": self._login_url({"date": date, "booking": booking_id})}
         if not isinstance(csrf_token, str) or not request.validate_csrf(csrf_token):
             return {"error": "csrf", "message": _("Your session has expired. Please reload the page.")}
+        guard = self._board_action_guard()
+        if guard:
+            return guard
         booking = self._own_booking(booking_id)
         if not booking:
             return {"error": "validation", "message": _("This booking is unavailable.")}
@@ -153,8 +173,8 @@ class BilliardBoard(BilliardBooking):
 
         result = {
             "is_owner": owner,
-            "replies": [{"display_name": board_display_name(reply.partner_id, public),
-                         "message": reply.message} for reply in replies],
+            "replies": [{"id": reply.id, "display_name": "" if reply.hidden else board_display_name(reply.partner_id, public),
+                         "message": _("This reply was removed.") if reply.hidden else reply.message} for reply in replies],
             "accepted": [{"display_name": board_display_name(application.partner_id, public)}
                          for application in applications if application.state == "accepted"],
             "application": None,
@@ -175,6 +195,10 @@ class BilliardBoard(BilliardBooking):
             return {"error": "login_required"}
         if not isinstance(csrf_token, str) or not request.validate_csrf(csrf_token):
             return {"error": "csrf", "message": _("Your session has expired. Please reload the page.")}
+        if operation in ("reply", "apply"):
+            guard = self._board_action_guard()
+            if guard:
+                return guard
         partner = request.env.user.partner_id
         try:
             with request.env.cr.savepoint():
@@ -237,3 +261,34 @@ class BilliardBoard(BilliardBooking):
     @http.route("/billiard/booking/application/decide", type="jsonrpc", auth="public", website=True, methods=["POST"])
     def decide(self, application=None, action=None, csrf_token=None, **kwargs):
         return self._join_action("decide", application=application, action=action, csrf_token=csrf_token)
+
+    @http.route("/billiard/booking/post/report", type="jsonrpc", auth="public", website=True, methods=["POST"])
+    def report(self, post=None, reply=None, reason=None, note=None, csrf_token=None, **kwargs):
+        self._board_config()
+        if request.env.user._is_public():
+            return {"error": "login_required"}
+        if not isinstance(csrf_token, str) or not request.validate_csrf(csrf_token):
+            return {"error": "csrf", "message": _("Your session has expired. Please reload the page.")}
+        guard = self._board_action_guard()
+        if guard:
+            return guard
+        if (bool(post) == bool(reply) or reason not in ("spam", "abuse", "personal_information", "other")
+                or (note is not None and (not isinstance(note, str) or len(note) > 500))):
+            return {"error": "validation", "message": _("Please check your report and note (maximum 500 characters).")}
+        model = "qclub.board.post" if post else "qclub.board.reply"
+        identifier = positive_id(post if post else reply)
+        domain = [("id", "=", identifier), ("website_id", "=", request.website.id), ("hidden", "=", False)]
+        target = request.env[model].sudo().search(domain, limit=1) if identifier else None
+        if not target:
+            return {"error": "validation", "message": _("This content is unavailable.")}
+        try:
+            with request.env.cr.savepoint():
+                report = request.env["qclub.board.report"].sudo().create({
+                    "website_id": request.website.id, "reporter_id": request.env.user.partner_id.id,
+                    "post_id" if post else "reply_id": target.id, "reason": reason, "note": note or "",
+                })
+                return {"id": report.id}
+        except UniqueViolation:
+            return {"error": "duplicate", "message": _("You have already reported this content.")}
+        except ValidationError as error:
+            return {"error": "validation", "message": str(error)}

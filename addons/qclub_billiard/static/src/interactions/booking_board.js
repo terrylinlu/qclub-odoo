@@ -96,6 +96,9 @@ export class BookingBoard {
             this.data = data;
             if (data.posts.length) {
                 this.node("h2", _t("Players wanted on %s", data.date_label), this.list);
+            } else {
+                this.node("p", _t("No one is looking for players on %s yet.", data.date_label), this.list)
+                    .className = "text-muted mb-0 small o_qclub_board_empty";
             }
             for (const post of data.posts) {
                 const label = post.remaining ? _t("Join · %s", post.remaining) : _t("Full");
@@ -215,6 +218,9 @@ export class BookingBoard {
             pending: _t("Waiting"), accepted: _t("Accepted"), declined: _t("Declined"),
             withdrawn: _t("Withdrawn"), removed: _t("Removed"),
         };
+        if (!post.hidden) {
+            this.renderReport(post, { post: post.id }, this.panel);
+        }
         this.node("p", _t("Accepted players")).className = "fw-bold mt-3 mb-1";
         for (const player of post.accepted) {
             this.node("p", player.display_name);
@@ -223,6 +229,9 @@ export class BookingBoard {
         for (const reply of post.replies) {
             const row = this.node("div");
             this.node("strong", reply.display_name, row);
+            if (reply.display_name) {
+                this.renderReport(post, { reply: reply.id }, row);
+            }
             this.node("p", reply.message, row).className = "o_qclub_reply_message text-break";
         }
         const error = this.node("p", "");
@@ -313,6 +322,77 @@ export class BookingBoard {
         }
         messageForm(_t("Reply (Don't share personal contact details)"), _t("Reply"),
             "/billiard/booking/post/reply", 500, true);
+    }
+
+    renderReport(post, target, parent) {
+        const button = this.node("button", _t("Report"), parent);
+        button.type = "button";
+        button.className = "btn btn-link";
+        const form = this.node("form", undefined, parent);
+        form.className = "o_qclub_report_form";
+        form.hidden = true;
+        button.setAttribute("aria-expanded", "false");
+        button.onclick = () => {
+            if (this.el.dataset.public === "1") {
+                window.location.assign(this.login(post.id));
+                return;
+            }
+            form.hidden = !form.hidden;
+            button.setAttribute("aria-expanded", String(!form.hidden));
+            if (!form.hidden) {
+                form.querySelector("input").focus();
+            }
+        };
+        const reasons = this.node("fieldset", undefined, form);
+        this.node("legend", _t("Report reason"), reasons).className = "fs-6";
+        const labels = {
+            spam: _t("Spam"), abuse: _t("Abuse"),
+            personal_information: _t("Personal information"), other: _t("Other"),
+        };
+        for (const [value, text] of Object.entries(labels)) {
+            const label = this.node("label", undefined, reasons);
+            label.className = "d-block";
+            const radio = this.node("input", undefined, label);
+            radio.type = "radio";
+            radio.name = "reason";
+            radio.value = value;
+            radio.checked = value === "spam";
+            this.node("span", text, label);
+        }
+        const label = this.node("label", _t("Report note (optional, maximum 500 characters)"), form);
+        const note = this.node("textarea", undefined, label);
+        note.className = "form-control";
+        note.maxLength = 500;
+        const status = this.node("p", "", form);
+        status.setAttribute("role", "status");
+        const submit = this.node("button", _t("Submit report"), form);
+        submit.type = "submit";
+        submit.className = "btn btn-primary my-2";
+        form.onsubmit = async (event) => {
+            event.preventDefault();
+            submit.disabled = true;
+            const number = this.number;
+            try {
+                const result = await rpc("/billiard/booking/post/report", {
+                    ...target, reason: form.elements.reason.value, note: note.value,
+                    csrf_token: this.el.dataset.csrfToken,
+                });
+                if (this.grid.isDestroyed || number !== this.number) {
+                    return;
+                }
+                if (result.error === "login_required") {
+                    window.location.assign(this.login(post.id));
+                } else {
+                    status.textContent = result.error ? (result.message || _t("Please try again.")) : _t("Report submitted.");
+                }
+            } catch {
+                if (!this.grid.isDestroyed && number === this.number) {
+                    status.textContent = _t("Your report could not be submitted. Please try again.");
+                }
+            } finally {
+                submit.disabled = false;
+            }
+        };
     }
 
     openBooking(booking) {

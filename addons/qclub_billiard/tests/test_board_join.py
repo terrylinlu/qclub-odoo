@@ -263,6 +263,7 @@ class TestBoardJoin(HttpCase):
                         record.with_user(user).unlink()
                 record.with_user(manager).write({"message": "manager update"})
         self.website.domain = False
+        self.env.flush_all()  # Clear first: website domains are unique row by row.
         self.other_site.domain = self.base_url()
         self.env.registry.clear_cache()
         for route in ("post/reply", "post/apply", "post/withdraw", "application/decide"):

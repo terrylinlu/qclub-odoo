@@ -44,15 +44,18 @@ class BilliardAccount(BilliardBooking):
         upcoming = bookings.filtered(lambda booking: booking.start >= now)
         history = bookings.filtered(lambda booking: booking.start < now)
         bookings = sorted(upcoming, key=lambda booking: booking.start) + list(history)
-        posts = request.env["qclub.board.post"].sudo().search(own_domain, order="id desc", limit=50)
-        applications = request.env["qclub.board.application"].sudo().search(own_domain, order="id desc", limit=50)
+        posts = request.env["qclub.board.post"].sudo().search(
+            own_domain, order="id desc", limit=50)
+        applications = request.env["qclub.board.application"].sudo().search(
+            own_domain, order="id desc", limit=50)
         # The relation domains keep the customer predicate even for other authors' replies.
         relevant = site_domain + ["|", "|", ("post_id.partner_id", "=", partner),
                                   ("post_id", "in", request.env["qclub.board.reply"].sudo().search(
                                       own_domain).post_id.ids),
                                   ("post_id", "in", request.env["qclub.board.application"].sudo().search(
                                       own_domain).post_id.ids)]
-        replies = request.env["qclub.board.reply"].sudo().search(relevant, order="id desc", limit=50)
+        replies = request.env["qclub.board.reply"].sudo().search(
+            relevant + [("hidden", "=", False)], order="id desc", limit=50)
 
         def link(booking, post=None, find=False):
             params = {"date": booking.business_date.isoformat()}
@@ -83,7 +86,7 @@ class BilliardAccount(BilliardBooking):
                 "time": post.booking_id._time_label(), "table": post.booking_id.table_id.name,
                 "state": _("Open") if post._is_open() else _("Closed"),
                 "accepted": Application.search_count(counts + [("state", "=", "accepted")]),
-                "needed": post.players_needed,
+                "needed": post.players_needed, "message": post._customer_message(),
                 "pending": Application.search_count(counts + [("state", "=", "pending")]),
                 "url": link(post.booking_id, post),
             })
@@ -93,6 +96,7 @@ class BilliardAccount(BilliardBooking):
                               "time": item.post_id.booking_id._time_label(),
                               "table": item.post_id.booking_id.table_id.name,
                               "state": application_labels[item.state],
+                              "message": item.post_id._customer_message(),
                               "url": link(item.post_id.booking_id, item.post_id)} for item in applications],
             "messages": [{"name": board_display_name(item.partner_id, False), "message": item.message,
                           "time": item.post_id.booking_id._time_label(),
