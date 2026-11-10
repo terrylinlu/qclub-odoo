@@ -110,3 +110,32 @@
 - 桌面和手机均以真实点击验证举报表单；频率统计四种操作合计、60 秒窗口由新增自动测试验证。
 
 本次沙箱 `make test`、`make lint` 均因 Docker socket 权限被拒绝而未执行。Python／XML 解析、前端 JS 语法、Playwright 桌面／手机测试发现检查及 `git diff --check` 已通过；这些静态检查不能替代运行测试。`make demo`、浏览器 e2e、`make iso-check` 和人工流程仍需独立验收。按任务要求不生成 docs/reports 文件。
+
+### BRD-031 account tabs and post panel polish
+
+1. Log in as `demo-customer-a` (password `demo`), open My Account and check the billiard ball and cue icon on **My Bookings & Players**.
+2. Open the card. Check the four tabs and their counts, including empty lists. Only **My bookings** appears initially.
+3. Click **Messages**, reload, and confirm Messages stays selected. Open a linked post, then use browser Back: Messages should still be selected. Visit `/my/billiard#unknown` and confirm My bookings appears.
+4. Focus a tab and use Left/Right arrows, including wrapping between the first and last tabs. Confirm the selected tab and visible list move together.
+5. On a phone viewport, scroll the tab row sideways. Confirm the document itself has no horizontal scroll and booking actions wrap. Check green, yellow and grey status pills where those states exist.
+6. Open an existing post: check the compact heading, muted details, grey message block, small Report controls, compact replies and side by side Apply/Reply forms on desktop (stacked on phones). Check a closed post and a Find players create form too. Text and actions should remain English.
+
+No additional demo records are required for this presentation change. The Docker demo data scripts are unchanged as explicitly requested. This walkthrough still requires manual acceptance; the sandbox cannot access Docker to run `make demo`.
+
+
+### BRD-010: creation times
+
+- Open a post on the booking page. Check that `Posted <time>` appears in the
+  details, including when the post is closed.
+- Check that each visible reply shows its creation time after the author and
+  before the right-aligned Report control. A hidden reply shows no time.
+- As the owner, check creation times after applicants' names. As an applicant,
+  check `Applied <time>` immediately after the application state.
+- Open `/my/billiard`: My posts and Messages show `Posted <time>`;
+  My join requests shows `Applied <time>`. Times use Adelaide local time.
+- Confirm message text remains separate, request/message rows have one link,
+  and `Accepted: 0 / 2` and `Waiting: 1` remain contiguous.
+
+No additional seed data is needed: existing posts, replies and applications
+already have creation timestamps. Docker demo seed files were excluded from
+this task. Demo execution and browser checks still require manual validation.

@@ -24,3 +24,4 @@ from . import test_board_join_concurrency
 from . import test_my_account
 
 from . import test_board_moderation
+from . import test_account_tabs

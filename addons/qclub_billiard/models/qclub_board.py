@@ -20,6 +20,12 @@ def board_display_name(partner, viewer_is_public):
     return name
 
 
+def board_posted_label(record):
+    """Format the creation instant with the booking's customer timezone and format."""
+    return record.env["qclub.booking"]._format_booking_time(
+        record.create_date, record.create_date).split(" – ")[0]
+
+
 COMMUNITY_GUIDELINES = """Community Guidelines
 Be respectful. No harassment, hate speech or offensive language.
 Keep posts about finding players for your booking. No advertising or spam.

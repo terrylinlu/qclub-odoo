@@ -3,6 +3,7 @@
     <template id="portal_my_home_billiard" inherit_id="portal.portal_my_home">
         <xpath expr="//div[@id='portal_common_category']" position="inside">
             <t t-if="request.env['qclub.config'].sudo().search_count([('website_id', '=', request.website.id), ('online_booking', '=', True)])" t-call="portal.portal_docs_entry">
+                <t t-set="icon" t-value="'/qclub_billiard/static/src/img/portal-billiard.svg'"/>
                 <t t-set="title">My Bookings &amp; Players</t>
                 <t t-set="text">View your bookings, posts, join requests and messages</t>
                 <t t-set="url" t-value="'/my/billiard'"/>
@@ -19,44 +20,63 @@
             <t t-name="qclub_billiard.my_billiard" t-call="portal.portal_layout">
                 <div class="o_qclub_my_account">
                     <h1>My Bookings &amp; Players</h1>
-                    <section id="qclub_my_bookings" class="mb-4">
-                        <h2>My bookings</h2>
-                        <p t-if="not bookings">No bookings yet.</p>
-                        <article t-foreach="bookings" t-as="item" class="border-bottom py-2">
-                            <a t-att-href="item['confirmation']" t-out="item['number']"/>
-                            <p><span t-out="item['time']"/> · <span t-out="item['table']"/> · <span t-out="item['state']"/></p>
-                            <a t-att-href="item['url']">View booking date</a>
-                            <a t-if="item['find']" t-att-href="item['find']" class="ms-3">Find players</a>
-                        </article>
-                    </section>
-                    <section id="qclub_my_posts" class="mb-4">
-                        <h2>My posts</h2>
-                        <p t-if="not posts">No posts yet.</p>
-                        <article t-foreach="posts" t-as="item" class="border-bottom py-2">
-                            <a t-att-href="item['url']" t-out="item['time']"/>
-                            <p><span t-out="item['table']"/> · <span t-out="item['state']"/></p>
-                            <p class="text-break" style="white-space: pre-wrap" t-out="item['message']"/>
-                            <p>Accepted: <span t-out="item['accepted']"/> / <span t-out="item['needed']"/> · Waiting: <span t-out="item['pending']"/></p>
-                        </article>
-                    </section>
-                    <section id="qclub_my_applications" class="mb-4">
-                        <h2>My join requests</h2>
-                        <p t-if="not applications">No join requests yet.</p>
-                        <article t-foreach="applications" t-as="item" class="border-bottom py-2">
-                            <a t-att-href="item['url']" t-out="item['time']"/>
-                            <p><span t-out="item['name']"/> · <span t-out="item['table']"/> · <span t-out="item['state']"/></p>
-                            <p class="text-break" style="white-space: pre-wrap" t-out="item['message']"/>
-                        </article>
-                    </section>
-                    <section id="qclub_my_messages" class="mb-4">
-                        <h2>Messages</h2>
-                        <p t-if="not messages">No messages yet.</p>
-                        <article t-foreach="messages" t-as="item" class="border-bottom py-2">
-                            <a t-att-href="item['url']" t-out="item['time']"/>
-                            <p t-out="item['name']"/>
-                            <p class="text-break" style="white-space: pre-wrap" t-out="item['message']"/>
-                        </article>
-                    </section>
+                    <nav class="nav nav-tabs flex-nowrap overflow-auto text-nowrap" role="tablist" aria-label="My Bookings and Players">
+                        <button type="button" id="qclub_tab_bookings" class="nav-link active" role="tab" aria-controls="qclub_my_bookings" aria-selected="true" tabindex="0" data-tab="bookings">My bookings <span class="badge rounded-pill text-bg-light ms-1" t-out="len(bookings)"/></button>
+                        <button type="button" id="qclub_tab_posts" class="nav-link" role="tab" aria-controls="qclub_my_posts" aria-selected="false" tabindex="-1" data-tab="posts">My posts <span class="badge rounded-pill text-bg-light ms-1" t-out="len(posts)"/></button>
+                        <button type="button" id="qclub_tab_requests" class="nav-link" role="tab" aria-controls="qclub_my_applications" aria-selected="false" tabindex="-1" data-tab="requests">My join requests <span class="badge rounded-pill text-bg-light ms-1" t-out="len(applications)"/></button>
+                        <button type="button" id="qclub_tab_messages" class="nav-link" role="tab" aria-controls="qclub_my_messages" aria-selected="false" tabindex="-1" data-tab="messages">Messages <span class="badge rounded-pill text-bg-light ms-1" t-out="len(messages)"/></button>
+                    </nav>
+                    <div class="tab-content">
+                        <section id="qclub_my_bookings" class="tab-pane fade active show" role="tabpanel" aria-labelledby="qclub_tab_bookings">
+                            <p t-if="not bookings">No bookings yet.</p>
+                            <article t-foreach="bookings" t-as="item" class="o_qclub_account_row">
+                                <div class="o_qclub_row_heading">
+                                    <a t-att-href="item['confirmation']" t-out="item['number']"/>
+                                    <span t-att-class="'badge rounded-pill ' + item['state_class']" t-out="item['state']"/>
+                                </div>
+                                <div class="o_qclub_booking_details">
+                                    <p class="small text-muted"><span t-out="item['time']"/> · <span t-out="item['table']"/></p>
+                                    <div class="o_qclub_row_actions">
+                                        <a t-att-href="item['url']">View booking date</a>
+                                        <a t-if="item['find']" t-att-href="item['find']" class="ms-3">Find players</a>
+                                    </div>
+                                </div>
+                            </article>
+                        </section>
+                        <section id="qclub_my_posts" class="tab-pane fade" role="tabpanel" aria-labelledby="qclub_tab_posts">
+                            <p t-if="not posts">No posts yet.</p>
+                            <article t-foreach="posts" t-as="item" class="o_qclub_account_row">
+                                <div class="o_qclub_row_heading">
+                                    <a t-att-href="item['url']" t-out="item['time']"/>
+                                    <span t-att-class="'badge rounded-pill ' + item['state_class']" t-out="item['state']"/>
+                                </div>
+                                <p class="small text-muted"><span t-out="item['table']"/> · Posted <span t-out="item['posted']"/></p>
+                                <p class="text-break o_qclub_user_text" t-out="item['message']"/>
+                                <p class="small text-muted">Accepted: <span t-out="item['accepted']"/> / <span t-out="item['needed']"/> · Waiting: <span t-out="item['pending']"/></p>
+                            </article>
+                        </section>
+                        <section id="qclub_my_applications" class="tab-pane fade" role="tabpanel" aria-labelledby="qclub_tab_requests">
+                            <p t-if="not applications">No join requests yet.</p>
+                            <article t-foreach="applications" t-as="item" class="o_qclub_account_row">
+                                <div class="o_qclub_row_heading">
+                                    <a t-att-href="item['url']" t-out="item['time']"/>
+                                    <span t-att-class="'badge rounded-pill ' + item['state_class']" t-out="item['state']"/>
+                                </div>
+                                <p class="small text-muted"><span t-out="item['name']"/> · <span t-out="item['table']"/> · Applied <span t-out="item['posted']"/></p>
+                                <p class="text-break o_qclub_user_text" t-out="item['message']"/>
+                            </article>
+                        </section>
+                        <section id="qclub_my_messages" class="tab-pane fade" role="tabpanel" aria-labelledby="qclub_tab_messages">
+                            <p t-if="not messages">No messages yet.</p>
+                            <article t-foreach="messages" t-as="item" class="o_qclub_account_row">
+                                <div class="o_qclub_row_heading">
+                                    <a t-att-href="item['url']" t-out="item['time']"/>
+                                </div>
+                                <p class="small text-muted"><span t-out="item['name']"/> · Posted <span t-out="item['posted']"/></p>
+                                <p class="text-break o_qclub_user_text" t-out="item['message']"/>
+                            </article>
+                        </section>
+                    </div>
                 </div>
             </t>
         </field>
