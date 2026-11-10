@@ -5,7 +5,7 @@ from odoo import _, fields, http
 from odoo.http import request
 
 from .main import BilliardBooking
-from ..models.qclub_board import board_display_name
+from ..models.qclub_board import board_display_name, board_posted_label
 
 
 def _status_class(state):
@@ -95,6 +95,7 @@ class BilliardAccount(BilliardBooking):
                 "state": _("Open") if post._is_open() else _("Closed"),
                 "state_class": _status_class("open" if post._is_open() else "closed"),
                 "accepted": Application.search_count(counts + [("state", "=", "accepted")]),
+                "posted": board_posted_label(post),
                 "needed": post.players_needed, "message": post._customer_message(),
                 "pending": Application.search_count(counts + [("state", "=", "pending")]),
                 "url": link(post.booking_id, post),
@@ -102,13 +103,15 @@ class BilliardAccount(BilliardBooking):
         return request.render("qclub_billiard.my_billiard", {
             "page_name": "billiard", "bookings": booking_rows, "posts": post_rows,
             "applications": [{"name": board_display_name(item.post_id.partner_id, False),
-                              "time": item.post_id.booking_id._time_label(),
+                              "posted": board_posted_label(item),
+                          "time": item.post_id.booking_id._time_label(),
                               "table": item.post_id.booking_id.table_id.name,
                               "state": application_labels[item.state],
                               "state_class": _status_class(item.state),
                               "message": item.post_id._customer_message(),
                               "url": link(item.post_id.booking_id, item.post_id)} for item in applications],
             "messages": [{"name": board_display_name(item.partner_id, False), "message": item.message,
+                          "posted": board_posted_label(item),
                           "time": item.post_id.booking_id._time_label(),
                           "url": link(item.post_id.booking_id, item.post_id)} for item in replies],
         })

@@ -50,7 +50,7 @@
                                     <a t-att-href="item['url']" t-out="item['time']"/>
                                     <span t-att-class="'badge rounded-pill ' + item['state_class']" t-out="item['state']"/>
                                 </div>
-                                <p class="small text-muted"><span t-out="item['table']"/></p>
+                                <p class="small text-muted"><span t-out="item['table']"/> · Posted <span t-out="item['posted']"/></p>
                                 <p class="text-break o_qclub_user_text" t-out="item['message']"/>
                                 <p class="small text-muted">Accepted: <span t-out="item['accepted']"/> / <span t-out="item['needed']"/> · Waiting: <span t-out="item['pending']"/></p>
                             </article>
@@ -62,7 +62,7 @@
                                     <a t-att-href="item['url']" t-out="item['time']"/>
                                     <span t-att-class="'badge rounded-pill ' + item['state_class']" t-out="item['state']"/>
                                 </div>
-                                <p class="small text-muted"><span t-out="item['name']"/> · <span t-out="item['table']"/></p>
+                                <p class="small text-muted"><span t-out="item['name']"/> · <span t-out="item['table']"/> · Applied <span t-out="item['posted']"/></p>
                                 <p class="text-break o_qclub_user_text" t-out="item['message']"/>
                             </article>
                         </section>
@@ -72,7 +72,7 @@
                                 <div class="o_qclub_row_heading">
                                     <a t-att-href="item['url']" t-out="item['time']"/>
                                 </div>
-                                <p class="small text-muted" t-out="item['name']"/>
+                                <p class="small text-muted"><span t-out="item['name']"/> · Posted <span t-out="item['posted']"/></p>
                                 <p class="text-break o_qclub_user_text" t-out="item['message']"/>
                             </article>
                         </section>

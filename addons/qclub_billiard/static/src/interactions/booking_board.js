@@ -183,6 +183,7 @@ export class BookingBoard {
         }
         this.node("p", `${post.table_name} · ${post.time_label}`).className = "o_qclub_post_details";
         this.node("p", _t("Level: %(level)s · Players wanted: %(players)s", { level: post.level[0].toUpperCase() + post.level.slice(1), players: post.remaining })).className = "o_qclub_post_details";
+        this.node("small", _t("Posted %s", post.posted_label)).className = "o_qclub_post_time";
         this.node("p", post.message).className = "o_qclub_post_message text-break";
     }
 
@@ -233,6 +234,9 @@ export class BookingBoard {
             const row = this.node("div");
             row.className = "o_qclub_reply_row";
             this.node("strong", reply.display_name, row);
+            if (reply.posted_label) {
+                this.node("small", reply.posted_label, row).className = "o_qclub_post_time";
+            }
             if (reply.display_name) {
                 this.renderReport(post, { reply: reply.id }, row);
             }
@@ -256,6 +260,7 @@ export class BookingBoard {
                 const row = this.node("div");
                 row.className = "o_qclub_application_row";
                 this.node("strong", application.display_name, row);
+                this.node("small", application.posted_label, row).className = "o_qclub_post_time";
                 this.node("p", states[application.state], row);
                 this.node("p", application.message, row).className = "o_qclub_application_message text-break";
                 if (post.state === "open") {
@@ -271,6 +276,7 @@ export class BookingBoard {
             }
         } else if (post.application) {
             this.node("p", states[post.application.state]);
+            this.node("small", _t("Applied %s", post.application.posted_label)).className = "o_qclub_post_time";
             this.node("p", post.application.message).className = "o_qclub_application_message text-break";
             if (post.state === "open" && ["pending", "accepted"].includes(post.application.state)) {
                 actionButton(_t("Withdraw"), "/billiard/booking/post/withdraw", { application: post.application.id });

@@ -81,3 +81,73 @@ class TestAccountTabs(HttpCase):
                 f"[contains(@class, 'text-bg-{colour}') and contains(@class, 'rounded-pill')]"
             )
             self.assertIn(label, [pill.text_content() for pill in pills])
+
+    def _timestamp_records(self):
+        post = self.env['qclub.board.post'].create({
+            'booking_id': self.own.id, 'message': 'Timestamp post', 'players_needed': 2,
+        })
+        applicant = self.env['res.users'].search([('login', '=', 'tabs-other')], limit=1)
+        application = self.env['qclub.board.application'].create({
+            'post_id': post.id, 'partner_id': applicant.partner_id.id, 'message': 'Timestamp application',
+        })
+        reply = self.env['qclub.board.reply'].create({
+            'post_id': post.id, 'partner_id': applicant.partner_id.id, 'message': 'Timestamp reply',
+        })
+        from odoo.tools import SQL
+        self.env.flush_all()
+        for table, record, instant in [
+            ('qclub_board_post', post, '2026-10-31 16:35:00'),
+            ('qclub_board_reply', reply, '2026-10-31 16:36:00'),
+            ('qclub_board_application', application, '2026-10-31 16:37:00'),
+        ]:
+            self.env.cr.execute(SQL('UPDATE %s SET create_date = %s WHERE id = %s',
+                                    SQL.identifier(table), instant, record.id))
+            record.invalidate_recordset(['create_date'])
+        return post, reply, application
+
+    def _timestamp_detail(self, post):
+        import json
+        response = self.url_open('/billiard/booking/post', data=json.dumps({
+            'jsonrpc': '2.0', 'method': 'call', 'id': 1, 'params': {'post': post.id},
+        }), headers={'Content-Type': 'application/json'})
+        self.assertEqual(response.status_code, 200)
+        return response.json()['result']
+
+    def test_brd_010_detail_creation_times_in_club_timezone(self):
+        post, reply, application = self._timestamp_records()
+        self.authenticate('tabs-customer', 'tabs-test')
+        detail = self._timestamp_detail(post)
+        self.assertEqual(detail['posted_label'], 'Sun 1 Nov, 3:05 AM')
+        self.assertEqual(detail['replies'][0]['posted_label'], 'Sun 1 Nov, 3:06 AM')
+        self.assertEqual(detail['applications'][0]['posted_label'], 'Sun 1 Nov, 3:07 AM')
+        application.partner_id.user_ids.write({'password': 'tabs-test'})
+        self.env.flush_all()
+        self.authenticate('tabs-other', 'tabs-test')
+        self.assertEqual(self._timestamp_detail(post)['application']['posted_label'], 'Sun 1 Nov, 3:07 AM')
+
+    def test_brd_010_hidden_reply_omits_creation_time(self):
+        post, reply, application = self._timestamp_records()
+        reply.action_hide()
+        self.env.flush_all()
+        detail = self._timestamp_detail(post)
+        self.assertEqual(detail['replies'][0]['posted_label'], '')
+        self.assertEqual(detail['replies'][0]['display_name'], '')
+
+    def test_brd_010_account_creation_times(self):
+        self._timestamp_records()
+        application = self.env['qclub.board.application'].search([('partner_id', '=', self.customer.partner_id.id)])
+        self.env.flush_all()
+        self.env.cr.execute('UPDATE qclub_board_application SET create_date = %s WHERE id = %s',
+                            ['2026-10-31 16:37:00', application.id])
+        application.invalidate_recordset(['create_date'])
+        self.authenticate('tabs-customer', 'tabs-test')
+        response = self.url_open('/my/billiard')
+        self.assertEqual(response.status_code, 200)
+        doc = html.fromstring(response.content)
+        self.assertIn('Posted Sun 1 Nov, 3:05 AM', doc.get_element_by_id('qclub_my_posts').text_content())
+        self.assertIn('Posted Sun 1 Nov, 3:06 AM', doc.get_element_by_id('qclub_my_messages').text_content())
+        # Existing setup includes this customer's join request on another post.
+        self.assertIn('Applied Sun 1 Nov, 3:07 AM', doc.get_element_by_id('qclub_my_applications').text_content())
+        for pane in ['qclub_my_applications', 'qclub_my_messages']:
+            for article in doc.get_element_by_id(pane).xpath('./article'):
+                self.assertEqual(len(article.xpath('.//a')), 1)

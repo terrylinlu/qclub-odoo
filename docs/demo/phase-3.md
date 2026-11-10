@@ -121,3 +121,21 @@
 6. Open an existing post: check the compact heading, muted details, grey message block, small Report controls, compact replies and side by side Apply/Reply forms on desktop (stacked on phones). Check a closed post and a Find players create form too. Text and actions should remain English.
 
 No additional demo records are required for this presentation change. The Docker demo data scripts are unchanged as explicitly requested. This walkthrough still requires manual acceptance; the sandbox cannot access Docker to run `make demo`.
+
+
+### BRD-010: creation times
+
+- Open a post on the booking page. Check that `Posted <time>` appears in the
+  details, including when the post is closed.
+- Check that each visible reply shows its creation time after the author and
+  before the right-aligned Report control. A hidden reply shows no time.
+- As the owner, check creation times after applicants' names. As an applicant,
+  check `Applied <time>` immediately after the application state.
+- Open `/my/billiard`: My posts and Messages show `Posted <time>`;
+  My join requests shows `Applied <time>`. Times use Adelaide local time.
+- Confirm message text remains separate, request/message rows have one link,
+  and `Accepted: 0 / 2` and `Waiting: 1` remain contiguous.
+
+No additional seed data is needed: existing posts, replies and applications
+already have creation timestamps. Docker demo seed files were excluded from
+this task. Demo execution and browser checks still require manual validation.

@@ -103,6 +103,12 @@
 }
 .o_qclub_board_marker:focus-visible { outline: 3px solid #0d6efd; outline-offset: -3px; }
 
+// Empty and neighbouring portal categories each add a top margin, which leaves uneven
+// rows. Only sites with the billiard card have this link, so AUSHARE is unaffected.
+.o_portal_docs:has(a[href="/my/billiard"]) > .o_portal_category {
+    margin-top: 0 !important;
+}
+
 .o_qclub_my_account {
     min-width: 0;
     max-width: 100%;
@@ -157,6 +163,10 @@
         font-size: 0.875rem;
         color: var(--bs-secondary-color, #6c757d);
         margin-bottom: 0.25rem;
+    }
+    .o_qclub_post_time {
+        font-size: 0.75rem;
+        color: var(--bs-secondary-color, #6c757d);
     }
     .o_qclub_post_message {
         margin-top: 0.75rem;

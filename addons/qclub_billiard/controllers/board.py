@@ -9,7 +9,7 @@ from odoo.exceptions import ValidationError
 from odoo.http import request
 
 from .main import BilliardBooking
-from ..models.qclub_board import COMMUNITY_GUIDELINES, board_display_name
+from ..models.qclub_board import COMMUNITY_GUIDELINES, board_display_name, board_posted_label
 
 
 def positive_id(value):
@@ -113,6 +113,7 @@ class BilliardBoard(BilliardBooking):
         if not record:
             return {"error": "not_found", "message": _("This post is unavailable.")}
         return dict(record._summary(request.env.user._is_public()), message=record._customer_message(), hidden=record.hidden,
+                    posted_label=board_posted_label(record),
                     state="open" if record._is_open() else "closed",
                     date=record.booking_id.business_date.isoformat(), **self._join_detail(record))
 
@@ -169,11 +170,13 @@ class BilliardBoard(BilliardBooking):
 
         def item(application):
             return {"id": application.id, "message": application.message or "", "state": application.state,
-                    "display_name": board_display_name(application.partner_id, public)}
+                    "display_name": board_display_name(application.partner_id, public),
+                    "posted_label": board_posted_label(application)}
 
         result = {
             "is_owner": owner,
             "replies": [{"id": reply.id, "display_name": "" if reply.hidden else board_display_name(reply.partner_id, public),
+                         "posted_label": "" if reply.hidden else board_posted_label(reply),
                          "message": _("This reply was removed.") if reply.hidden else reply.message} for reply in replies],
             "accepted": [{"display_name": board_display_name(application.partner_id, public)}
                          for application in applications if application.state == "accepted"],
