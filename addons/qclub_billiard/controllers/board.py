@@ -9,7 +9,7 @@ from odoo.exceptions import ValidationError
 from odoo.http import request
 
 from .main import BilliardBooking
-from ..models.qclub_board import COMMUNITY_GUIDELINES
+from ..models.qclub_board import COMMUNITY_GUIDELINES, board_display_name
 
 
 def positive_id(value):
@@ -97,7 +97,7 @@ class BilliardBoard(BilliardBooking):
             return {"error": "not_found", "message": _("This post is unavailable.")}
         return dict(record._summary(request.env.user._is_public()), message=record.message,
                     state="open" if record._is_open() else "closed",
-                    date=record.booking_id.business_date.isoformat())
+                    date=record.booking_id.business_date.isoformat(), **self._join_detail(record))
 
     @http.route("/billiard/booking/post/create", type="jsonrpc", auth="public", website=True, methods=["POST"])
     def create_post(self, booking_id=None, message=None, level=None, players_needed=None,
@@ -140,3 +140,100 @@ class BilliardBoard(BilliardBooking):
             return {"error": "duplicate", "message": _("A post already exists for this booking.")}
         except ValidationError as error:
             return {"error": "validation", "message": str(error)}
+
+    def _join_detail(self, post):
+        public = request.env.user._is_public()
+        owner = not public and request.env.user.partner_id == post.partner_id
+        applications = request.env["qclub.board.application"].sudo().search([("post_id", "=", post.id)])
+        replies = request.env["qclub.board.reply"].sudo().search([("post_id", "=", post.id)])
+
+        def item(application):
+            return {"id": application.id, "message": application.message or "", "state": application.state,
+                    "display_name": board_display_name(application.partner_id, public)}
+
+        result = {
+            "is_owner": owner,
+            "replies": [{"display_name": board_display_name(reply.partner_id, public),
+                         "message": reply.message} for reply in replies],
+            "accepted": [{"display_name": board_display_name(application.partner_id, public)}
+                         for application in applications if application.state == "accepted"],
+            "application": None,
+            "terms": COMMUNITY_GUIDELINES, "terms_accepted": False if public else bool(self._terms()),
+        }
+        if owner:
+            result["applications"] = [item(application) for application in applications]
+        elif not public:
+            own = applications.filtered(lambda application: application.partner_id == request.env.user.partner_id)
+            if own:
+                result["application"] = item(own[-1])
+        return result
+
+    def _join_action(self, operation, post=None, application=None, message=None,
+                     action=None, accept_terms=False, csrf_token=None):
+        self._board_config()
+        if request.env.user._is_public():
+            return {"error": "login_required"}
+        if not isinstance(csrf_token, str) or not request.validate_csrf(csrf_token):
+            return {"error": "csrf", "message": _("Your session has expired. Please reload the page.")}
+        partner = request.env.user.partner_id
+        try:
+            with request.env.cr.savepoint():
+                if operation in ("reply", "apply"):
+                    identifier = positive_id(post)
+                    record = request.env["qclub.board.post"].sudo().search([
+                        ("id", "=", identifier), ("website_id", "=", request.website.id),
+                    ], limit=1) if identifier else None
+                    if not record:
+                        raise ValidationError(_("This post is unavailable."))
+                    if message is None and operation == "apply":
+                        message = ""
+                    maximum = 500 if operation == "reply" else 200
+                    if not isinstance(message, str) or len(message.strip()) > maximum or (
+                        operation == "reply" and not message.strip()
+                    ):
+                        raise ValidationError(_("Please check your message length."))
+                    if not self._terms():
+                        if accept_terms is not True:
+                            raise ValidationError(_("Please agree to the Community Guidelines."))
+                        try:
+                            with request.env.cr.savepoint():
+                                request.env["qclub.board.terms"].sudo().create({
+                                    "website_id": request.website.id, "partner_id": partner.id,
+                                })
+                        except UniqueViolation:
+                            pass
+                    model = "qclub.board.reply" if operation == "reply" else "qclub.board.application"
+                    created = request.env[model].sudo().create({
+                        "post_id": record.id, "partner_id": partner.id, "message": message.strip(),
+                    })
+                    return {"id": created.id}
+                identifier = positive_id(application)
+                record = request.env["qclub.board.application"].sudo().search([
+                    ("id", "=", identifier), ("website_id", "=", request.website.id),
+                ], limit=1) if identifier else None
+                if not record:
+                    raise ValidationError(_("This application is unavailable."))
+                if operation == "decide" and action not in ("accept", "decline", "remove"):
+                    raise ValidationError(_("This application cannot be changed."))
+                record._transition("withdraw" if operation == "withdraw" else action, partner)
+                return {"ok": True}
+        except UniqueViolation:
+            return {"error": "duplicate", "message": _("You have already applied to this post.")}
+        except ValidationError as error:
+            return {"error": "validation", "message": str(error)}
+
+    @http.route("/billiard/booking/post/reply", type="jsonrpc", auth="public", website=True, methods=["POST"])
+    def reply(self, post=None, message=None, accept_terms=False, csrf_token=None, **kwargs):
+        return self._join_action("reply", post=post, message=message, accept_terms=accept_terms, csrf_token=csrf_token)
+
+    @http.route("/billiard/booking/post/apply", type="jsonrpc", auth="public", website=True, methods=["POST"])
+    def apply(self, post=None, message=None, accept_terms=False, csrf_token=None, **kwargs):
+        return self._join_action("apply", post=post, message=message, accept_terms=accept_terms, csrf_token=csrf_token)
+
+    @http.route("/billiard/booking/post/withdraw", type="jsonrpc", auth="public", website=True, methods=["POST"])
+    def withdraw(self, application=None, csrf_token=None, **kwargs):
+        return self._join_action("withdraw", application=application, csrf_token=csrf_token)
+
+    @http.route("/billiard/booking/application/decide", type="jsonrpc", auth="public", website=True, methods=["POST"])
+    def decide(self, application=None, action=None, csrf_token=None, **kwargs):
+        return self._join_action("decide", application=application, action=action, csrf_token=csrf_token)

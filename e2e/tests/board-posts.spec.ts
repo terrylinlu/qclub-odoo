@@ -105,7 +105,7 @@ test('test_brd_004_brd_006_brd_007_brd_008_brd_009_brd_025_brd_029_posts_in_book
     const plain = visitor.locator(`.o_qclub_slot_occupied[data-table-id="${slot.table}"][data-slot-index="${slot.index + 2}"]`);
     await expect(plain).toHaveAttribute('aria-disabled', 'true');
     await expect(plain).not.toHaveAttribute('role', 'button');
-    await visitorPanel.getByRole('link', { name: 'Log in to find players' }).click();
+    await visitorPanel.getByRole('link', { name: 'Apply to join' }).click();
     await visitor.locator('input[name="login"]').fill(mobile ? 'demo-customer-b' : 'demo-customer-c');
     await visitor.locator('input[name="password"]').fill('demo');
     await visitor.getByRole('button', { name: 'Log in', exact: true }).click();

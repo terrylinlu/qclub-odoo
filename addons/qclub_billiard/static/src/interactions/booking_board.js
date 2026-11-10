@@ -167,15 +167,152 @@ export class BookingBoard {
                 this.node("p", _t("Level: %(level)s · Players wanted: %(players)s", { level: post.level[0].toUpperCase() + post.level.slice(1), players: post.remaining }));
                 this.node("p", post.message).className = "o_qclub_post_message text-break";
                 this.node("p", _t("This post is closed."));
-            } else if (this.el.dataset.public === "1") {
-                this.node("a", _t("Log in to find players")).href = this.login(id);
             }
+            this.renderJoin(post);
         } catch {
             if (!this.grid.isDestroyed && number === this.number) {
                 this.panel.replaceChildren();
                 this.node("p", _t("This post could not be loaded. Please try again."));
             }
         }
+    }
+
+    async joinAction(post, route, params, error, button) {
+        const number = this.number;
+        button.disabled = true;
+        try {
+            const result = await rpc(route, { ...params, csrf_token: this.el.dataset.csrfToken });
+            if (this.grid.isDestroyed || number !== this.number) {
+                return;
+            }
+            if (result.error === "login_required") {
+                window.location.assign(this.login(post.id));
+            } else if (result.error) {
+                error.hidden = false;
+                error.textContent = result.message || _t("Please try again.");
+                error.scrollIntoView({ behavior: "smooth", block: "center" });
+            } else {
+                const refreshing = this.grid.loadAvailability();
+                const refreshNumber = this.number;
+                await refreshing;
+                if (!this.grid.isDestroyed && refreshNumber === this.number) {
+                    await this.openPost(post.id);
+                }
+            }
+        } catch {
+            if (!this.grid.isDestroyed && number === this.number) {
+                error.hidden = false;
+                error.textContent = _t("Your action could not be completed. Please try again.");
+                error.scrollIntoView({ behavior: "smooth", block: "center" });
+            }
+        } finally {
+            button.disabled = false;
+        }
+    }
+
+    renderJoin(post) {
+        const states = {
+            pending: _t("Waiting"), accepted: _t("Accepted"), declined: _t("Declined"),
+            withdrawn: _t("Withdrawn"), removed: _t("Removed"),
+        };
+        this.node("p", _t("Accepted players")).className = "fw-bold mt-3 mb-1";
+        for (const player of post.accepted) {
+            this.node("p", player.display_name);
+        }
+        this.node("p", _t("Replies")).className = "fw-bold mt-3 mb-1";
+        for (const reply of post.replies) {
+            const row = this.node("div");
+            this.node("strong", reply.display_name, row);
+            this.node("p", reply.message, row).className = "o_qclub_reply_message text-break";
+        }
+        const error = this.node("p", "");
+        error.className = "alert alert-danger";
+        error.setAttribute("role", "alert");
+        // An empty alert should not leave an empty red box in the panel.
+        error.hidden = true;
+        const actionButton = (label, route, params, parent = this.panel) => {
+            const button = this.node("button", label, parent);
+            button.type = "button";
+            button.className = "btn btn-outline-primary m-1";
+            button.onclick = () => this.joinAction(post, route, params, error, button);
+            return button;
+        };
+        if (post.is_owner) {
+            this.node("p", _t("Applications")).className = "fw-bold mt-3 mb-1";
+            for (const application of post.applications) {
+                const row = this.node("div");
+                this.node("strong", application.display_name, row);
+                this.node("p", states[application.state], row);
+                this.node("p", application.message, row).className = "o_qclub_application_message text-break";
+                if (post.state === "open") {
+                    const decide = (label, action) => actionButton(label, "/billiard/booking/application/decide",
+                        { application: application.id, action }, row);
+                    if (application.state === "pending") {
+                        decide(_t("Accept"), "accept");
+                        decide(_t("Decline"), "decline");
+                    } else if (application.state === "accepted") {
+                        decide(_t("Remove"), "remove");
+                    }
+                }
+            }
+        } else if (post.application) {
+            this.node("p", states[post.application.state]);
+            this.node("p", post.application.message).className = "o_qclub_application_message text-break";
+            if (post.state === "open" && ["pending", "accepted"].includes(post.application.state)) {
+                actionButton(_t("Withdraw"), "/billiard/booking/post/withdraw", { application: post.application.id });
+            }
+        }
+        if (post.state !== "open") {
+            return;
+        }
+        if (this.el.dataset.public === "1") {
+            this.node("a", _t("Apply to join")).href = this.login(post.id);
+            const label = this.node("label", _t("Reply (Don't share personal contact details)"));
+            label.htmlFor = "o_qclub_public_reply";
+            const reply = this.node("textarea");
+            reply.id = label.htmlFor;
+            reply.className = "form-control";
+            reply.onclick = () => window.location.assign(this.login(post.id));
+            reply.onfocus = () => window.location.assign(this.login(post.id));
+            return;
+        }
+        const messageForm = (label, submitText, route, maximum, required) => {
+            const form = this.node("form");
+            const fieldLabel = this.node("label", label, form);
+            const input = this.node("textarea", undefined, form);
+            input.id = required ? "o_qclub_reply" : "o_qclub_application";
+            fieldLabel.htmlFor = input.id;
+            input.className = "form-control mb-2";
+            input.maxLength = maximum;
+            input.required = required;
+            let terms;
+            if (!post.terms_accepted) {
+                this.node("p", post.terms, form).className = "o_qclub_terms";
+                const termsLabel = this.node("label", _t("I agree to the Community Guidelines"), form);
+                terms = this.node("input", undefined, termsLabel);
+                terms.type = "checkbox";
+                terms.required = true;
+            }
+            const submit = this.node("button", submitText, form);
+            submit.type = "submit";
+            submit.className = "btn btn-primary d-block my-2";
+            form.onsubmit = (event) => {
+                event.preventDefault();
+                return this.joinAction(post, route, {
+                    post: post.id, message: input.value, accept_terms: Boolean(terms?.checked),
+                }, error, submit);
+            };
+        };
+        if (!post.is_owner && (!post.application || post.application.state === "withdrawn")) {
+            if (post.remaining) {
+                messageForm(_t("Application message (optional, don't share personal contact details)"),
+                    _t("Apply to join"), "/billiard/booking/post/apply", 200, false);
+            } else {
+                this.node("p", _t("Full"));
+            }
+        }
+        messageForm(_t("Reply (Don't share personal contact details)"), _t("Reply"),
+            "/billiard/booking/post/reply", 500, true);
     }
 
     openBooking(booking) {
