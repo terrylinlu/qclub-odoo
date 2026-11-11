@@ -34,6 +34,7 @@ class QclubOpeningHours(models.Model):
     _order = "website_id, weekday, open_hour"
 
     website_id = fields.Many2one("website", string="Website", required=True, ondelete="cascade", index=True)
+    company_id = fields.Many2one(related="website_id.company_id", store=True, index=True)
     weekday = fields.Selection(WEEKDAYS, required=True)
     open_hour = fields.Integer(string="Opening Hour", required=True, aggregator=False)
     close_hour = fields.Integer(string="Closing Hour", required=True, aggregator=False)

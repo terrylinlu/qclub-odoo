@@ -96,6 +96,7 @@ SELECT 'payment_provider|' || jsonb_build_object(
 )::text COLLATE "C" AS fingerprint
 FROM payment_provider p
 LEFT JOIN website w ON w.id = (to_jsonb(p)->>'website_id')::integer
+WHERE p.company_id = (SELECT company_id FROM website WHERE name = 'AUSHARE')
 ORDER BY fingerprint
 $query$
 WHERE to_regclass('payment_provider') IS NOT NULL

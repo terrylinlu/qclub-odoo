@@ -11,6 +11,8 @@ from odoo.tests import HttpCase, tagged
 from odoo.tests.common import new_test_user
 from odoo.tools import mute_logger
 
+from .common import site_companies
+
 from . import test_board_posts
 
 
@@ -246,8 +248,10 @@ class TestBoardJoin(HttpCase):
         application = self.apply()
         reply = self.Reply.create({"post_id": self.post_record.id, "partner_id": self.other.partner_id.id,
                                    "message": "hello"})
-        staff = new_test_user(self.env, login="join-staff", groups="qclub_billiard.group_billiard_staff")
-        manager = new_test_user(self.env, login="join-manager", groups="qclub_billiard.group_billiard_manager")
+        staff = new_test_user(self.env, login="join-staff", groups="qclub_billiard.group_billiard_staff",
+                                    company_ids=[(6, 0, site_companies(self.env))], company_id=self.other_site.company_id.id)
+        manager = new_test_user(self.env, login="join-manager", groups="qclub_billiard.group_billiard_manager",
+                                    company_ids=[(6, 0, site_companies(self.env))], company_id=self.other_site.company_id.id)
         for record in (application, reply):
             # Back-office users work across websites (see test_sec_003_staff_has_no_website_filter);
             # the website rule applies to portal users only.

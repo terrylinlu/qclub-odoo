@@ -22,6 +22,7 @@ class QclubTable(models.Model):
     active = fields.Boolean(string="Enabled", default=True, help="Disabled tables cannot receive new bookings.")
     sequence = fields.Integer(default=10)
     website_id = fields.Many2one("website", string="Website", required=True, ondelete="cascade", index=True)
+    company_id = fields.Many2one(related="website_id.company_id", store=True, index=True)
 
     _name_website_uniq = models.Constraint(
         "UNIQUE(website_id, name)",

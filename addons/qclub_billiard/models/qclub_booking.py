@@ -42,6 +42,7 @@ class QclubBooking(models.Model):
     name = fields.Char(required=True, readonly=True, default="New", copy=False)
     table_id = fields.Many2one("qclub.table", required=True, ondelete="restrict", index=True)
     website_id = fields.Many2one(related="table_id.website_id", store=True, index=True)
+    company_id = fields.Many2one(related="website_id.company_id", store=True, index=True)
     partner_id = fields.Many2one("res.partner", string="Customer", required=True, ondelete="restrict")
     start = fields.Datetime(required=True, index=True)
     start_date = fields.Date("Date", compute="_compute_start_parts", readonly=False)

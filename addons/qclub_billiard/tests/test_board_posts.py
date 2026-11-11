@@ -11,6 +11,8 @@ from odoo.tests import HttpCase, tagged
 from odoo.tests.common import new_test_user
 from odoo.tools import mute_logger
 
+from .common import site_companies
+
 
 @tagged("post_install", "-at_install")
 @freeze_time("2026-11-01 00:00:00")
@@ -193,8 +195,10 @@ class TestBoardPosts(HttpCase):
         terms = self.env["qclub.board.terms"].create({
             "website_id": self.website.id, "partner_id": self.customer.partner_id.id,
         })
-        staff = new_test_user(self.env, login="board-staff", groups="qclub_billiard.group_billiard_staff")
-        manager = new_test_user(self.env, login="board-manager", groups="qclub_billiard.group_billiard_manager")
+        staff = new_test_user(self.env, login="board-staff", groups="qclub_billiard.group_billiard_staff",
+                                    company_ids=[(6, 0, site_companies(self.env))], company_id=self.other_site.company_id.id)
+        manager = new_test_user(self.env, login="board-manager", groups="qclub_billiard.group_billiard_manager",
+                                    company_ids=[(6, 0, site_companies(self.env))], company_id=self.other_site.company_id.id)
         for record in (post, terms):
             for site in (self.website, self.other_site, self.website):
                 with patch.object(ir_http, "get_request_website", return_value=site):

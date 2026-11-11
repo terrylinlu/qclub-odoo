@@ -60,4 +60,70 @@
         <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
         <field name="domain_force">[('website_id', '=', website.id)]</field>
     </record>
+    <record id="rule_qclub_table_type_company" model="ir.rule">
+        <field name="name">Internal company: qclub.table.type</field>
+        <field name="model_id" ref="model_qclub_table_type"/>
+        <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+        <field name="domain_force">['|', ('website_id.company_id', '=', False), ('website_id.company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_qclub_table_company" model="ir.rule">
+        <field name="name">Internal company: qclub.table</field>
+        <field name="model_id" ref="model_qclub_table"/>
+        <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+        <field name="domain_force">['|', ('website_id.company_id', '=', False), ('website_id.company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_qclub_opening_hours_company" model="ir.rule">
+        <field name="name">Internal company: qclub.opening.hours</field>
+        <field name="model_id" ref="model_qclub_opening_hours"/>
+        <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+        <field name="domain_force">['|', ('website_id.company_id', '=', False), ('website_id.company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_qclub_config_company" model="ir.rule">
+        <field name="name">Internal company: qclub.config</field>
+        <field name="model_id" ref="model_qclub_config"/>
+        <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+        <field name="domain_force">['|', ('website_id.company_id', '=', False), ('website_id.company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_qclub_board_post_company" model="ir.rule">
+        <field name="name">Internal company: qclub.board.post</field>
+        <field name="model_id" ref="model_qclub_board_post"/>
+        <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+        <field name="domain_force">['|', ('website_id.company_id', '=', False), ('website_id.company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_qclub_board_terms_company" model="ir.rule">
+        <field name="name">Internal company: qclub.board.terms</field>
+        <field name="model_id" ref="model_qclub_board_terms"/>
+        <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+        <field name="domain_force">['|', ('website_id.company_id', '=', False), ('website_id.company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_qclub_board_reply_company" model="ir.rule">
+        <field name="name">Internal company: qclub.board.reply</field>
+        <field name="model_id" ref="model_qclub_board_reply"/>
+        <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+        <field name="domain_force">['|', ('website_id.company_id', '=', False), ('website_id.company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_qclub_board_application_company" model="ir.rule">
+        <field name="name">Internal company: qclub.board.application</field>
+        <field name="model_id" ref="model_qclub_board_application"/>
+        <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+        <field name="domain_force">['|', ('website_id.company_id', '=', False), ('website_id.company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_qclub_board_report_company" model="ir.rule">
+        <field name="name">Internal company: qclub.board.report</field>
+        <field name="model_id" ref="model_qclub_board_report"/>
+        <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+        <field name="domain_force">['|', ('website_id.company_id', '=', False), ('website_id.company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_qclub_board_ban_company" model="ir.rule">
+        <field name="name">Internal company: qclub.board.ban</field>
+        <field name="model_id" ref="model_qclub_board_ban"/>
+        <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+        <field name="domain_force">['|', ('website_id.company_id', '=', False), ('website_id.company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_qclub_booking_company" model="ir.rule">
+        <field name="name">Internal company: qclub.booking</field>
+        <field name="model_id" ref="model_qclub_booking"/>
+        <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+        <field name="domain_force">['|', ('website_id.company_id', '=', False), ('website_id.company_id', 'in', company_ids)]</field>
+    </record>
 </odoo>
