@@ -13,6 +13,7 @@ class QclubTableType(models.Model):
     sequence = fields.Integer(default=10)
     active = fields.Boolean(default=True)
     website_id = fields.Many2one("website", string="Website", required=True, ondelete="cascade", index=True)
+    company_id = fields.Many2one(related="website_id.company_id", store=True, index=True)
 
     _name_website_uniq = models.Constraint(
         "UNIQUE(website_id, name)",

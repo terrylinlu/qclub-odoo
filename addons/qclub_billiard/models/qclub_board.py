@@ -55,6 +55,7 @@ class BoardPost(models.Model):
 
     booking_id = fields.Many2one("qclub.booking", required=True, ondelete="restrict", index=True)
     website_id = fields.Many2one(related="booking_id.website_id", store=True, index=True)
+    company_id = fields.Many2one(related="website_id.company_id", store=True, index=True)
     partner_id = fields.Many2one(related="booking_id.partner_id", store=True, index=True)
     hidden = fields.Boolean(default=False, index=True)
     hidden_by = fields.Many2one("res.users", readonly=True)
@@ -183,6 +184,7 @@ class BoardTerms(models.Model):
     _description = "Board community guidelines acceptance"
 
     website_id = fields.Many2one("website", required=True, ondelete="restrict", index=True)
+    company_id = fields.Many2one(related="website_id.company_id", store=True, index=True)
     partner_id = fields.Many2one("res.partner", required=True, ondelete="restrict", index=True)
     accepted_at = fields.Datetime(required=True, default=fields.Datetime.now)
 
@@ -200,6 +202,7 @@ class BoardReply(models.Model):
     post_id = fields.Many2one("qclub.board.post", required=True, ondelete="restrict", index=True)
     partner_id = fields.Many2one("res.partner", required=True, ondelete="restrict", index=True)
     website_id = fields.Many2one(related="post_id.website_id", store=True, index=True)
+    company_id = fields.Many2one(related="website_id.company_id", store=True, index=True)
     hidden = fields.Boolean(default=False, index=True)
     hidden_by = fields.Many2one("res.users", readonly=True)
     hidden_at = fields.Datetime(readonly=True)
@@ -238,6 +241,7 @@ class BoardApplication(models.Model):
     post_id = fields.Many2one("qclub.board.post", required=True, ondelete="restrict", index=True)
     partner_id = fields.Many2one("res.partner", required=True, ondelete="restrict", index=True)
     website_id = fields.Many2one(related="post_id.website_id", store=True, index=True)
+    company_id = fields.Many2one(related="website_id.company_id", store=True, index=True)
     message = fields.Text()
     state = fields.Selection([
         ("pending", "Waiting"), ("accepted", "Accepted"), ("declined", "Declined"),
@@ -304,6 +308,7 @@ class BoardReport(models.Model):
     _order = "id desc"
 
     website_id = fields.Many2one("website", required=True, ondelete="restrict", index=True)
+    company_id = fields.Many2one(related="website_id.company_id", store=True, index=True)
     reporter_id = fields.Many2one("res.partner", required=True, ondelete="restrict", index=True)
     post_id = fields.Many2one("qclub.board.post", ondelete="restrict", index=True)
     reply_id = fields.Many2one("qclub.board.reply", ondelete="restrict", index=True)
@@ -380,6 +385,7 @@ class BoardBan(models.Model):
     _order = "id desc"
 
     website_id = fields.Many2one("website", required=True, ondelete="restrict", index=True)
+    company_id = fields.Many2one(related="website_id.company_id", store=True, index=True)
     partner_id = fields.Many2one("res.partner", required=True, ondelete="restrict", index=True)
     reason = fields.Text(required=True)
     until = fields.Datetime()

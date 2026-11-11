@@ -14,6 +14,7 @@ class QclubConfig(models.Model):
     _order = "website_id"
 
     website_id = fields.Many2one("website", string="Website", required=True, ondelete="cascade")
+    company_id = fields.Many2one(related="website_id.company_id", store=True, index=True)
     online_booking = fields.Boolean(string="Online Booking", default=False)
     occupancy_requires_login = fields.Boolean(string="Login Required to View Availability", default=False)
     online_board = fields.Boolean(string="Online Board", default=False)

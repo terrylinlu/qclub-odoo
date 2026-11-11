@@ -26,7 +26,15 @@
 | 4000 0000 0000 0002 | 被拒绝 |
 | 4000 0025 0000 3155 | 需要 3D Secure 验证，验证后成功 |
 
-## 演示步骤
+## Task 4.0: two companies
+
+- CO-002：用 `demo-aushare-staff` / `demo` 登录后台（只允许 AUSHARE 公司）。Billiards 菜单仍由用户组控制，但桌台、预约、帖子和配置列表没有 Q Club 记录；直接打开 Q Club 记录应拒绝访问。用 `demo-staff` / `demo` 登录（仅 TAB 公司），确认能查看 Q Club 记录并处理预约。
+- CO-003：用 AUSHARE 公司的 `demo-customer-a` 登录 Q Club，查看占用网格并提交预约；用 TAB 公司的 `demo-customer-c` 登录 AUSHARE `/shop`，查看不绑定公司的商品并加入购物车。两个域名分别登录，使用同一账号，不需重新注册。
+- CO-004：为 Customer A 准备一条 AUSHARE 已确认订单。分别登录两个网站的 `/my` 和 `/my/orders`：Q Club 的订单列表及计数不含该订单，AUSHARE 仍显示；AUSHARE 没有 Q Club 卡片，`/my/billiard` 为 404。报价和发票同样只在启用在线预约的网站按其公司过滤。
+- CO-005：在 Q Club 注册一个新演示账号，在后台确认其默认公司为 TAB。
+- CO-006：运行 `make iso-check` 核对 AUSHARE 指纹。Task 4.0 尚未实现下文的 Stripe 和结算流程；桌台数量和价格仍以当前演示数据为准。
+
+## 阶段 4 后续演示步骤
 
 | 步骤 | 操作 | 应该看到 | 规格 |
 |---|---|---|---|

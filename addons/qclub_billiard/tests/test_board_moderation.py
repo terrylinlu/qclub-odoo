@@ -11,6 +11,8 @@ from odoo.tests import HttpCase, tagged
 from odoo.tests.common import new_test_user
 from odoo.tools import mute_logger
 
+from .common import site_companies
+
 from . import test_board_posts
 
 
@@ -54,8 +56,10 @@ class TestBoardModeration(HttpCase):
         self.Reply = self.env["qclub.board.reply"]
         self.Report = self.env["qclub.board.report"]
         self.Ban = self.env["qclub.board.ban"]
-        self.staff = new_test_user(self.env, login="moderation-staff", groups="qclub_billiard.group_billiard_staff")
-        self.manager = new_test_user(self.env, login="moderation-manager", groups="qclub_billiard.group_billiard_manager")
+        self.staff = new_test_user(self.env, login="moderation-staff", groups="qclub_billiard.group_billiard_staff",
+                                    company_ids=[(6, 0, site_companies(self.env))], company_id=self.other_site.company_id.id)
+        self.manager = new_test_user(self.env, login="moderation-manager", groups="qclub_billiard.group_billiard_manager",
+                                    company_ids=[(6, 0, site_companies(self.env))], company_id=self.other_site.company_id.id)
 
     def report(self, **values):
         return self.Report.create({"website_id": self.website.id, "reporter_id": self.other.partner_id.id,

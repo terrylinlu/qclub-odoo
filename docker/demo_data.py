@@ -35,6 +35,19 @@ for name, domain in SITE_DOMAINS.items():
     site.domain = domain
     summary.append(f"website {name} (id={site.id}) -> {domain}")
 qclub = Website.search([("name", "=", "Q Club")], limit=1)
+aushare = Website.search([("name", "=", "AUSHARE")], limit=1)
+aushare.company_id.name = "AUSHAREU PTY LTD (Demo)"
+tab = env["res.company"].search([("name", "=", "TAB Entertainment Pty Ltd (Demo)")], limit=1)
+if not tab:
+    tab = env["res.company"].with_context(no_vat_validation=True).create({
+        "name": "TAB Entertainment Pty Ltd (Demo)", "currency_id": env.ref("base.AUD").id,
+        "country_id": env.ref("base.au").id, "vat": "00 000 000 000",
+        "street": "1 Demo Street", "city": "Adelaide", "zip": "5000",
+    })
+tab.partner_id.tz = "Australia/Adelaide"
+qclub.company_id = tab
+env.ref("base.user_admin").write({"company_ids": [(4, tab.id), (4, aushare.company_id.id)]})
+summary.append("companies: Q Club -> TAB Entertainment (Demo); AUSHARE -> AUSHAREU PTY LTD (Demo)")
 
 ICP = env["ir.config_parameter"].sudo()
 ICP.set_param("web.base.url", BACKEND_URL)
@@ -65,6 +78,14 @@ ensure_user("demo-staff", "[Demo] Staff Wang", ["base.group_user", "qclub_billia
 ensure_user("demo-customer-a", "[Demo] Customer A", ["base.group_portal"])
 ensure_user("demo-customer-b", "[Demo] Customer B", ["base.group_portal"])
 ensure_user("demo-customer-c", "[Demo] Customer C", ["base.group_portal"])
+ensure_user("demo-aushare-staff", "[Demo] AUSHARE Staff", [
+    "base.group_user", "qclub_billiard.group_billiard_staff",
+])
+for login in ("demo-staff", "demo-customer-a", "demo-customer-b", "demo-customer-c", "demo-aushare-staff"):
+    company = tab if login in ("demo-staff", "demo-customer-c") else aushare.company_id
+    Users.search([("login", "=", login)], limit=1).write({
+        "company_id": company.id, "company_ids": [(6, 0, company.ids)],
+    })
 
 # ---- 任务 1.1：球厅配置、桌台类型、桌台 ----
 config = env["qclub.config"]._get_for_website(qclub)
