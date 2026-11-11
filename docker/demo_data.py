@@ -36,6 +36,7 @@ for name, domain in SITE_DOMAINS.items():
     summary.append(f"website {name} (id={site.id}) -> {domain}")
 qclub = Website.search([("name", "=", "Q Club")], limit=1)
 aushare = Website.search([("name", "=", "AUSHARE")], limit=1)
+aushare.company_id.name = "AUSHAREU PTY LTD (Demo)"
 tab = env["res.company"].search([("name", "=", "TAB Entertainment Pty Ltd (Demo)")], limit=1)
 if not tab:
     tab = env["res.company"].with_context(no_vat_validation=True).create({
@@ -46,7 +47,7 @@ if not tab:
 tab.partner_id.tz = "Australia/Adelaide"
 qclub.company_id = tab
 env.ref("base.user_admin").write({"company_ids": [(4, tab.id), (4, aushare.company_id.id)]})
-summary.append("companies: Q Club -> TAB Entertainment (Demo); AUSHARE unchanged")
+summary.append("companies: Q Club -> TAB Entertainment (Demo); AUSHARE -> AUSHAREU PTY LTD (Demo)")
 
 ICP = env["ir.config_parameter"].sudo()
 ICP.set_param("web.base.url", BACKEND_URL)

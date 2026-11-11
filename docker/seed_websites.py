@@ -12,6 +12,8 @@ for name, domain in (("AUSHARE", "https://aushare.test"), ("Q Club", "https://qc
     if not Website.search([("name", "=", name)], limit=1):
         Website.create({"name": name, "domain": domain})
 
+aushare = Website.search([("name", "=", "AUSHARE")], limit=1)
+aushare.company_id.name = "AUSHAREU PTY LTD (Test)"
 qclub = Website.search([("name", "=", "Q Club")], limit=1)
 company = env["res.company"].search([("name", "=", "TAB Entertainment Pty Ltd (Test)")], limit=1)
 if not company:
