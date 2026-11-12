@@ -78,10 +78,16 @@ ensure_user("demo-staff", "[Demo] Staff Wang", ["base.group_user", "qclub_billia
 ensure_user("demo-customer-a", "[Demo] Customer A", ["base.group_portal"])
 ensure_user("demo-customer-b", "[Demo] Customer B", ["base.group_portal"])
 ensure_user("demo-customer-c", "[Demo] Customer C", ["base.group_portal"])
+# Dedicated payment-test accounts keep unpaid limits separate from other specs
+# and from the other browser project. Reuse the same portal/company rules.
+PAYMENT_CUSTOMERS = ("demo-customer-pay", "demo-customer-pay-mobile")
+for login, label in zip(PAYMENT_CUSTOMERS, ("Desktop", "Mobile")):
+    ensure_user(login, f"[Demo] Payment Customer {label}", ["base.group_portal"])
 ensure_user("demo-aushare-staff", "[Demo] AUSHARE Staff", [
     "base.group_user", "qclub_billiard.group_billiard_staff",
 ])
-for login in ("demo-staff", "demo-customer-a", "demo-customer-b", "demo-customer-c", "demo-aushare-staff"):
+for login in ("demo-staff", "demo-customer-a", "demo-customer-b", "demo-customer-c",
+              *PAYMENT_CUSTOMERS, "demo-aushare-staff"):
     company = tab if login in ("demo-staff", "demo-customer-c") else aushare.company_id
     Users.search([("login", "=", login)], limit=1).write({
         "company_id": company.id, "company_ids": [(6, 0, company.ids)],
@@ -96,7 +102,7 @@ config.write({
     "booking_email_from": "Q Club Demo <bookings@qclub.localhost>",
     "contact_phone": "08 0000 0000", "contact_email": "contact@qclub.localhost",
 })
-for login in ("demo-customer-a", "demo-customer-b", "demo-customer-c"):
+for login in ("demo-customer-a", "demo-customer-b", "demo-customer-c", *PAYMENT_CUSTOMERS):
     Users.search([("login", "=", login)], limit=1).partner_id.email = login + "@qclub.localhost"
 # 任务 2.1：仅演示库的 Q Club 菜单，模块数据本身不创建网站菜单。
 Menu = env["website.menu"]
@@ -194,3 +200,44 @@ env.cr.commit()
 print("[demo] demo data written to " + DEMO_DB + ":")
 for line in summary:
     print("  - " + line)
+
+# PAY-003: install last: module installation replaces the registry. Do not reuse
+# any recordset above after this point; continue on a new cursor/environment.
+module = env['ir.module.module'].search([('name', '=', 'payment_demo')], limit=1)
+if not module:
+    raise SystemExit('Demo payment module is unavailable in this Odoo installation.')
+installed_demo_now = module.state != 'installed'
+if installed_demo_now:
+    module.button_immediate_install()
+env.cr.commit()
+
+from odoo import api, SUPERUSER_ID
+from odoo.modules.registry import Registry
+
+with Registry(DEMO_DB).cursor() as payment_cr:
+    payment_env = api.Environment(payment_cr, SUPERUSER_ID, {})
+    payment_site = payment_env['website'].search([('name', '=', 'Q Club')], limit=1)
+    Provider = payment_env['payment.provider']
+    stripe = Provider.search([('code', '=', 'stripe'), ('company_id', '=', payment_site.company_id.id),
+                              ('state', 'in', ['test', 'enabled'])], limit=1)
+    demo = Provider.search([('code', '=', 'demo'), ('company_id', '=', payment_site.company_id.id),
+                            ('website_id', '=', payment_site.id)], limit=1)
+    if not demo:
+        prototype = Provider.search([('code', '=', 'demo')], limit=1)
+        if not prototype:
+            raise SystemExit('payment_demo installed but its provider is missing.')
+        values = {'name': 'Demo', 'company_id': payment_site.company_id.id,
+                  'website_id': payment_site.id, 'state': 'disabled'}
+        if installed_demo_now:
+            # payment_demo initially publishes its generic provider. Scope that
+            # newly installed provider immediately so AUSHARE never gets Demo.
+            demo = payment_env.ref('payment.payment_provider_demo')
+            demo.write(values)
+        else:
+            demo = prototype.with_context(active_test=False).copy(values)
+    demo.write({'state': 'disabled' if stripe else 'test', 'is_published': not bool(stripe),
+                'website_id': payment_site.id})
+    if not stripe:
+        demo.with_context(active_test=False).payment_method_ids.write({'active': True})
+    payment_cr.commit()
+    print('[demo] Q Club Demo payment: ' + ('disabled (Stripe enabled)' if stripe else 'test, published'))

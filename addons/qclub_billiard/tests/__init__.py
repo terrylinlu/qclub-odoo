@@ -28,3 +28,6 @@ from . import test_account_tabs
 from . import test_multi_company
 
 from . import test_grid_prices
+from . import test_deposit_payment
+
+from . import test_deposit_payment_http

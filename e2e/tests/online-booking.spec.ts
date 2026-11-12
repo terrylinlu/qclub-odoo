@@ -56,7 +56,7 @@ test('test_web_006_web_008_web_004_select_login_restore_submit_confirmation', as
   await expect(page).toHaveURL(/\/billiard\/booking\/confirmation\/QB/);
   await expect(page.locator('.o_qclub_confirmation')).toContainText('Awaiting Deposit');
   await expect(page.locator('.o_qclub_hold')).toHaveText(/Held for \d+:\d{2}/);
-  await expect(page.locator('.o_qclub_confirmation')).toContainText('Online deposit payment is coming soon. Our staff will contact you to confirm.');
+  await expect(page.locator('.o_qclub_deposit_payment #o_payment_form')).toBeVisible();
 });
 
 test('test_web_006_mobile_selection_clear_and_shorten', async ({ page }) => {

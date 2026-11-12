@@ -1,11 +1,11 @@
 {
     "name": "Q Club Billiard Booking",
-    "version": "19.0.4.0.0",
+    "version": "19.0.4.2.0",
     "summary": "台球厅在线预约：桌台、时段预约、押金、约球留言板",
     "category": "Website",
     "author": "Q Club",
     "license": "LGPL-3",
-    "depends": ["website_sale", "portal", "bus", "mail"],
+    "depends": ["website_sale", "portal", "bus", "mail", "account_payment"],
     "data": [
         "security/qclub_security.xml",
         "security/ir.model.access.csv",
@@ -19,6 +19,7 @@
         "views/qclub_board_views.xml",
         "views/qclub_menus.xml",
         "views/booking_templates.xml",
+        "views/deposit_payment.xml",
         "views/my_account_templates.xml",
     ],
     "assets": {

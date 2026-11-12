@@ -69,7 +69,10 @@ class TestOnlineBookingHttp(HttpCase):
         page = self.url_open(result["confirmation_url"])
         self.assertEqual(page.status_code, 200)
         self.assertIn(result["time_label"], page.text)
-        self.assertIn("Online deposit payment is coming soon. Our staff will contact you to confirm.", page.text)
+        self.assertTrue(html.fromstring(page.content).xpath(
+            "//div[contains(concat(' ', normalize-space(@class), ' '), ' o_qclub_deposit_payment ')]"
+            "[.//form[@id='o_payment_form'] or .//*[normalize-space()='No payment method available']]"
+        ))
         self.assertIn("data-remaining=", page.text)
 
     def test_web_005_conflict_exact_message_and_no_record(self):

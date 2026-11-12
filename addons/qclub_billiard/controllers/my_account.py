@@ -4,7 +4,7 @@ from urllib.parse import urlencode
 from odoo import _, fields, http
 from odoo.http import request
 
-from .main import BilliardBooking
+from .board import BilliardBoard
 from ..models.qclub_board import board_display_name, board_posted_label
 
 
@@ -16,7 +16,7 @@ def _status_class(state):
     return "text-bg-secondary"
 
 
-class BilliardAccount(BilliardBooking):
+class BilliardAccount(BilliardBoard):
     def _own_domain(self):
         return [("website_id", "=", request.website.id),
                 ("partner_id", "=", request.env.user.partner_id.id)]

@@ -71,8 +71,11 @@ test('test_cfg_006_hidden_prices_keep_selection_amounts', async ({ page, browser
     }
     const index = Number(await second.getAttribute('data-slot-index'));
     const table = await second.getAttribute('data-table-id');
-    await page.locator(`.o_qclub_slot_free[data-table-id="${table}"][data-slot-index="${index - 1}"]`).click();
-    await second.click();
+    // Fix both cells before clicking: `second` is re-evaluated after the first click.
+    const firstCell = page.locator(`.o_qclub_slot[data-table-id="${table}"][data-slot-index="${index - 1}"]`);
+    const secondCell = page.locator(`.o_qclub_slot[data-table-id="${table}"][data-slot-index="${index}"]`);
+    await firstCell.click();
+    await secondCell.click();
     await expect(page.locator('.o_qclub_slot_free[aria-pressed="true"]')).toHaveCount(2);
     const summary = page.locator('.o_qclub_summary');
     await expect(summary).toContainText(/Table fee: \$[\d,]+\.\d{2}/);
@@ -88,12 +91,39 @@ test('test_cfg_006_hidden_prices_keep_selection_amounts', async ({ page, browser
   }
 });
 
-test('test_cfg_006_default_prices_visible', async ({ page }) => {
-  await page.goto('/billiard/booking');
-  await expect(page.locator('.o_qclub_booking_grid')).toHaveAttribute('data-show-grid-prices', '1');
-  await showFreePair(page);
-  for (const text of await page.locator('.o_qclub_slot_free').allTextContents()) {
-    expect(text).toMatch(/\$\d/);
+test('test_cfg_006_default_prices_visible', async ({ page, browser, baseURL }) => {
+  const adminContext = await browser.newContext({ baseURL });
+  const admin = await adminContext.newPage();
+  let configId: number | undefined;
+  let original: boolean | undefined;
+  try {
+    await admin.goto('/web/login?redirect=%2Fbilliard%2Fbooking');
+    await admin.locator('input[name="login"]').fill('admin');
+    await admin.locator('input[name="password"]').fill('admin');
+    await admin.getByRole('button', { name: 'Log in', exact: true }).click();
+    await expect(admin.locator('.o_qclub_grid_table')).toBeVisible();
+    const configs = await orm(admin, 'qclub.config', 'search_read', [
+      [['website_id.name', '=', 'Q Club']], ['id', 'show_grid_prices'],
+    ]);
+    expect(configs).toHaveLength(1);
+    configId = configs[0].id;
+    original = configs[0].show_grid_prices;
+    expect(typeof original).toBe('boolean');
+    expect(await orm(admin, 'qclub.config', 'write', [[configId], { show_grid_prices: true }])).toBe(true);
+    await page.goto('/billiard/booking');
+    await expect(page.locator('.o_qclub_booking_grid')).toHaveAttribute('data-show-grid-prices', '1');
+    await showFreePair(page);
+    for (const text of await page.locator('.o_qclub_slot_free').allTextContents()) {
+      expect(text).toMatch(/\$\d/);
+    }
+    await expect(page.locator('tbody .o_qclub_table_heading').first()).toHaveAttribute('title', /\$/);
+  } finally {
+    try {
+      if (configId !== undefined && original !== undefined) {
+        expect(await orm(admin, 'qclub.config', 'write', [[configId], { show_grid_prices: original }])).toBe(true);
+      }
+    } finally {
+      await adminContext.close();
+    }
   }
-  await expect(page.locator('tbody .o_qclub_table_heading').first()).toHaveAttribute('title', /\$/);
 });
