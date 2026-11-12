@@ -256,7 +256,8 @@ export class BookingGrid extends Interaction {
             const details = document.createElement("small");
             details.className = "d-block text-muted fw-normal";
             details.textContent = table.type;
-            name.title = `${table.name} · ${table.type} · ${formatPrice(table.hourly_price)} / ${_t("hour")}`;
+            name.title = this.el.dataset.showGridPrices === "0" ? `${table.name} · ${table.type}` :
+                `${table.name} · ${table.type} · ${formatPrice(table.hourly_price)} / ${_t("hour")}`;
             name.append(title, details);
             tableRow.append(name);
             for (const [index, state] of table.slots.entries()) {
@@ -265,7 +266,8 @@ export class BookingGrid extends Interaction {
                 cell.dataset.tableId = String(table.id);
                 cell.dataset.slotIndex = String(index);
                 cell.dataset.state = state;
-                cell.textContent = state === "free" ? formatPrice(table.hourly_price) :
+                cell.textContent = state === "free" ?
+                    (this.el.dataset.showGridPrices === "0" ? _t("Available") : formatPrice(table.hourly_price)) :
                     state === "occupied" ? _t("Booked") : "";
                 cell.setAttribute("aria-label", `${table.name}, ${result.slots[index].label}, ${labels[state]}`);
                 if (state === "free") {

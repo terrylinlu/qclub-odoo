@@ -48,6 +48,7 @@ class BilliardBooking(http.Controller):
             "min_date": minimum.isoformat(), "max_date": maximum.isoformat(),
             "occupancy_requires_login": config.occupancy_requires_login,
             "board_enabled": config.online_board,
+            "show_grid_prices": config.show_grid_prices,
             "board_post": self._board_parameter(kwargs.get("post")),
             "board_booking": self._board_parameter(kwargs.get("booking")),
             "is_public": request.env.user._is_public(),

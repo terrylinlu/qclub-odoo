@@ -12,6 +12,7 @@
                 <div id="wrap" class="o_qclub_booking_page container-fluid py-3">
                     <h1>Book a Table</h1>
                     <div class="o_qclub_booking_grid" t-att-data-public="'1' if is_public else '0'"
+                         t-att-data-show-grid-prices="'1' if show_grid_prices else '0'"
                          t-att-data-board-enabled="'1' if board_enabled else '0'"
                          t-att-data-board-post="board_post" t-att-data-board-booking="board_booking"
                          t-att-data-csrf-token="csrf_token" t-att-data-max-hours="max_hours" t-att-data-login-required="'1' if login_required else '0'">
