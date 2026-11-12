@@ -56,6 +56,13 @@
             background: var(--body-bg, #fff);
             text-align: left;
             overflow-wrap: anywhere;
+
+            strong, small {
+                max-width: 9.5rem;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
         }
     }
 
@@ -64,6 +71,24 @@
             width: 7rem;
             min-width: 7rem;
             max-width: 7rem;
+
+            strong, small { max-width: 6.5rem; }
+        }
+    }
+
+    @media (min-width: 992px) {
+        .o_qclub_grid_table {
+            th, td {
+                padding-block: 0.15rem;
+                line-height: 1.1;
+            }
+
+            .o_qclub_slot { white-space: nowrap; }
+
+            .o_qclub_table_heading {
+                strong { font-size: 0.875rem; }
+                small { font-size: 0.75rem; }
+            }
         }
     }
 

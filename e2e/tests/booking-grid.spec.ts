@@ -83,7 +83,7 @@ test('test_web_003_tbl_006_desktop_friday_fits_viewport', async ({ page }, testI
     await expect(page.locator('.o_qclub_grid_table')).toBeVisible();
   }
   await expect(page.locator('thead th[data-slot-index]')).toHaveCount(12);
-  await expect(page.locator('.o_qclub_table_row')).toHaveCount(3);
+  await expect(page.locator('.o_qclub_table_row')).toHaveCount(12);
   await expect(page.locator('thead th[data-slot-index]').last()).toHaveText('1:00 AM (next day)');
   const scroll = page.locator('.o_qclub_grid_scroll');
   expect(await scroll.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
