@@ -26,3 +26,5 @@ from . import test_my_account
 from . import test_board_moderation
 from . import test_account_tabs
 from . import test_multi_company
+
+from . import test_grid_prices

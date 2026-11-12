@@ -40,6 +40,7 @@
                     <group string="Website Availability">
                         <field name="online_booking"/>
                         <field name="occupancy_requires_login"/>
+                        <field name="show_grid_prices"/>
                     </group>
                     <group>
                         <group string="Deposit and Cancellation">
