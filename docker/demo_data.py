@@ -117,14 +117,15 @@ TableType = env["qclub.table.type"].with_context(active_test=False)
 Table = env["qclub.table"].with_context(active_test=False)
 DEMO_TABLES = [
     # (类型, 桌台, 演示单价 AUD/小时 —— 假数据)
-    ("[Demo] Chinese 8-Ball", "[Demo] Table 1", 20.0),
-    ("[Demo] Snooker", "[Demo] Table 2", 30.0),
-    ("[Demo] 9-Ball", "[Demo] Table 3", 25.0),
+    *[("[Demo] American Pool", f"[Demo] American {number}", 20.0) for number in range(1, 5)],
+    *[("[Demo] Chinese 8-Ball", f"[Demo] Chinese {number}", 25.0) for number in range(1, 8)],
+    ("[Demo] Snooker", "[Demo] Snooker 1", 30.0),
 ]
 for seq, (type_name, table_name, price) in enumerate(DEMO_TABLES, start=1):
     table_type = TableType.search([("name", "=", type_name), ("website_id", "=", qclub.id)], limit=1)
     if not table_type:
         table_type = TableType.create({"name": type_name, "website_id": qclub.id, "sequence": seq})
+    table_type.write({"active": True, "sequence": seq})
     table = Table.search([("name", "=", table_name), ("website_id", "=", qclub.id)], limit=1)
     vals = {"type_id": table_type.id, "hourly_price": price, "sequence": seq, "active": True}
     if table:
@@ -132,6 +133,24 @@ for seq, (type_name, table_name, price) in enumerate(DEMO_TABLES, start=1):
     else:
         Table.create(dict(vals, name=table_name, website_id=qclub.id))
     summary.append(f"table {table_name} ({type_name}, {price:g} AUD/h)")
+
+old_tables = Table.search([
+    ("website_id", "=", qclub.id),
+    ("name", "in", ["[Demo] Table 1", "[Demo] Table 2", "[Demo] Table 3"]),
+])
+old_tables.write({"active": False})
+for table in old_tables:
+    summary.append(f"table {table.name} (archived; existing bookings kept)")
+for table_type in TableType.search([
+    ("website_id", "=", qclub.id), ("name", "=like", "[Demo] %"),
+]):
+    if not Table.search_count([
+        ("website_id", "=", qclub.id), ("type_id", "=", table_type.id),
+        ("name", "=like", "[Demo] %"), ("active", "=", True),
+    ]):
+        table_type.write({"active": False})
+        summary.append(f"table type {table_type.name} (archived; no active demo tables)")
+summary.append("Q Club demo tables: 12 (4 American Pool, 7 Chinese 8-Ball, 1 Snooker)")
 
 # ---- 任务 1.2：营业时间 ----
 hours = env["qclub.opening.hours"]._load_default_hours(qclub)
@@ -152,8 +171,8 @@ else:
     raise SystemExit("Q Club has no business day for demo bookings.")
 
 for table_name, login, start_hour, duration, confirmed in (
-    ("[Demo] Table 1", "demo-customer-a", 15, 2, True),
-    ("[Demo] Table 2", "demo-customer-b", 18, 1, False),
+    ("[Demo] American 1", "demo-customer-a", 15, 2, True),
+    ("[Demo] Chinese 1", "demo-customer-b", 18, 1, False),
 ):
     customer = Users.search([("login", "=", login)], limit=1).partner_id
     booking = Booking.search([

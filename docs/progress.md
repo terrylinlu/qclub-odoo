@@ -435,6 +435,7 @@
 - [ ] 一键跳转登录（2026-11-11 你选的做法 A）：已登录顾客在 Q Club 与 AUSHARE 之间跳转时自动登录，用一次性、短时有效的凭证；单独写规格，涉及 AUSHARE 的改动逐项批准
 - [x] 生产迁移（2026-11-11 由你执行）：新建 TAB Entertainment，Q Club 网站已改过去；改动前已有 EBS 快照；AUSHARE 页面正常、商品均未绑定公司、员工权限已设；AUSHARE 原本只启用银行转账，未变。科目表和 GST 待会计确认后配置
 - [ ] Q Club 开放网上预约前：Q Club 网站的 Customer Account 改为 **Free sign up**（目前两个网站都是 On invitation，按网站分别设置，AUSHARE 可保持不变）；Q Club 的其他支付方式在上线前配置
+- [ ] 生产 Stripe 正式账号上线前关闭 **Link**（快捷支付）：开着时付款表单强制要求手机号，付款会失败（穿刺 3，2026-11-12；测试账号已关闭）
 - [ ] 编写 Claude Code 审查者提示词
 
 ### 阶段 6 之前

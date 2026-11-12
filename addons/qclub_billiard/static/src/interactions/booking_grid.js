@@ -219,7 +219,7 @@ export class BookingGrid extends Interaction {
         const heading = document.createElement("th");
         heading.scope = "col";
         heading.className = "o_qclub_table_heading";
-        heading.textContent = _t("Table / hourly price");
+        heading.textContent = _t("Table");
         row.append(heading);
         for (const [index, slot] of result.slots.entries()) {
             const column = document.createElement("th");
@@ -255,7 +255,8 @@ export class BookingGrid extends Interaction {
             title.textContent = table.name;
             const details = document.createElement("small");
             details.className = "d-block text-muted fw-normal";
-            details.textContent = `${table.type} · ${formatPrice(table.hourly_price)} / ${_t("hour")}`;
+            details.textContent = table.type;
+            name.title = `${table.name} · ${table.type} · ${formatPrice(table.hourly_price)} / ${_t("hour")}`;
             name.append(title, details);
             tableRow.append(name);
             for (const [index, state] of table.slots.entries()) {
