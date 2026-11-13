@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="deposit_refund_form" model="ir.ui.view">
+        <field name="name">qclub.deposit.refund.form</field>
+        <field name="model">qclub.deposit.refund</field>
+        <field name="arch" type="xml">
+            <form string="Refund extra payment">
+                <group>
+                    <field name="booking_id"/>
+                    <field name="extra_payments_html"/>
+                    <field name="transaction_id"/>
+                    <field name="reason"/>
+                </group>
+                <footer>
+                    <button name="action_refund" type="object" string="Refund extra payment" class="btn-primary"/>
+                    <button string="Cancel" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+    <record id="deposit_email" model="ir.ui.view">
+        <field name="name">Q Club deposit email</field>
+        <field name="key">qclub_billiard.deposit_email</field>
+        <field name="type">qweb</field>
+        <field name="model">qclub.booking</field>
+        <field name="arch" type="xml">
+            <t t-name="qclub_billiard.deposit_email">
+                <div style="font-family: sans-serif; max-width: 640px; margin: auto; padding: 24px;">
+                    <img t-att-src="domain + '/web/image/website/' + str(booking.website_id.id) + '/logo'" t-att-alt="booking.website_id.name" width="160"/>
+                    <h1 t-out="booking.website_id.name"/>
+                    <p t-out="booking.company_id.name"/>
+                    <p t-out="booking.company_id.partner_id.contact_address"/>
+                    <p t-if="booking.company_id.vat">ABN: <span t-out="booking.company_id.vat"/></p>
+                    <h2 t-out="event_label"/>
+                    <p t-out="booking.name"/><p t-out="booking.table_id.name"/><p t-out="time_label"/>
+                    <p>Deposit (AUD): <span t-field="booking.deposit_amount"/></p>
+                    <p t-if="event == 'confirmed'">Free cancellation deadline: <span t-out="deadline_label"/> (Adelaide)</p>
+                    <p t-if="event == 'refunded'">Your payment was refunded in full because the slot was no longer available.</p>
+                    <p t-if="event == 'refund_pending'">The slot is no longer available. A full refund has been requested; our team will follow up if it fails.</p>
+                    <p t-if="event == 'duplicate'">An extra deposit was received. A manager must review and refund the extra payment.</p>
+                    <a t-att-href="domain + '/billiard/booking/confirmation/' + booking.name">View booking confirmation</a>
+                    <hr/><p><span t-out="config.contact_phone"/> <span t-out="config.contact_email"/></p>
+                </div>
+            </t>
+        </field>
+    </record>
+</odoo>

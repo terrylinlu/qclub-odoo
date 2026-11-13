@@ -44,6 +44,11 @@
                     <field name="state" widget="statusbar" statusbar_visible="pending,confirmed,arrived,done"/>
                 </header>
                 <sheet>
+                    <div class="alert alert-warning" role="alert" invisible="not payment_attention">
+                        <strong>Payment needs attention</strong>
+                        <br />
+                        <field name="payment_attention_reason" readonly="True" />
+                    </div>
                     <h1><field name="name"/></h1>
                     <field name="currency_id" invisible="True"/>
                     <group>
@@ -69,7 +74,19 @@
                         <field name="table_fee" readonly="True"/>
                         <field name="deposit_amount" readonly="True"/>
                     </group>
+                    <group string="Deposit">
+                        <field name="deposit_state" readonly="True" />
+                        <field name="paid_amount" readonly="True" />
+                        <field name="paid_at" readonly="True" />
+                        <field name="payment_reference" readonly="True" />
+                        <field name="payment_attention" readonly="True" />
+                        <field name="lock_extended" readonly="True" />
+                        <field name="has_extra_payment" invisible="True" />
+                        <field name="payment_transactions_html" readonly="True" />
+                        <button name="action_refund_extra_payment" string="Refund extra payment" type="object" groups="qclub_billiard.group_billiard_manager" invisible="not has_extra_payment" />
+                    </group>
                 </sheet>
+                <chatter />
             </form>
         </field>
     </record>
@@ -103,6 +120,7 @@
                 <filter name="expired" string="Expired" domain="[('state', '=', 'expired')]"/>
                 <filter name="no_show" string="No-show" domain="[('state', '=', 'no_show')]"/>
                 <separator/>
+                <filter name="payment_attention" string="Payment needs attention" domain="[('payment_attention', '=', True)]" />
                 <filter name="business_date" string="Business Date" date="business_date"/>
                 <group>
                     <filter name="group_state" string="Status" context="{'group_by': 'state'}"/>

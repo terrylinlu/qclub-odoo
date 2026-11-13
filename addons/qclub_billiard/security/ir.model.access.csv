@@ -24,3 +24,4 @@ access_qclub_board_application_manager,qclub.board.application manager,model_qcl
 access_qclub_board_report_staff,qclub.board.report staff,model_qclub_board_report,group_billiard_staff,1,0,0,0
 access_qclub_board_report_manager,qclub.board.report manager,model_qclub_board_report,group_billiard_manager,1,1,0,0
 access_qclub_board_ban_manager,qclub.board.ban manager,model_qclub_board_ban,group_billiard_manager,1,1,1,0
+access_qclub_deposit_refund_manager,Deposit refund manager,model_qclub_deposit_refund,qclub_billiard.group_billiard_manager,1,1,1,1

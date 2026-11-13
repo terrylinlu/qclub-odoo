@@ -66,7 +66,16 @@
                     <p t-field="booking.state"/>
                     <p t-if="booking.created_in_cancel_window" class="alert alert-warning" role="alert">This booking cannot be cancelled free of charge.</p>
                     <p t-if="booking.state in ('pending', 'expired')" class="o_qclub_hold" t-att-data-remaining="remaining"/>
-                    <p>Online deposit payment is coming soon. Our staff will contact you to confirm.</p>
+                    <div t-if="show_deposit_form" class="o_qclub_deposit_payment">
+                        <h2>Pay deposit</h2>
+                        <p t-out="booking.company_id.name" />
+                        <p t-out="booking.company_id.partner_id.contact_address" />
+                        <p t-if="booking.company_id.vat">ABN: <span t-out="booking.company_id.vat" />
+                        </p>
+                        <t t-call="payment.form">
+                            <t t-set="submit_button_label">Pay deposit</t>
+                        </t>
+                    </div>
                     <a t-if="find_players_url" t-att-href="find_players_url" class="btn btn-primary">Find players</a>
                     <a href="/billiard/booking">Book a Table</a>
                 </div>
@@ -91,7 +100,7 @@
                     <p>Deposit: <span t-field="booking.deposit_amount"/></p>
                     <p>Hold expires: <span t-out="lock_label"/> (Adelaide)</p>
                     <p t-if="booking.created_in_cancel_window" style="background: #fff3cd; padding: 12px;">This booking cannot be cancelled free of charge.</p>
-                    <p>Online deposit payment is coming soon. Our staff will contact you to confirm.</p>
+                    <p>Pay your deposit on the booking confirmation page.</p>
                     <a t-att-href="domain + '/billiard/booking/confirmation/' + booking.name">View booking confirmation</a>
                     <hr/>
                     <p><span t-out="config.contact_phone"/> <span t-out="config.contact_email"/></p>

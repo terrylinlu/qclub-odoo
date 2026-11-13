@@ -4,3 +4,6 @@ from . import qclub_table_type
 from . import qclub_opening_hours
 from . import qclub_booking
 from . import qclub_board
+from . import payment_transaction
+from . import booking_deposit
+from . import deposit_refund

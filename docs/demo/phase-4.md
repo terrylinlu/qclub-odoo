@@ -79,3 +79,42 @@
 5. 管理员重新开启开关，刷新后确认网格价格恢复。
 
 本次未修改 docker/ 演示数据脚本；新增字段默认开启。
+
+## 任务 4.2：在线押金（PAY-001–014）
+
+押金 E2E 使用独立演示账号（密码均为 `demo`）：桌面 `demo-customer-pay`，移动端
+`demo-customer-pay-mobile`。两者沿用其他顾客的 portal / 公司隔离规则；更新后运行
+`make demo` 创建账号，避免与其他规格共用未付款预约额度。
+
+先运行 `make demo`，演示脚本会在 `qclub_demo` 安装并发布仅限 Q Club / TAB
+公司的 Demo 支付方式；若该公司已启用 Stripe，则保留 Stripe，停用 Demo。
+本任务没有执行这些命令，也没有连接数据库。
+
+1. 在 Q Club 以 `demo-customer-a` 登录，从营业日期范围内挑选空闲桌台和时段，提交预约。
+2. 确认页应显示 Awaiting Deposit、AUD 押金、TAB 公司身份和 Pay deposit 表单。
+   开始时间在免费取消窗口内时，应显示不能免费取消的提示。
+3. 选 Demo，Payment Details 填任意演示文字，Payment Status 选 Successful，点击 Pay deposit。
+   返回确认页后状态应为 Confirmed，付款表单消失。Mailpit 应收到 Q Club 发件人的
+   “Deposit received – booking confirmed”邮件，含金额、时段、免费取消截止时间，不含支付详情。
+4. 另选空闲时段创建预约，Demo 选 Error。预约应保持 Awaiting Deposit，锁定期内可重试。
+5. 后台用员工查看 Deposit 区域：状态、实付金额、时间、交易号及交易列表只读；手动确认
+   新建电话预约后，状态应为 No online deposit。
+6. AUSHARE 网站不能显示 Q Club 支付方式或访问 Q Club 预约付款；匿名用户、其他顾客同样不能访问。
+7. 本地真实 Stripe 测试演示：在仓库外准备 mode 600 的
+   `~/.config/qclub/stripe-test.env`（`STRIPE_PUBLISHABLE_KEY`、`STRIPE_SECRET_KEY`）和
+   `stripe-webhook.env`（`STRIPE_WEBHOOK_SECRET`）。只能使用测试模式值。
+   执行 `tools/stripe_demo.sh start`，用已在穿刺 3 验证的测试卡完成成功、拒绝、3DS 演示。
+   CLI listener 的签名 secret 必须与私有 webhook 文件一致；不要把 CLI 启动输出贴入仓库或报告。
+   `tools/stripe_demo.sh status` 仅显示容器状态；`stop` 停止转发。
+8. 人工验证并发付款：两个窗口在到账前分别开始支付；第二笔成功到账后应标记
+   Payment needs attention，发邮件到 Q Club 联系邮箱，不自动退款。
+   管理员打开 Refund extra payment，选择多付的交易并填写原因；员工看不到按钮。
+   原始押金不受影响，退款请求和原因、操作人、UTC 时间进入 chatter。
+   支付方确认退款后，若没有其他异常，提示消失；退款失败则保持提示。
+9. 验证过期竞态：到账时锁定已过期，空闲时段应恢复确认；已被占用或已取消则发起全额退款。
+   退款完成时邮件写明已退款；尚未完成或失败时邮件明确写退款已请求，并保留后台提示。
+10. PAY-012 仅人工验收：12 张桌（美式 4 × AUD20、中式 7 × AUD25、斯诺克 1 × AUD30），50% 押金。
+    PAY-013 银行账单商户名须在 Q Club 自己的 Stripe 账号人工核对；自动测试只验证网页和邮件的公司身份。
+
+结束 Stripe 演示后，在演示库后台停用 Q Club Stripe，再运行 `make demo` 即恢复 Demo。
+不要在生产环境运行此脚本。

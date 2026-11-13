@@ -140,3 +140,39 @@ class QclubConfig(models.Model):
             self.env["qclub.opening.hours"]._load_default_hours(config.website_id)
         self.invalidate_recordset(["has_opening_hours"])
         return {"type": "ir.actions.client", "tag": "reload"}
+
+    def _stripe_test_provider(self):
+        self.ensure_one()
+        Provider = self.env['payment.provider'].sudo()
+        if 'stripe_secret_key' not in Provider._fields:
+            raise ValidationError(_('Stripe is not installed; install payment_stripe in the demo database first.'))
+        provider = Provider.search([
+            ('code', '=', 'stripe'), ('company_id', '=', self.company_id.id),
+            ('website_id', '=', self.website_id.id),
+        ], limit=1)
+        if not provider:
+            # Never repurpose a provider used by another website (including a global one).
+            prototype = Provider.search([('code', '=', 'stripe')], limit=1)
+            if not prototype:
+                raise ValidationError(_('Stripe provider does not exist; install payment_stripe first.'))
+            provider = prototype.with_context(active_test=False).copy({'name': 'Q Club Stripe', 'company_id': self.company_id.id,
+                                       'website_id': self.website_id.id, 'state': 'disabled'})
+        return provider
+
+    def _configure_stripe_test(self, publishable_key, secret_key, webhook_secret):
+        """Trusted shell helper. Reject credentials before lookup; never log their values."""
+        import re
+
+        self.ensure_one()
+        for value, prefix in ((publishable_key, 'pk_test_'), (secret_key, 'sk_test_'),
+                              (webhook_secret, 'whsec_')):
+            if (not isinstance(value, str) or '_live_' in value
+                    or not re.fullmatch(re.escape(prefix) + r'[A-Za-z0-9_]+', value)):
+                raise ValidationError(_('Only well-formed Stripe test credentials are accepted.'))
+        provider = self._stripe_test_provider()
+        provider.write({
+            'stripe_publishable_key': publishable_key, 'stripe_secret_key': secret_key,
+            'stripe_webhook_secret': webhook_secret, 'state': 'test',
+            'company_id': self.company_id.id, 'website_id': self.website_id.id, 'is_published': True,
+        })
+        return provider

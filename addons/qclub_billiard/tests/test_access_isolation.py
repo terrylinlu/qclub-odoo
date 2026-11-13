@@ -175,16 +175,39 @@ class TestAccessIsolation(BilliardCase):
                 self.assertTrue(set((self.booking_a | self.booking_b | other).ids) <= set(found.ids))
 
     def test_iso_001_module_data_whitelist(self):
+        from odoo.fields import Field
+
+        payment_fields = {
+            key for cls in self.env.registry.models["payment.transaction"].__mro__
+            if cls.__dict__.get("_module") == "qclub_billiard"
+            for key, value in cls.__dict__.items()
+            if isinstance(value, Field) and (key.startswith("qclub_") or key == "website_id")
+        }
+        own_models = OWN_MODELS | {"qclub.deposit.refund"}
         offending = []
         for data in self.env["ir.model.data"].search([("module", "=", "qclub_billiard")]):
             xmlid = f"{data.module}.{data.name}"
-            if data.model not in DATA_MODELS:
+            if data.model == "ir.model.inherit":
+                inheritance = self.env["ir.model.inherit"].browse(data.res_id).exists()
+                if not (xmlid == "qclub_billiard.model_inherit__qclub_booking__mail_thread"
+                        and inheritance and inheritance.model_id.model == "qclub.booking"
+                        and inheritance.parent_id.model == "mail.thread" and not inheritance.parent_field_id):
+                    offending.append(f"{xmlid}: unapproved model inheritance")
+            elif data.model not in DATA_MODELS | own_models:
                 offending.append(f"{xmlid}: {data.model}")
+            elif data.model == "ir.model.fields":
+                field = self.env["ir.model.fields"].browse(data.res_id).exists()
+                if not field or (field.model == "payment.transaction" and field.name not in payment_fields | {"id", "display_name"}):
+                    offending.append(f"{xmlid}: missing or unapproved payment field")
             elif data.model == "ir.model.fields.selection":
                 # Odoo generates these rows for Selection fields; only our own
                 # models' fields may contribute selection metadata.
                 selection = self.env["ir.model.fields.selection"].browse(data.res_id).exists()
-                if not selection or selection.field_id.model_id.model not in OWN_MODELS:
+                if not selection or not (
+                    selection.field_id.model_id.model in own_models
+                    or (selection.field_id.model_id.model == "payment.transaction"
+                        and selection.field_id.name in payment_fields)
+                ):
                     offending.append(f"{xmlid}: missing selection or foreign field model")
             elif data.model == "ir.ui.view":
                 view = self.env["ir.ui.view"].browse(data.res_id).exists()
@@ -192,11 +215,13 @@ class TestAccessIsolation(BilliardCase):
                     xmlid == "qclub_billiard.portal_my_home_billiard"
                     and view and view.inherit_id == self.env.ref("portal.portal_my_home")
                 )
-                if not approved_portal_card and (not view or view.model not in OWN_MODELS or view.inherit_id):
+                if not approved_portal_card and (not view or view.model not in own_models or view.inherit_id):
                     offending.append(f"{xmlid}: foreign model or inherited view")
         self.assertFalse(offending, "Forbidden module data:\n" + "\n".join(sorted(offending)))
 
     def test_iso_002_no_core_model_extensions(self):
+        from odoo.fields import Field
+
         offending = []
         for name, model in self.env.registry.models.items():
             if model._original_module == "qclub_billiard" or name in CORE_EXTENSION_ALLOWLIST:
@@ -205,5 +230,27 @@ class TestAccessIsolation(BilliardCase):
                 if (cls.__dict__.get("_module") == "qclub_billiard"
                         or cls.__module__.startswith("odoo.addons.qclub_billiard.")):
                     attributes = sorted(key for key in cls.__dict__ if not key.startswith("__"))
+                    if name == "payment.transaction":
+                        own_fields = {
+                            key: value for key, value in cls.__dict__.items()
+                            if isinstance(value, Field) and value._module == "qclub_billiard"
+                            and (key.startswith("qclub_") or key == "website_id")
+                            and not any(field.name == key and field._module != "qclub_billiard"
+                                        for base in model.__mro__
+                                        for field in base.__dict__.get("_field_definitions", []))
+                        }
+                        metadata = {
+                            "_inherit": ["payment.transaction"], "_name": "payment.transaction",
+                            "_module": "qclub_billiard", "_field_definitions": list(own_fields.values()),
+                            "_table_object_definitions": [],
+                        }
+                        overrides = {"create", "_compute_reference_prefix", "_create_payment", "_post_process"}
+                        attributes = [key for key in attributes if not (
+                            key in own_fields
+                            or (key in metadata and cls.__dict__[key] == metadata[key])
+                            or (callable(cls.__dict__[key]) and (key in overrides or key.startswith("_qclub")))
+                        )]
+                        if not attributes:
+                            continue
                     offending.append(f"{name}: {cls.__name__}: {', '.join(attributes)}")
         self.assertFalse(offending, "Core model extensions:\n" + "\n".join(sorted(offending)))
