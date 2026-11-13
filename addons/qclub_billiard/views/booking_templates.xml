@@ -64,6 +64,8 @@
                     <p>Table fee: <span t-field="booking.table_fee"/></p>
                     <p>Deposit: <span t-field="booking.deposit_amount"/></p>
                     <p t-field="booking.state"/>
+                    <button t-if="booking._can_cancel()" type="button" class="btn btn-outline-danger o_qclub_cancel"
+                            t-att-data-booking-id="booking.id" t-att-data-csrf-token="request.csrf_token()">Cancel booking</button>
                     <p t-if="booking.created_in_cancel_window" class="alert alert-warning" role="alert">This booking cannot be cancelled free of charge.</p>
                     <p t-if="booking.state in ('pending', 'expired')" class="o_qclub_hold" t-att-data-remaining="remaining"/>
                     <div t-if="show_deposit_form" class="o_qclub_deposit_payment">

@@ -118,3 +118,28 @@
 
 结束 Stripe 演示后，在演示库后台停用 Q Club Stripe，再运行 `make demo` 即恢复 Demo。
 不要在生产环境运行此脚本。
+
+## 任务 4.3：取消与退款（待人工运行）
+
+本任务未连接任何数据库，未执行 make demo、make test 或 make e2e。
+复用已有 `demo-customer-pay`（桌面）和 `demo-customer-pay-mobile`（手机），无需新增演示数据或修改 docker。
+
+1. 登录 Q Club，在至少三天后的空闲时段预约并使用 Demo 成功支付押金。
+2. 确认页应显示 Cancel booking。进入 My Account → My bookings，找到本次预约并点击 Cancel booking。
+   弹窗应显示服务端计算的 “You will receive a full refund of $….”；Keep booking 不改变状态。
+3. 点击 Confirm cancellation。页面重载，状态变为 Cancelled，取消按钮消失。
+   后台 Deposit 应显示 Refunded、退款金额、UTC 存储的退款时间、提供方交易号、Free cancellation 和操作人。
+   Mailpit 应收到 Q Club 发件人的取消邮件；关联找球友帖子应关闭。
+4. 再预约不足 24 小时后的时段并完成 Demo 支付。取消弹窗应显示押金 non-refundable。
+   确认后应为 Cancelled / Forfeited，没有退款交易。
+5. 创建尚未付款的预约；取消弹窗应显示 “This booking has no deposit to refund.”。
+   确认后押金保持 Awaiting payment。后台手动确认且 No online deposit 的预约同样没有可退押金。
+6. 员工在后台点 Cancel：先打开结果向导；不足 24 小时的已付预约按不退处理。
+   该向导复用 `qclub.deposit.refund` 的 `cancel` 模式；原 Refund extra payment 使用 `extra_refund` 模式，仍仅限管理员。
+   两个入口各自打开独立表单，页头仍为 5 个按钮；不新增模型，也无需调整 ISO-001 白名单。
+   管理员在该情形可选 Exception full refund，原因必填；其他情形不显示该选项。
+7. 用离线 mock 测试验证请求失败和后续退款失败通知：预约保留 Cancelled，押金 Refund failed，
+   出现 Payment needs attention，联系邮箱收到提醒；只有管理员能 Retry refund。
+   成功、进行中的退款都必须阻止再次发出全额退款。
+8. 真实 Stripe 测试模式退款、后续失败通知、邮件及无会计凭证需在获准的测试环境另行验收。
+   AUSHARE 的两个取消接口均应 404；其他顾客、匿名顾客和已开始的预约应被拒绝。

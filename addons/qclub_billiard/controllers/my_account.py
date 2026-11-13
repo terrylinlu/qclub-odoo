@@ -3,6 +3,8 @@ from urllib.parse import urlencode
 
 from odoo import _, fields, http
 from odoo.http import request
+from odoo.exceptions import ValidationError
+from werkzeug.exceptions import NotFound
 
 from .board import BilliardBoard
 from ..models.qclub_board import board_display_name, board_posted_label
@@ -80,6 +82,7 @@ class BilliardAccount(BilliardBoard):
             post = request.env["qclub.board.post"].sudo().search(
                 site_domain + [("partner_id", "=", partner), ("booking_id", "=", booking.id)], limit=1)
             booking_rows.append({
+                "cancel_id": booking.id if booking._can_cancel() else None,
                 "number": booking.name, "time": booking._time_label(), "table": booking.table_id.name,
                 "state": booking_labels[booking.state], "state_class": _status_class(booking.state), "url": link(booking, post),
                 "confirmation": "/billiard/booking/confirmation/" + booking.name,
@@ -115,3 +118,29 @@ class BilliardAccount(BilliardBoard):
                           "time": item.post_id.booking_id._time_label(),
                           "url": link(item.post_id.booking_id, item.post_id)} for item in replies],
         })
+
+    def _cancellation_booking(self, booking_id):
+        self._website_config()
+        if request.env.user._is_public():
+            raise NotFound()
+        booking = request.env['qclub.booking'].sudo().search(
+            self._own_domain() + [('id', '=', booking_id)], limit=1)
+        if not booking:
+            raise NotFound()
+        return booking
+
+    @http.route('/billiard/booking/<int:booking_id>/cancel/outcome', type='jsonrpc', auth='public',
+                website=True, methods=['POST'])
+    def cancellation_outcome(self, booking_id):
+        booking = self._cancellation_booking(booking_id)
+        return {'text': booking._cancellation_outcome()['text']}
+
+    @http.route('/billiard/booking/<int:booking_id>/cancel/confirm', type='jsonrpc', auth='public',
+                website=True, methods=['POST'])
+    def cancellation_confirm(self, booking_id, csrf_token=None):
+        booking = self._cancellation_booking(booking_id)
+        if not isinstance(csrf_token, str) or not request.validate_csrf(csrf_token):
+            raise ValidationError(_('Your session has expired. Please reload the page.'))
+        # Ownership and website are checked before sudo; no refund choice is accepted.
+        booking._cancel_booking()
+        return {'cancelled': True}

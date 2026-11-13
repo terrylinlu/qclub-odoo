@@ -38,6 +38,8 @@
                                     <p class="small text-muted"><span t-out="item['time']"/> · <span t-out="item['table']"/></p>
                                     <div class="o_qclub_row_actions">
                                         <a t-att-href="item['url']">View booking date</a>
+                                        <button t-if="item['cancel_id']" type="button" class="btn btn-link o_qclub_cancel"
+                                                t-att-data-booking-id="item['cancel_id']" t-att-data-csrf-token="request.csrf_token()">Cancel booking</button>
                                         <a t-if="item['find']" t-att-href="item['find']" class="ms-3">Find players</a>
                                     </div>
                                 </div>

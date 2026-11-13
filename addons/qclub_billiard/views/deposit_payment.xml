@@ -5,11 +5,12 @@
         <field name="model">qclub.deposit.refund</field>
         <field name="arch" type="xml">
             <form string="Refund extra payment">
+                <field name="mode" invisible="True" readonly="True"/>
                 <group>
                     <field name="booking_id"/>
                     <field name="extra_payments_html"/>
-                    <field name="transaction_id"/>
-                    <field name="reason"/>
+                    <field name="transaction_id" required="True"/>
+                    <field name="reason" required="True"/>
                 </group>
                 <footer>
                     <button name="action_refund" type="object" string="Refund extra payment" class="btn-primary"/>
@@ -39,6 +40,47 @@
                     <p t-if="event == 'refund_pending'">The slot is no longer available. A full refund has been requested; our team will follow up if it fails.</p>
                     <p t-if="event == 'duplicate'">An extra deposit was received. A manager must review and refund the extra payment.</p>
                     <a t-att-href="domain + '/billiard/booking/confirmation/' + booking.name">View booking confirmation</a>
+                    <hr/><p><span t-out="config.contact_phone"/> <span t-out="config.contact_email"/></p>
+                </div>
+            </t>
+        </field>
+    </record>
+    <record id="deposit_cancel_form" model="ir.ui.view">
+        <field name="name">qclub.deposit.refund.cancel.form</field>
+        <field name="model">qclub.deposit.refund</field>
+        <field name="priority">30</field>
+        <field name="arch" type="xml">
+            <form string="Cancel booking">
+                <field name="mode" invisible="True" readonly="True"/>
+                <group>
+                    <field name="booking_id"/>
+                    <field name="outcome" readonly="True"/>
+                    <field name="exception_available" invisible="True"/>
+                    <field name="exception_refund" groups="qclub_billiard.group_billiard_manager" invisible="not exception_available"/>
+                    <field name="reason" groups="qclub_billiard.group_billiard_manager"
+                           invisible="not exception_available or not exception_refund" required="exception_refund"/>
+                </group>
+                <footer>
+                    <button name="action_cancel_booking" type="object" string="Confirm cancellation" class="btn-primary"/>
+                    <button string="Keep booking" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+    <record id="cancellation_email" model="ir.ui.view">
+        <field name="name">Q Club cancellation email</field>
+        <field name="key">qclub_billiard.cancellation_email</field>
+        <field name="type">qweb</field>
+        <field name="model">qclub.booking</field>
+        <field name="arch" type="xml">
+            <t t-name="qclub_billiard.cancellation_email">
+                <div style="font-family: sans-serif; max-width: 640px; margin: auto; padding: 24px;">
+                    <img t-att-src="domain + '/web/image/website/' + str(booking.website_id.id) + '/logo'" t-att-alt="booking.website_id.name" width="160"/>
+                    <h1 t-out="booking.website_id.name"/>
+                    <p t-out="booking.company_id.name"/>
+                    <h2 t-out="label"/><p t-out="booking.name"/>
+                    <p t-out="booking._time_label()"/><p t-out="text"/>
+                    <a t-att-href="domain + '/billiard/booking/confirmation/' + booking.name">View booking</a>
                     <hr/><p><span t-out="config.contact_phone"/> <span t-out="config.contact_email"/></p>
                 </div>
             </t>

@@ -36,7 +36,7 @@
                             groups="qclub_billiard.group_billiard_staff" invisible="state != 'confirmed'"/>
                     <button name="action_complete" string="Complete" type="object"
                             groups="qclub_billiard.group_billiard_staff" invisible="state != 'arrived'"/>
-                    <button name="action_cancel" string="Cancel" type="object"
+                    <button name="action_cancel" string="Cancel" context="{'qclub_cancel_dialog': True}" type="object"
                             groups="qclub_billiard.group_billiard_staff"
                             invisible="state not in ('pending', 'confirmed')"/>
                     <button name="action_no_show" string="No-show" type="object"
@@ -78,6 +78,13 @@
                         <field name="deposit_state" readonly="True" />
                         <field name="paid_amount" readonly="True" />
                         <field name="paid_at" readonly="True" />
+                        <field name="refund_amount" readonly="True"/>
+                        <field name="refund_at" readonly="True"/>
+                        <field name="refund_reference" readonly="True"/>
+                        <field name="refund_reason" readonly="True"/>
+                        <field name="refund_operator_id" readonly="True"/>
+                        <button name="action_retry_refund" string="Retry refund" type="object"
+                                groups="qclub_billiard.group_billiard_manager" invisible="deposit_state != 'refund_failed'"/>
                         <field name="payment_reference" readonly="True" />
                         <field name="payment_attention" readonly="True" />
                         <field name="lock_extended" readonly="True" />

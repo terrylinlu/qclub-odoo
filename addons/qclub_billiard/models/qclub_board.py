@@ -176,7 +176,12 @@ class BoardPost(models.Model):
                 ("post_id", "=", post.id), ("state", "=", "accepted"),
             ])
             for application in applications:
-                post._queue_email(event, application.partner_id, post.partner_id)
+                try:
+                    with self.env.cr.savepoint():
+                        post._queue_email(event, application.partner_id, post.partner_id)
+                except Exception:
+                    # Keep the booking/post state change outside the notification savepoint.
+                    _logger.exception("Could not queue board email for post %s", post.id)
 
 
 class BoardTerms(models.Model):

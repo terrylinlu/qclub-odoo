@@ -3,7 +3,7 @@
 
 约定：测试方法名包含小写需求编号，如 test_bk_004_overlap_rejected 对应需求 BK-004。
 环境变量：
-  SPEC_PREFIXES  参与覆盖检查的编号前缀，默认 CFG,TBL,BK,WEB,SEC,ISO,ADM,BRD,CO,PAY（DEMO 由演示验收检验，阶段 4 的 RF/NS/ST 暂不检查）
+  SPEC_PREFIXES  参与覆盖检查的编号前缀，默认 CFG,TBL,BK,WEB,SEC,ISO,ADM,BRD,CO,PAY,RF（DEMO 由演示验收检验，阶段 4 的 NS/ST 暂不检查）
   STRICT=1       存在未覆盖需求或失败测试时返回非零退出码（CI 在阶段 1 完成后开启）
 """
 import datetime
@@ -14,7 +14,7 @@ import sys
 import xml.etree.ElementTree as ET
 
 REPORTS = "docs/reports"
-PREFIXES = set(os.environ.get("SPEC_PREFIXES", "CFG,TBL,BK,WEB,SEC,ISO,ADM,BRD,CO,PAY").split(","))
+PREFIXES = set(os.environ.get("SPEC_PREFIXES", "CFG,TBL,BK,WEB,SEC,ISO,ADM,BRD,CO,PAY,RF").split(","))
 STRICT = os.environ.get("STRICT") == "1"
 ROW = re.compile(r"^\|\s*([A-Z]{2,4}-\d{3})\s*\|\s*(.*?)\s*\|\s*$")
 TID = re.compile(r"(?:^|_)([a-z]{2,4})_(\d{3})(?=_|$)")
