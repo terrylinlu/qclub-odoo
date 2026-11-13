@@ -23,6 +23,9 @@
         "views/my_account_templates.xml",
     ],
     "assets": {
+        "web.assets_backend": [
+            "qclub_billiard/static/src/js/booking_conflict_dialog.js",
+        ],
         "web.assets_frontend": [
             "qclub_billiard/static/src/interactions/booking_grid.js",
             "qclub_billiard/static/src/interactions/my_account.js",

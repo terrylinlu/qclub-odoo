@@ -37,7 +37,12 @@ class BookingDeposit(models.Model):
     @api.depends('payment_attention', 'payment_attention_reason')
     def _compute_payment_transactions(self):
         for booking in self:
-            transactions = self.env['payment.transaction'].sudo().search([('qclub_booking_id', '=', booking.id)])
+            booking_id = booking._origin.id
+            if not booking_id:
+                booking.has_extra_payment = False
+                booking.payment_transactions_html = False
+                continue
+            transactions = self.env['payment.transaction'].sudo().search([('qclub_booking_id', '=', booking_id)])
             booking.has_extra_payment = any(tx.qclub_payment_issue == 'duplicate'
                                             and not tx.qclub_refund_requested for tx in transactions)
             booking.payment_transactions_html = Markup('<ul>%s</ul>') % Markup('').join(
