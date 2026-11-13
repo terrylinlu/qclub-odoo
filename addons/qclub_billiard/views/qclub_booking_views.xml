@@ -4,7 +4,7 @@
         <field name="name">qclub.booking.list</field>
         <field name="model">qclub.booking</field>
         <field name="arch" type="xml">
-            <list>
+            <list default_order="start asc">
                 <field name="name"/>
                 <field name="create_date" string="Booked On"/>
                 <field name="business_date"/>
@@ -117,6 +117,9 @@
                 <field name="name"/>
                 <field name="partner_id"/>
                 <field name="table_id"/>
+                <filter name="upcoming" string="Upcoming"
+                        domain="[('start', '&gt;=', datetime.datetime.now().to_utc().strftime('%Y-%m-%d %H:%M:%S')), ('state', 'in', ['pending', 'confirmed', 'arrived'])]"/>
+                <separator/>
                 <filter name="active" string="Active" domain="[('state', 'in', ('pending', 'confirmed', 'arrived'))]"/>
                 <separator/>
                 <filter name="pending" string="Awaiting Deposit" domain="[('state', '=', 'pending')]"/>
@@ -143,6 +146,6 @@
         <field name="res_model">qclub.booking</field>
         <field name="view_mode">list,calendar,form</field>
         <field name="search_view_id" ref="qclub_booking_view_search"/>
-        <field name="context">{'search_default_active': 1}</field>
+        <field name="context">{'search_default_upcoming': 1}</field>
     </record>
 </odoo>

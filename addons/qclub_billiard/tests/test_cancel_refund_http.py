@@ -1,10 +1,14 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
+from types import SimpleNamespace
+from urllib.parse import parse_qs, urlsplit
 from unittest.mock import patch
 
 from freezegun import freeze_time
 from lxml import html
-from odoo import Command
+from odoo import Command, fields
 from odoo.tests import tagged
+from odoo.tools import SQL
+from odoo.tools.safe_eval import safe_eval
 from odoo.tests.common import new_test_user
 from odoo.addons.payment.tests.http_common import PaymentHttpCommon
 
@@ -131,3 +135,182 @@ class TestCancelRefundHttp(PaymentHttpCommon):
         self.assertEqual(len(tx.child_transaction_ids), 1)
         self.assertEqual(self.booking.deposit_state, 'refunded')
         self.assertNotIn('o_qclub_cancel', self.url_open(self.path).text)
+
+    def test_brd_031_upcoming_bookings_never_hidden(self):
+        self.booking.action_confirm()
+        Booking = self.env['qclub.booking']
+        cancelled = Booking.browse()
+        for _ in range(60):
+            booking = Booking.create({
+                'table_id': self.table.id, 'partner_id': self.owner.partner_id.id,
+                'start': self.booking.start + timedelta(hours=1), 'duration_hours': 1,
+                'booking_channel': 'backoffice',
+            })
+            booking.action_cancel()
+            cancelled += booking
+        self.env.flush_all()
+        self.authenticate(self.owner.login, 'offline')
+        response = self.url_open('/my/billiard')
+        self.assertEqual(response.status_code, 200)
+        page = html.fromstring(response.content)
+        rows = page.xpath('//*[@id="qclub_my_bookings"]/article')
+        self.assertEqual(len(rows), 20)
+        self.assertEqual(rows[0].xpath('.//div[contains(@class, "o_qclub_row_heading")]/a/text()'),
+                         [self.booking.name])
+        self.assertIn('Confirmed', rows[0].text_content())
+        self.assertEqual(len(rows[0].xpath('.//button[contains(@class, "o_qclub_cancel")]')), 1)
+        other_rows = rows[1:]
+        self.assertEqual(len(other_rows), 19)
+        self.assertTrue(all('Cancelled' in row.text_content() for row in other_rows))
+        expected = list(reversed(cancelled.mapped('name')))[:19]
+        self.assertEqual([row.xpath('.//div[contains(@class, "o_qclub_row_heading")]/a/text()')[0]
+                          for row in other_rows], expected)
+        badge = page.xpath('//*[@id="qclub_tab_bookings"]/span')[0]
+        self.assertEqual(int(badge.text_content().strip()), 61)
+
+    def test_brd_031_paging_and_order(self):
+        self.config.online_board = True
+        self.booking.action_confirm()
+        own = self.booking
+        own_posts = self.env['qclub.board.post']
+        requests = self.env['qclub.board.application']
+        messages = self.env['qclub.board.reply']
+        other_bookings = self.env['qclub.booking']
+
+        def booking(partner, start, label):
+            table = self.table.copy({'name': label})
+            record = self.env['qclub.booking'].create({
+                'table_id': table.id, 'partner_id': partner.id, 'start': start,
+                'duration_hours': 1, 'booking_channel': 'backoffice',
+            })
+            record.action_confirm()
+            return record
+
+        def post(record, label):
+            return self.env['qclub.board.post'].create({
+                'booking_id': record.id, 'players_needed': 2, 'message': label,
+            })
+
+        # Create in reverse time order, so id order cannot accidentally pass the test.
+        future = [datetime(2026, 11, 6, 3, 30) + timedelta(days=i // 6, hours=i % 6)
+                  for i in range(1, 25)]
+        cancelled = []
+        for i, start in enumerate(reversed(future)):
+            own += booking(self.owner.partner_id, start, f'Own future {i}')
+        for i in range(10):
+            record = booking(self.owner.partner_id, datetime(2026, 11, 12, 3, 30), f'Own cancelled {i}')
+            own += record
+            cancelled.append(record)
+        for i in range(10):
+            own += booking(self.owner.partner_id, datetime(2026, 11, 2, 3, 30) + timedelta(hours=i % 6),
+                           f'Own past {i}')
+        for i, record in enumerate(own):
+            item = post(record, f'Own post {i}')
+            own_posts += item
+            with freeze_time(datetime(2026, 11, 1, 0, 0) + timedelta(minutes=i)):
+                messages += self.env['qclub.board.reply'].create({
+                    'post_id': item.id, 'partner_id': self.other.partner_id.id, 'message': f'Message {i:02d}',
+                })
+        self.env.flush_all()
+        # Creation time deliberately runs opposite to id order.
+        for i, reply in enumerate(messages):
+            self.env.cr.execute(SQL('UPDATE qclub_board_reply SET create_date = %s WHERE id = %s',
+                                    datetime(2026, 11, 1) + timedelta(minutes=44 - i), reply.id))
+        messages.invalidate_recordset(['create_date'])
+        for record in cancelled:
+            record.action_cancel()
+        for i in reversed(range(25)):
+            record = booking(self.other.partner_id,
+                             datetime(2026, 11, 7, 3, 30) + timedelta(days=i // 6, hours=i % 6),
+                             f'Request table {i}')
+            other_bookings += record
+            item = post(record, f'Request post {i}')
+            requests += self.env['qclub.board.application'].create({
+                'post_id': item.id, 'partner_id': self.owner.partner_id.id,
+            })
+            if i >= 22:
+                record.action_cancel()
+        private_booking = booking(self.other.partner_id, datetime(2026, 11, 10, 3, 30), 'Private table')
+        private_post = post(private_booking, 'PRIVATE unrelated post')
+        self.env['qclub.board.reply'].create({
+            'post_id': private_post.id, 'partner_id': self.other.partner_id.id,
+            'message': 'PRIVATE unrelated reply',
+        })
+        self.env.flush_all()
+        self.authenticate(self.owner.login, 'offline')
+        sections = {'bookings': 'qclub_my_bookings', 'posts': 'qclub_my_posts',
+                    'requests': 'qclub_my_applications', 'messages': 'qclub_my_messages'}
+        def fetch(query=''):
+            response = self.url_open('/my/billiard' + query)
+            self.assertEqual(response.status_code, 200)
+            self.assertNotIn('PRIVATE unrelated', response.text)
+            for record in other_bookings | private_booking:
+                self.assertNotIn('/confirmation/' + record.name, response.text)
+            return html.fromstring(response.content)
+
+        with freeze_time('2026-11-05 00:00:00'):
+            now = fields.Datetime.now()
+            upcoming = own.filtered(lambda b: b.start >= now and b.state in ('pending', 'confirmed', 'arrived'))
+            ordered = upcoming.sorted(lambda b: (b.start, b.id)) + (own - upcoming).sorted(
+                lambda b: (b.start, b.id), reverse=True)
+            open_posts = own_posts.filtered(lambda p: p._is_open())
+            ordered_posts = open_posts.sorted(lambda p: (p.booking_id.start, p.id)) + (own_posts - open_posts).sorted(
+                lambda p: (p.booking_id.start, p.id), reverse=True)
+            open_requests = requests.filtered(lambda r: r.post_id._is_open())
+            ordered_requests = open_requests.sorted(lambda r: (r.post_id.booking_id.start, r.id)) + (
+                requests - open_requests).sorted(lambda r: (r.post_id.booking_id.start, r.id), reverse=True)
+            ordered_messages = messages.sorted(lambda r: (r.create_date, r.id), reverse=True)
+            expected = {
+                'bookings': ordered.mapped('name'), 'posts': ordered_posts.mapped('message'),
+                'requests': ordered_requests.mapped('post_id.message'), 'messages': ordered_messages.mapped('message'),
+            }
+            for page_number in (1, 2, 3):
+                doc = fetch('?' + '&'.join(f'{tab}_page={page_number}' for tab in sections))
+                for tab, section in sections.items():
+                    rows = doc.xpath(f'//*[@id="{section}"]/article')
+                    # Requests have 25 rows, so an out-of-range page falls back to page 1.
+                    current = page_number if page_number <= (len(expected[tab]) + 19) // 20 else 1
+                    wanted = expected[tab][(current - 1) * 20:current * 20]
+                    self.assertEqual(len(rows), len(wanted), (tab, page_number))
+                    if tab == 'bookings':
+                        actual = [row.xpath('.//div[contains(@class, "o_qclub_row_heading")]/a/text()')[0]
+                                  for row in rows]
+                    else:
+                        actual = [row.xpath('.//p[contains(@class, "o_qclub_user_text")]')[0].text_content().strip()
+                                  for row in rows]
+                    self.assertEqual(actual, wanted, (tab, page_number))
+                    badge = doc.xpath(f'//*[@id="qclub_tab_{tab}"]/span')[0]
+                    self.assertEqual(int(badge.text_content()), len(expected[tab]))
+                    links = doc.xpath(f'//*[@id="{section}"]//nav[contains(@class, "o_qclub_pager")]//a/@href')
+                    self.assertTrue(links)
+                    for href in links:
+                        parts = urlsplit(href)
+                        self.assertEqual(parts.fragment, tab)
+                        args = parse_qs(parts.query)
+                        for other_tab in sections:
+                            if other_tab != tab:
+                                other_page = page_number if other_tab != 'requests' or page_number < 3 else 1
+                                self.assertEqual(args[f'{other_tab}_page'], [str(other_page)])
+            for invalid in ('0', '-1', 'bad', '1.5', '999999999999999999999'):
+                doc = fetch(f'?bookings_page={invalid}&posts_page=2')
+                rows = doc.xpath('//*[@id="qclub_my_bookings"]/article')
+                self.assertEqual(len(rows), 20)
+                self.assertIn(ordered[0].name, rows[0].text_content())
+                self.assertEqual(len(doc.xpath('//*[@id="qclub_my_posts"]/article')), 20)
+
+    def test_adm_002_upcoming_default_filter_and_order(self):
+        context = safe_eval(self.env.ref('qclub_billiard.qclub_booking_action').context)
+        self.assertEqual(context.get('search_default_upcoming'), 1)
+        self.assertFalse(context.get('search_default_active'))
+        view = html.fromstring(self.env.ref('qclub_billiard.qclub_booking_view_list').arch_db)
+        self.assertEqual(view.get('default_order'), 'start asc')
+        view = html.fromstring(self.env.ref('qclub_billiard.qclub_booking_view_search').arch_db)
+        node = view.xpath('//filter[@name="upcoming"]')[0]
+        self.assertEqual(node.get('string'), 'Upcoming')
+        # The browser evaluates datetime.now() in local time, then explicitly converts to UTC.
+        self.assertIn('.to_utc()', node.get('domain'))
+        now = fields.Datetime.now()
+        clock = SimpleNamespace(datetime=SimpleNamespace(now=lambda: SimpleNamespace(to_utc=lambda: now)))
+        domain = safe_eval(node.get('domain'), {'datetime': clock})
+        self.assertEqual(domain, [('start', '>=', fields.Datetime.to_string(now)),
+                                  ('state', 'in', ['pending', 'confirmed', 'arrived'])])

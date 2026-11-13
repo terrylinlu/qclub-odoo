@@ -22,7 +22,18 @@ export class MyAccount extends Interaction {
 
     start() {
         this.tabs = [...this.el.querySelectorAll('[role="tab"]')];
-        this.activate(this.tabs.find((tab) => `#${tab.dataset.tab}` === window.location.hash) || this.tabs[0]);
+        this.restoreTab = () => this.activate(
+            this.tabs.find((tab) => `#${tab.dataset.tab}` === window.location.hash) || this.tabs[0]
+        );
+        this.restoreTab();
+        window.addEventListener("hashchange", this.restoreTab);
+        window.addEventListener("popstate", this.restoreTab);
+    }
+
+    destroy() {
+        window.removeEventListener("hashchange", this.restoreTab);
+        window.removeEventListener("popstate", this.restoreTab);
+        super.destroy();
     }
 
     activate(selected, remember = false) {
@@ -36,7 +47,9 @@ export class MyAccount extends Interaction {
             pane.classList.toggle("show", active);
         }
         if (remember) {
-            window.history.replaceState(window.history.state, "", `#${selected.dataset.tab}`);
+            const url = new URL(window.location.href);
+            url.hash = selected.dataset.tab;
+            window.history.replaceState(window.history.state, "", url);
         }
     }
 }

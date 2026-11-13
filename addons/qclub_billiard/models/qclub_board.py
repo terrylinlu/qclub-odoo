@@ -54,6 +54,7 @@ class BoardPost(models.Model):
     _rec_name = "message"
 
     booking_id = fields.Many2one("qclub.booking", required=True, ondelete="restrict", index=True)
+    booking_start = fields.Datetime(related="booking_id.start")
     website_id = fields.Many2one(related="booking_id.website_id", store=True, index=True)
     company_id = fields.Many2one(related="website_id.company_id", store=True, index=True)
     partner_id = fields.Many2one(related="booking_id.partner_id", store=True, index=True)
@@ -244,6 +245,7 @@ class BoardApplication(models.Model):
     _order = "id"
 
     post_id = fields.Many2one("qclub.board.post", required=True, ondelete="restrict", index=True)
+    booking_start = fields.Datetime(related="post_id.booking_id.start")
     partner_id = fields.Many2one("res.partner", required=True, ondelete="restrict", index=True)
     website_id = fields.Many2one(related="post_id.website_id", store=True, index=True)
     company_id = fields.Many2one(related="website_id.company_id", store=True, index=True)
