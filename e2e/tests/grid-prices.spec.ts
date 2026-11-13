@@ -74,10 +74,14 @@ test('test_cfg_006_hidden_prices_keep_selection_amounts', async ({ page, browser
     // Fix both cells before clicking: `second` is re-evaluated after the first click.
     const firstCell = page.locator(`.o_qclub_slot[data-table-id="${table}"][data-slot-index="${index - 1}"]`);
     const secondCell = page.locator(`.o_qclub_slot[data-table-id="${table}"][data-slot-index="${index}"]`);
-    await firstCell.click();
-    await secondCell.click();
-    await expect(page.locator('.o_qclub_slot_free[aria-pressed="true"]')).toHaveCount(2);
     const summary = page.locator('.o_qclub_summary');
+    // Each click requests a quote and may refresh the grid; let it settle before the next click.
+    await firstCell.click();
+    await expect(firstCell).toHaveAttribute('aria-pressed', 'true');
+    await expect(summary).toContainText(/Deposit: \$/);
+    await secondCell.click();
+    await expect(secondCell).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('.o_qclub_slot_free[aria-pressed="true"]')).toHaveCount(2);
     await expect(summary).toContainText(/Table fee: \$[\d,]+\.\d{2}/);
     await expect(summary).toContainText(/Deposit: \$[\d,]+\.\d{2}/);
   } finally {
