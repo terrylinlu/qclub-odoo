@@ -88,6 +88,33 @@ class TestCancelRefundHttp(PaymentHttpCommon):
         tx._post_process()
         return tx
 
+    def test_web_009_cancelled_booking_hides_cancellation_window_warning(self):
+        self.config.free_cancel_hours = 24
+        with freeze_time('2026-11-06 03:00:00'):
+            booking = self.env['qclub.booking'].create({
+                'table_id': self.table.id, 'partner_id': self.owner.partner_id.id,
+                'start': '2026-11-06 04:30:00', 'duration_hours': 1, 'booking_channel': 'online',
+            })
+            self.assertTrue(booking.created_in_cancel_window)
+            self.assertEqual(booking.state, 'pending')
+            path = '/billiard/booking/confirmation/' + booking.name
+            warning = 'This booking cannot be cancelled free of charge.'
+            self.env.flush_all()
+            self.authenticate(self.owner.login, 'offline')
+            response = self.url_open(path)
+            self.assertEqual(response.status_code, 200)
+            self.assertIn(warning, html.fromstring(response.content).text_content())
+
+            self.assertTrue(booking._cancel_booking())
+            self.assertEqual(booking.state, 'cancelled')
+            self.assertTrue(booking.created_in_cancel_window)
+            self.env.flush_all()
+            response = self.url_open(path)
+            self.assertEqual(response.status_code, 200)
+            page = html.fromstring(response.content)
+            self.assertTrue(page.xpath('//*[@id="wrap"]//p[normalize-space(.)="Cancelled"]'))
+            self.assertNotIn(warning, page.text_content())
+
     def test_rf_003_owner_buttons_and_server_outcomes(self):
         self.authenticate(self.owner.login, 'offline')
         self._token()
