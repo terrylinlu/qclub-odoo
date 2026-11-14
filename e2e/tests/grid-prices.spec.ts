@@ -76,10 +76,14 @@ test('test_cfg_006_hidden_prices_keep_selection_amounts', async ({ page, browser
     const secondCell = page.locator(`.o_qclub_slot[data-table-id="${table}"][data-slot-index="${index}"]`);
     const summary = page.locator('.o_qclub_summary');
     // Each click requests a quote and may refresh the grid; let it settle before the next click.
+    const firstResponse = page.waitForResponse(r => r.url().endsWith('/billiard/booking/quote'));
     await firstCell.click();
+    await firstResponse;
     await expect(firstCell).toHaveAttribute('aria-pressed', 'true');
     await expect(summary).toContainText(/Deposit: \$/);
+    const secondResponse = page.waitForResponse(r => r.url().endsWith('/billiard/booking/quote'));
     await secondCell.click();
+    await secondResponse;
     await expect(secondCell).toHaveAttribute('aria-pressed', 'true');
     await expect(page.locator('.o_qclub_slot_free[aria-pressed="true"]')).toHaveCount(2);
     await expect(summary).toContainText(/Table fee: \$[\d,]+\.\d{2}/);
