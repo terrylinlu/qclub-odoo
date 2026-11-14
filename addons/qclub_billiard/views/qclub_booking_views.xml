@@ -4,7 +4,7 @@
         <field name="name">qclub.booking.list</field>
         <field name="model">qclub.booking</field>
         <field name="arch" type="xml">
-            <list default_order="start asc">
+            <list default_order="create_date desc">
                 <field name="name"/>
                 <field name="create_date" string="Booked On"/>
                 <field name="business_date"/>

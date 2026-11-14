@@ -378,7 +378,7 @@ class TestCancelRefundHttp(PaymentHttpCommon):
         self.assertEqual(context.get('search_default_upcoming'), 1)
         self.assertFalse(context.get('search_default_active'))
         view = html.fromstring(self.env.ref('qclub_billiard.qclub_booking_view_list').arch_db)
-        self.assertEqual(view.get('default_order'), 'start asc')
+        self.assertEqual(view.get('default_order'), 'create_date desc')
         view = html.fromstring(self.env.ref('qclub_billiard.qclub_booking_view_search').arch_db)
         node = view.xpath('//filter[@name="upcoming"]')[0]
         self.assertEqual(node.get('string'), 'Upcoming')
