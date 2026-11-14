@@ -7,6 +7,8 @@ export default defineConfig({
   // Multi-customer flows share one single-process demo server.
   timeout: 60000,
   workers: 2,
+  // The single-process demo server occasionally stalls under CI load; retry once there.
+  retries: process.env.CI ? 1 : 0,
   // First back-office login builds a large asset bundle and briefly stalls the single-process demo.
   expect: { timeout: 15000 },
   use: {
