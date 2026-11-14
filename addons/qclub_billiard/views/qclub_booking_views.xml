@@ -4,7 +4,7 @@
         <field name="name">qclub.booking.list</field>
         <field name="model">qclub.booking</field>
         <field name="arch" type="xml">
-            <list>
+            <list default_order="create_date desc">
                 <field name="name"/>
                 <field name="create_date" string="Booked On"/>
                 <field name="business_date"/>
@@ -36,7 +36,7 @@
                             groups="qclub_billiard.group_billiard_staff" invisible="state != 'confirmed'"/>
                     <button name="action_complete" string="Complete" type="object"
                             groups="qclub_billiard.group_billiard_staff" invisible="state != 'arrived'"/>
-                    <button name="action_cancel" string="Cancel" type="object"
+                    <button name="action_cancel" string="Cancel" context="{'qclub_cancel_dialog': True}" type="object"
                             groups="qclub_billiard.group_billiard_staff"
                             invisible="state not in ('pending', 'confirmed')"/>
                     <button name="action_no_show" string="No-show" type="object"
@@ -78,6 +78,13 @@
                         <field name="deposit_state" readonly="True" />
                         <field name="paid_amount" readonly="True" />
                         <field name="paid_at" readonly="True" />
+                        <field name="refund_amount" readonly="True"/>
+                        <field name="refund_at" readonly="True"/>
+                        <field name="refund_reference" readonly="True"/>
+                        <field name="refund_reason" readonly="True"/>
+                        <field name="refund_operator_id" readonly="True"/>
+                        <button name="action_retry_refund" string="Retry refund" type="object"
+                                groups="qclub_billiard.group_billiard_manager" invisible="deposit_state != 'refund_failed'"/>
                         <field name="payment_reference" readonly="True" />
                         <field name="payment_attention" readonly="True" />
                         <field name="lock_extended" readonly="True" />
@@ -110,6 +117,9 @@
                 <field name="name"/>
                 <field name="partner_id"/>
                 <field name="table_id"/>
+                <filter name="upcoming" string="Upcoming"
+                        domain="[('start', '&gt;=', datetime.datetime.now().to_utc().strftime('%Y-%m-%d %H:%M:%S')), ('state', 'in', ['pending', 'confirmed', 'arrived'])]"/>
+                <separator/>
                 <filter name="active" string="Active" domain="[('state', 'in', ('pending', 'confirmed', 'arrived'))]"/>
                 <separator/>
                 <filter name="pending" string="Awaiting Deposit" domain="[('state', '=', 'pending')]"/>
@@ -136,6 +146,6 @@
         <field name="res_model">qclub.booking</field>
         <field name="view_mode">list,calendar,form</field>
         <field name="search_view_id" ref="qclub_booking_view_search"/>
-        <field name="context">{'search_default_active': 1}</field>
+        <field name="context">{'search_default_upcoming': 1}</field>
     </record>
 </odoo>

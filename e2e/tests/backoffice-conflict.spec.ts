@@ -16,7 +16,8 @@ test('test_adm_003_backoffice_conflict_dialog', async ({ page }, testInfo) => {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ jsonrpc: '2.0', method: 'call', id: 1, params: {
         model: 'qclub.booking', method: 'search_read',
-        args: [[['state', 'in', ['confirmed', 'arrived']],
+        // Only enabled tables: an archived table gives a different (also correct) validation error.
+        args: [[['state', 'in', ['confirmed', 'arrived']], ['table_id.active', '=', true],
           ['start', '>', new Date().toISOString().slice(0, 19).replace('T', ' ')]],
         ['table_id', 'partner_id', 'start', 'start_date', 'start_hour']],
         kwargs: { limit: 1, order: 'start' },
