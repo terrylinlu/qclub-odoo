@@ -49,6 +49,14 @@ test('test_rf_001_rf_003_demo_paid_cancel_from_my_bookings', async ({ page }, te
   const dialog = page.getByRole('dialog', { name: 'Cancel booking' });
   await expect(dialog).toContainText(/You will receive a full refund of .*\d+\.\d{2}/);
   await dialog.getByRole('button', { name: 'Confirm cancellation', exact: true }).click();
+  const notice = page.locator('#wrap > .o_qclub_cancel_notice');
+  await expect(notice).toBeVisible();
+  await expect(notice).toHaveCount(1);
+  await expect(notice).toContainText('Booking cancelled.');
   await expect(row).toContainText('Cancelled');
   await expect(row.getByRole('button', { name: 'Cancel booking', exact: true })).toHaveCount(0);
+  await notice.getByRole('button', { name: 'Close', exact: true }).click();
+  await expect(notice).toHaveCount(0);
+  await page.reload();
+  await expect(notice).toHaveCount(0);
 });

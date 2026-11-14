@@ -127,7 +127,8 @@
 1. 登录 Q Club，在至少三天后的空闲时段预约并使用 Demo 成功支付押金。
 2. 确认页应显示 Cancel booking。进入 My Account → My bookings，找到本次预约并点击 Cancel booking。
    弹窗应显示服务端计算的 “You will receive a full refund of $….”；Keep booking 不改变状态。
-3. 点击 Confirm cancellation。页面重载，状态变为 Cancelled，取消按钮消失。
+3. 点击 Confirm cancellation。页面重载，顶部显示可关闭的绿色 “Booking cancelled.” 提示，状态变为 Cancelled，取消按钮消失。
+   关闭提示并再次刷新，提示不应重复出现；确认页取消最后一条可取消预约时也应显示提示。
    后台 Deposit 应显示 Refunded、退款金额、UTC 存储的退款时间、提供方交易号、Free cancellation 和操作人。
    Mailpit 应收到 Q Club 发件人的取消邮件；关联找球友帖子应关闭。
 4. 再预约不足 24 小时后的时段并完成 Demo 支付。取消弹窗应显示押金 non-refundable。
@@ -148,7 +149,9 @@
 
 1. 在 `/my/billiard` 使用已有预约较多的演示顾客，确认四个标签各自每页最多 20 条；
    数量徽章显示该标签的总数。My bookings 先显示尚未开始的有效预约，从近到远；
-   然后显示其余预约，从新到旧。My posts / My join requests 按对应预约同样排序，Messages 按留言创建时间从新到旧。
+   然后显示其余预约，按下单时间（create_date）从新到旧，同时间按 ID 倒序；每行时段下方显示 “Booked on <时间>”。
+   My posts / My join requests 的有效未来记录仍按预约时间从近到远，其余记录按发帖 / 申请创建时间倒序。
+   使用预约时间与创建时间顺序不同的记录验证历史排序；Messages 按留言创建时间从新到旧。
 2. 在不同标签分别翻页，确认链接保留四个分页参数及当前标签片段（如 `#posts`）；
    刷新、切换标签、浏览器返回后，标签与各自页码保持。非法页码回到第 1 页。
    有 45 条记录的标签，第 1 页应为 20 行，第 3 页应为 5 行，总数徽章为 45。

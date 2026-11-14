@@ -237,6 +237,13 @@ class TestCancelRefundHttp(PaymentHttpCommon):
             'message': 'PRIVATE unrelated reply',
         })
         self.env.flush_all()
+        # Creation times oppose id order and booking-time order; pairs also test id ties.
+        for records in (own, own_posts, requests):
+            for i, record in enumerate(records):
+                self.env.cr.execute(SQL('UPDATE %s SET create_date = %s WHERE id = %s',
+                                        SQL.identifier(record._table),
+                                        datetime(2026, 11, 1) - timedelta(minutes=i // 2), record.id))
+            records.invalidate_recordset(['create_date'])
         self.authenticate(self.owner.login, 'offline')
         sections = {'bookings': 'qclub_my_bookings', 'posts': 'qclub_my_posts',
                     'requests': 'qclub_my_applications', 'messages': 'qclub_my_messages'}
@@ -252,13 +259,13 @@ class TestCancelRefundHttp(PaymentHttpCommon):
             now = fields.Datetime.now()
             upcoming = own.filtered(lambda b: b.start >= now and b.state in ('pending', 'confirmed', 'arrived'))
             ordered = upcoming.sorted(lambda b: (b.start, b.id)) + (own - upcoming).sorted(
-                lambda b: (b.start, b.id), reverse=True)
+                lambda b: (b.create_date, b.id), reverse=True)
             open_posts = own_posts.filtered(lambda p: p._is_open())
             ordered_posts = open_posts.sorted(lambda p: (p.booking_id.start, p.id)) + (own_posts - open_posts).sorted(
-                lambda p: (p.booking_id.start, p.id), reverse=True)
+                lambda p: (p.create_date, p.id), reverse=True)
             open_requests = requests.filtered(lambda r: r.post_id._is_open())
             ordered_requests = open_requests.sorted(lambda r: (r.post_id.booking_id.start, r.id)) + (
-                requests - open_requests).sorted(lambda r: (r.post_id.booking_id.start, r.id), reverse=True)
+                requests - open_requests).sorted(lambda r: (r.create_date, r.id), reverse=True)
             ordered_messages = messages.sorted(lambda r: (r.create_date, r.id), reverse=True)
             expected = {
                 'bookings': ordered.mapped('name'), 'posts': ordered_posts.mapped('message'),
@@ -273,6 +280,8 @@ class TestCancelRefundHttp(PaymentHttpCommon):
                     wanted = expected[tab][(current - 1) * 20:current * 20]
                     self.assertEqual(len(rows), len(wanted), (tab, page_number))
                     if tab == 'bookings':
+                        for row in rows:
+                            self.assertIn('Booked on', row.text_content())
                         actual = [row.xpath('.//div[contains(@class, "o_qclub_row_heading")]/a/text()')[0]
                                   for row in rows]
                     else:

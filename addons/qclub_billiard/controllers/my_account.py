@@ -104,7 +104,7 @@ class BilliardAccount(BilliardBoard):
                                        offset=offset, limit=ACCOUNT_PAGE_SIZE)
             remaining = ACCOUNT_PAGE_SIZE - len(records)
             if remaining:
-                records += model.search(domain + other, order=f'{start_field} desc, id desc',
+                records += model.search(domain + other, order='create_date desc, id desc',
                                         offset=max(0, offset - upcoming_count), limit=remaining)
             return records
 
@@ -149,6 +149,7 @@ class BilliardAccount(BilliardBoard):
             booking_rows.append({
                 "cancel_id": booking.id if booking._can_cancel() else None,
                 "number": booking.name, "time": booking._time_label(), "table": booking.table_id.name,
+                "posted": board_posted_label(booking),
                 "state": booking_labels[booking.state], "state_class": _status_class(booking.state), "url": link(booking, post),
                 "confirmation": "/billiard/booking/confirmation/" + booking.name,
                 "find": link(booking, find=True) if config.online_board and not post
