@@ -32,7 +32,7 @@ RF-001、RF-002 见 `docs/spec/phase1-2.md` 第 F 节，本阶段实现。
 
 | 编号 | 需求 |
 |---|---|
-| RF-003 | 顾客可在 My Account 的 My bookings 和确认页自行取消待付押金或已确认的预约；确认前先显示结果，如 "You will receive a full refund of $20.00." 或 "Your $15.00 deposit is non-refundable."（第 H 节第 2 条） |
+| RF-003 | 顾客可在 My Account 的 My bookings 和确认页自行取消待付押金或已确认的预约；确认前先显示结果，如 "You will receive a full refund of $20.00." 或 "Your $15.00 deposit is non-refundable."（第 H 节第 2 条）；确认取消成功后，页面刷新时必须显示一条明显的提示（如 "Booking cancelled."），不能只是静默刷新（2026-11-13 验收时发现并修正） |
 | RF-004 | 取消窗口按快照值计算：开始前**大于或等于**窗口时长取消为免费取消；员工在后台取消同样按此规则 |
 | RF-005 | 管理员可在窗口内取消时例外全额退款，必须填写原因；员工没有这个权限 |
 | RF-006 | 退款通过 Stripe 原路退回，记录退款金额、时间、Stripe 退款号、原因、操作员（ST-002）。Stripe 退款失败时预约仍取消，退款标为失败并在后台提醒，可重试 |
