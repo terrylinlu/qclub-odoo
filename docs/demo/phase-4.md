@@ -118,3 +118,45 @@
 
 结束 Stripe 演示后，在演示库后台停用 Q Club Stripe，再运行 `make demo` 即恢复 Demo。
 不要在生产环境运行此脚本。
+
+## 任务 4.3：取消与退款（待人工运行）
+
+本任务未连接任何数据库，未执行 make demo、make test 或 make e2e。
+复用已有 `demo-customer-pay`（桌面）和 `demo-customer-pay-mobile`（手机），无需新增演示数据或修改 docker。
+
+1. 登录 Q Club，在至少三天后的空闲时段预约并使用 Demo 成功支付押金。
+2. 确认页应显示 Cancel booking。进入 My Account → My bookings，找到本次预约并点击 Cancel booking。
+   弹窗应显示服务端计算的 “You will receive a full refund of $….”；Keep booking 不改变状态。
+3. 点击 Confirm cancellation。页面重载，顶部显示可关闭的绿色 “Booking cancelled.” 提示，状态变为 Cancelled，取消按钮消失。
+   关闭提示并再次刷新，提示不应重复出现；确认页取消最后一条可取消预约时也应显示提示。
+   后台 Deposit 应显示 Refunded、退款金额、UTC 存储的退款时间、提供方交易号、Free cancellation 和操作人。
+   Mailpit 应收到 Q Club 发件人的取消邮件；关联找球友帖子应关闭。
+   确认页 Cancelled 状态下方应显示与邮件相同的 “Your deposit of $… has been refunded in full.”；退款尚未完成时显示 “A full refund of $… has been requested. Our team will follow up if it fails.”。
+4. 再预约不足 24 小时后的时段并完成 Demo 支付。取消弹窗应显示押金 non-refundable。
+   确认后应为 Cancelled / Forfeited，没有退款交易；确认页状态下方应显示 “Your $… deposit is non-refundable.”。
+5. 创建尚未付款的预约；取消弹窗应显示 “This booking has no deposit to refund.”。
+   确认后押金保持 Awaiting payment。后台手动确认且 No online deposit 的预约同样没有可退押金。
+6. 员工在后台点 Cancel：先打开结果向导；不足 24 小时的已付预约按不退处理。
+   该向导复用 `qclub.deposit.refund` 的 `cancel` 模式；原 Refund extra payment 使用 `extra_refund` 模式，仍仅限管理员。
+   两个入口各自打开独立表单，页头仍为 5 个按钮；不新增模型，也无需调整 ISO-001 白名单。
+   管理员在该情形可选 Exception full refund，原因必填；其他情形不显示该选项。
+7. 用离线 mock 测试验证请求失败和后续退款失败通知：预约保留 Cancelled，押金 Refund failed，
+   出现 Payment needs attention，联系邮箱收到提醒；只有管理员能 Retry refund。
+   成功、进行中的退款都必须阻止再次发出全额退款。
+8. 真实 Stripe 测试模式退款、后续失败通知、邮件及无会计凭证需在获准的测试环境另行验收。
+   AUSHARE 的两个取消接口均应 404；其他顾客、匿名顾客和已开始的预约应被拒绝。
+
+## BRD-031 / ADM-002：分页与默认排序验收
+
+1. 在 `/my/billiard` 使用已有预约较多的演示顾客，确认四个标签各自每页最多 20 条；
+   数量徽章显示该标签的总数。My bookings 先显示尚未开始的有效预约，从近到远；
+   然后显示其余预约，按下单时间（create_date）从新到旧，同时间按 ID 倒序；每行时段下方显示 “Booked on <时间>”。
+   My posts / My join requests 的有效未来记录仍按预约时间从近到远，其余记录按发帖 / 申请创建时间倒序。
+   使用预约时间与创建时间顺序不同的记录验证历史排序；Messages 按留言创建时间从新到旧。
+2. 在不同标签分别翻页，确认链接保留四个分页参数及当前标签片段（如 `#posts`）；
+   刷新、切换标签、浏览器返回后，标签与各自页码保持。非法页码回到第 1 页。
+   有 45 条记录的标签，第 1 页应为 20 行，第 3 页应为 5 行，总数徽章为 45。
+3. 后台 Bookings 默认启用可移除的 Upcoming 筛选（当前 UTC 时刻之后的 pending/confirmed/arrived），
+   列表按 Start 升序。移除 Upcoming 可查看历史预约；Odoo 自带分页及日历入口保持可用。
+
+无需新增 docker 演示账号或数据。本轮仅做静态与离线分页检查，未连接数据库或执行演示环境。

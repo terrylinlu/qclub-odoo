@@ -439,7 +439,7 @@ class TestBooking(BilliardCase):
     def test_adm_002_views_search_and_menu(self):
         action = self.env.ref("qclub_billiard.qclub_booking_action")
         self.assertEqual(action.view_mode, "list,calendar,form")
-        self.assertIn("search_default_active", action.context)
+        self.assertIn("search_default_upcoming", action.context)
         root = ElementTree.fromstring(self.env.ref("qclub_billiard.qclub_booking_view_search").arch_db)
         filters = {node.get("name"): node for node in root.findall(".//filter")}
         self.assertEqual(filters["active"].get("domain"), "[('state', 'in', ('pending', 'confirmed', 'arrived'))]")

@@ -21,10 +21,10 @@
                 <div class="o_qclub_my_account">
                     <h1>My Bookings &amp; Players</h1>
                     <nav class="nav nav-tabs flex-nowrap overflow-auto text-nowrap" role="tablist" aria-label="My Bookings and Players">
-                        <button type="button" id="qclub_tab_bookings" class="nav-link active" role="tab" aria-controls="qclub_my_bookings" aria-selected="true" tabindex="0" data-tab="bookings">My bookings <span class="badge rounded-pill text-bg-light ms-1" t-out="len(bookings)"/></button>
-                        <button type="button" id="qclub_tab_posts" class="nav-link" role="tab" aria-controls="qclub_my_posts" aria-selected="false" tabindex="-1" data-tab="posts">My posts <span class="badge rounded-pill text-bg-light ms-1" t-out="len(posts)"/></button>
-                        <button type="button" id="qclub_tab_requests" class="nav-link" role="tab" aria-controls="qclub_my_applications" aria-selected="false" tabindex="-1" data-tab="requests">My join requests <span class="badge rounded-pill text-bg-light ms-1" t-out="len(applications)"/></button>
-                        <button type="button" id="qclub_tab_messages" class="nav-link" role="tab" aria-controls="qclub_my_messages" aria-selected="false" tabindex="-1" data-tab="messages">Messages <span class="badge rounded-pill text-bg-light ms-1" t-out="len(messages)"/></button>
+                        <button type="button" id="qclub_tab_bookings" class="nav-link active" role="tab" aria-controls="qclub_my_bookings" aria-selected="true" tabindex="0" data-tab="bookings">My bookings <span class="badge rounded-pill text-bg-light ms-1" t-out="pagers['bookings']['total']"/></button>
+                        <button type="button" id="qclub_tab_posts" class="nav-link" role="tab" aria-controls="qclub_my_posts" aria-selected="false" tabindex="-1" data-tab="posts">My posts <span class="badge rounded-pill text-bg-light ms-1" t-out="pagers['posts']['total']"/></button>
+                        <button type="button" id="qclub_tab_requests" class="nav-link" role="tab" aria-controls="qclub_my_applications" aria-selected="false" tabindex="-1" data-tab="requests">My join requests <span class="badge rounded-pill text-bg-light ms-1" t-out="pagers['requests']['total']"/></button>
+                        <button type="button" id="qclub_tab_messages" class="nav-link" role="tab" aria-controls="qclub_my_messages" aria-selected="false" tabindex="-1" data-tab="messages">Messages <span class="badge rounded-pill text-bg-light ms-1" t-out="pagers['messages']['total']"/></button>
                     </nav>
                     <div class="tab-content">
                         <section id="qclub_my_bookings" class="tab-pane fade active show" role="tabpanel" aria-labelledby="qclub_tab_bookings">
@@ -36,12 +36,18 @@
                                 </div>
                                 <div class="o_qclub_booking_details">
                                     <p class="small text-muted"><span t-out="item['time']"/> · <span t-out="item['table']"/></p>
+                                    <p class="small text-muted">Booked on <span t-out="item['posted']"/></p>
                                     <div class="o_qclub_row_actions">
                                         <a t-att-href="item['url']">View booking date</a>
+                                        <button t-if="item['cancel_id']" type="button" class="btn btn-link o_qclub_cancel"
+                                                t-att-data-booking-id="item['cancel_id']" t-att-data-csrf-token="request.csrf_token()">Cancel booking</button>
                                         <a t-if="item['find']" t-att-href="item['find']" class="ms-3">Find players</a>
                                     </div>
                                 </div>
                             </article>
+                            <t t-call="qclub_billiard.account_pager">
+                                <t t-set="pager" t-value="pagers['bookings']"/>
+                            </t>
                         </section>
                         <section id="qclub_my_posts" class="tab-pane fade" role="tabpanel" aria-labelledby="qclub_tab_posts">
                             <p t-if="not posts">No posts yet.</p>
@@ -54,6 +60,9 @@
                                 <p class="text-break o_qclub_user_text" t-out="item['message']"/>
                                 <p class="small text-muted">Accepted: <span t-out="item['accepted']"/> / <span t-out="item['needed']"/> · Waiting: <span t-out="item['pending']"/></p>
                             </article>
+                            <t t-call="qclub_billiard.account_pager">
+                                <t t-set="pager" t-value="pagers['posts']"/>
+                            </t>
                         </section>
                         <section id="qclub_my_applications" class="tab-pane fade" role="tabpanel" aria-labelledby="qclub_tab_requests">
                             <p t-if="not applications">No join requests yet.</p>
@@ -65,6 +74,9 @@
                                 <p class="small text-muted"><span t-out="item['name']"/> · <span t-out="item['table']"/> · Applied <span t-out="item['posted']"/></p>
                                 <p class="text-break o_qclub_user_text" t-out="item['message']"/>
                             </article>
+                            <t t-call="qclub_billiard.account_pager">
+                                <t t-set="pager" t-value="pagers['requests']"/>
+                            </t>
                         </section>
                         <section id="qclub_my_messages" class="tab-pane fade" role="tabpanel" aria-labelledby="qclub_tab_messages">
                             <p t-if="not messages">No messages yet.</p>
@@ -75,9 +87,40 @@
                                 <p class="small text-muted"><span t-out="item['name']"/> · Posted <span t-out="item['posted']"/></p>
                                 <p class="text-break o_qclub_user_text" t-out="item['message']"/>
                             </article>
+                            <t t-call="qclub_billiard.account_pager">
+                                <t t-set="pager" t-value="pagers['messages']"/>
+                            </t>
                         </section>
                     </div>
                 </div>
+            </t>
+        </field>
+    </record>
+    <record id="account_pager" model="ir.ui.view">
+        <field name="name">Q Club account tab pager</field>
+        <field name="key">qclub_billiard.account_pager</field>
+        <field name="type">qweb</field>
+        <field name="model">qclub.booking</field>
+        <field name="arch" type="xml">
+            <t t-name="qclub_billiard.account_pager">
+                <nav t-if="pager['page_count'] &gt; 1" class="o_qclub_pager mt-3" t-att-aria-label="pager['label']">
+                    <ul class="pagination flex-wrap">
+                        <li t-att-class="'page-item' + ('' if pager['previous'] else ' disabled')">
+                            <a t-if="pager['previous']" class="page-link" t-att-href="pager['previous']" rel="prev">Previous</a>
+                            <span t-else="" class="page-link" aria-disabled="true">Previous</span>
+                        </li>
+                        <li t-foreach="pager['pages']" t-as="link"
+                            t-att-class="'page-item' + (' active' if link['url'] and link['number'] == pager['current'] else '')">
+                            <a t-if="link['url']" class="page-link" t-att-href="link['url']"
+                               t-att-aria-current="'page' if link['number'] == pager['current'] else None" t-out="link['number']"/>
+                            <span t-else="" class="page-link">…</span>
+                        </li>
+                        <li t-att-class="'page-item' + ('' if pager['next'] else ' disabled')">
+                            <a t-if="pager['next']" class="page-link" t-att-href="pager['next']" rel="next">Next</a>
+                            <span t-else="" class="page-link" aria-disabled="true">Next</span>
+                        </li>
+                    </ul>
+                </nav>
             </t>
         </field>
     </record>

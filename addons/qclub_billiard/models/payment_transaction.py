@@ -46,7 +46,7 @@ class PaymentTransaction(models.Model):
 
     def _post_process(self):
         # Use Odoo's regular chain; the narrow _create_payment override implements Option A.
-        for tx in self.filtered(lambda t: t.state == 'done' and t._qclub_booking()):
+        for tx in self.filtered(lambda t: (t.state == 'done' or (t.operation == 'refund' and t.state in ('error', 'cancel'))) and t._qclub_booking()):
             booking = tx._qclub_booking().sudo()
             # Consistent table -> booking -> transaction lock order with booking creation/expiry.
             booking._lock_tables(booking.table_id.ids)
@@ -55,6 +55,9 @@ class PaymentTransaction(models.Model):
             booking.invalidate_recordset()
             tx.invalidate_recordset()
             if tx.operation == 'refund':
+                booking._sync_cancellation_refund(tx)
+                if tx.state != 'done':
+                    continue
                 if not tx.qclub_deposit_processed:
                     if tx.source_transaction_id.qclub_payment_issue == 'slot':
                         booking._queue_deposit_email('refunded')

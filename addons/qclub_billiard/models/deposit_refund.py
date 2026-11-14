@@ -6,19 +6,62 @@ from odoo.tools.misc import format_amount
 
 class DepositRefund(models.TransientModel):
     _name = 'qclub.deposit.refund'
-    _description = 'Refund Extra Deposit Payment'
+    _description = 'Deposit Refund and Booking Cancellation'
 
+    mode = fields.Selection([('extra_refund', 'Refund extra payment'), ('cancel', 'Cancel booking')],
+                            required=True, default='extra_refund')
     booking_id = fields.Many2one('qclub.booking', required=True, readonly=True)
     website_id = fields.Many2one(related='booking_id.website_id', store=True)
     company_id = fields.Many2one(related='website_id.company_id', store=True)
     # Manager selection reads a safe projection, never payment.transaction ACLs.
     transaction_id = fields.Selection(selection='_extra_transaction_options',
-                                      string='Extra payment', required=True)
+                                      string='Extra payment')
     extra_payments_html = fields.Html(related='booking_id.payment_transactions_html', readonly=True)
-    reason = fields.Char(required=True)
+    reason = fields.Char()
+    outcome = fields.Char(compute='_compute_outcome')
+    exception_available = fields.Boolean(compute='_compute_outcome')
+    exception_refund = fields.Boolean(string='Exception full refund')
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        default_mode = self.default_get(['mode']).get('mode')
+        for vals in vals_list:
+            if vals.get('mode', default_mode) == 'extra_refund' and not self.env.user.has_group(
+                    'qclub_billiard.group_billiard_manager'):
+                raise AccessError(_('Only billiard managers can refund extra payments.'))
+        return super().create(vals_list)
+
+    def write(self, vals):
+        if vals.get('mode') == 'extra_refund' and not self.env.user.has_group(
+                'qclub_billiard.group_billiard_manager'):
+            raise AccessError(_('Only billiard managers can refund extra payments.'))
+        return super().write(vals)
+
+    @api.depends('booking_id', 'mode')
+    def _compute_outcome(self):
+        for wizard in self:
+            wizard.outcome = False
+            wizard.exception_available = False
+            if wizard.mode == 'cancel' and wizard.booking_id:
+                wizard.booking_id.check_access('write')
+                outcome = wizard.booking_id._cancellation_outcome()
+                wizard.outcome = outcome['text']
+                wizard.exception_available = outcome['exception_allowed'] and self.env.user.has_group(
+                    'qclub_billiard.group_billiard_manager')
+
+    def action_cancel_booking(self):
+        self.ensure_one()
+        if not self.env.user.has_group('qclub_billiard.group_billiard_staff'):
+            raise AccessError(_('Only billiard staff can use this wizard.'))
+        if self.mode != 'cancel':
+            raise ValidationError(_('Use the cancellation wizard to cancel a booking.'))
+        self.booking_id._cancel_booking(exception_refund=self.exception_refund, reason=self.reason)
+        return {'type': 'ir.actions.act_window_close'}
 
     @api.model
     def _extra_transaction_options(self):
+        if not self.env.user.has_group('qclub_billiard.group_billiard_manager'):
+            return []
         booking = self.env['qclub.booking'].browse(self.env.context.get('default_booking_id')).exists()
         if not booking:
             return []
@@ -30,9 +73,15 @@ class DepositRefund(models.TransientModel):
         return [(str(tx.id), f'{tx.reference} — {format_amount(self.env, tx.amount, tx.currency_id)}')
                 for tx in transactions]
 
-    @api.constrains('reason')
+    @api.constrains('mode', 'reason', 'transaction_id')
     def _check_reason(self):
         for wizard in self:
+            if wizard.mode != 'extra_refund':
+                continue
+            if not self.env.user.has_group('qclub_billiard.group_billiard_manager'):
+                raise AccessError(_('Only billiard managers can refund extra payments.'))
+            if not wizard.transaction_id:
+                raise ValidationError(_('Select an extra deposit transaction.'))
             if not wizard.reason or not wizard.reason.strip():
                 raise ValidationError(_('A refund reason is required.'))
 
@@ -40,6 +89,9 @@ class DepositRefund(models.TransientModel):
         self.ensure_one()
         if not self.env.user.has_group('qclub_billiard.group_billiard_manager'):
             raise AccessError(_('Only billiard managers can refund extra payments.'))
+        if self.mode != 'extra_refund':
+            raise ValidationError(_('Use the extra-payment refund wizard to refund an extra payment.'))
+        self._check_reason()
         booking = self.booking_id
         booking.check_access('write')
         booking._lock_tables(booking.table_id.ids)

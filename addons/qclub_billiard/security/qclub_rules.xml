@@ -131,4 +131,16 @@
         <field name="model_id" ref="model_qclub_deposit_refund"/>
         <field name="domain_force">[('company_id', 'in', company_ids)]</field>
     </record>
+    <record id="rule_deposit_refund_staff_mode" model="ir.rule">
+        <field name="name">Staff: cancellation wizard only</field>
+        <field name="model_id" ref="model_qclub_deposit_refund"/>
+        <field name="groups" eval="[(4, ref('group_billiard_staff'))]"/>
+        <field name="domain_force">[('mode', '=', 'cancel')]</field>
+    </record>
+    <record id="rule_deposit_refund_manager_mode" model="ir.rule">
+        <field name="name">Managers: both deposit wizard modes</field>
+        <field name="model_id" ref="model_qclub_deposit_refund"/>
+        <field name="groups" eval="[(4, ref('group_billiard_manager'))]"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+    </record>
 </odoo>
