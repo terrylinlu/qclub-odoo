@@ -359,6 +359,20 @@ class BookingDeposit(models.Model):
         self._request_cancellation_refund()
         return True
 
+    def _cancellation_result_text(self, attention=False):
+        self.ensure_one()
+        amount = format_amount(self.env, self.paid_amount, self.currency_id)
+        if attention:
+            return _('Cancellation refund failed. A manager must review and retry the refund.')
+        elif self.deposit_state == 'refunded':
+            return _('Your deposit of %s has been refunded in full.', amount)
+        elif self.deposit_state == 'forfeited':
+            return _('Your %s deposit is non-refundable.', amount)
+        elif self.refund_reason:
+            return _('A full refund of %s has been requested. Our team will follow up if it fails.', amount)
+        else:
+            return _('This booking has no deposit to refund.')
+
     def _queue_cancellation_email(self, attention=False):
         self.ensure_one()
         config = self._config()
@@ -370,17 +384,7 @@ class BookingDeposit(models.Model):
                 domain = (self.website_id.domain or '').rstrip('/')
                 if not domain.startswith(('https://', 'http://')):
                     return
-                amount = format_amount(self.env, self.paid_amount, self.currency_id)
-                if attention:
-                    text = _('Cancellation refund failed. A manager must review and retry the refund.')
-                elif self.deposit_state == 'refunded':
-                    text = _('Your deposit of %s has been refunded in full.', amount)
-                elif self.deposit_state == 'forfeited':
-                    text = _('Your %s deposit is non-refundable.', amount)
-                elif self.refund_reason:
-                    text = _('A full refund of %s has been requested. Our team will follow up if it fails.', amount)
-                else:
-                    text = _('This booking has no deposit to refund.')
+                text = self._cancellation_result_text(attention=attention)
                 label = _('Refund failed – payment needs attention') if attention else _('Booking cancelled')
                 body = self.env['ir.qweb']._render('qclub_billiard.cancellation_email', {
                     'booking': self, 'config': config, 'domain': domain, 'text': text, 'label': label,

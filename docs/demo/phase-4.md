@@ -131,8 +131,9 @@
    关闭提示并再次刷新，提示不应重复出现；确认页取消最后一条可取消预约时也应显示提示。
    后台 Deposit 应显示 Refunded、退款金额、UTC 存储的退款时间、提供方交易号、Free cancellation 和操作人。
    Mailpit 应收到 Q Club 发件人的取消邮件；关联找球友帖子应关闭。
+   确认页 Cancelled 状态下方应显示与邮件相同的 “Your deposit of $… has been refunded in full.”；退款尚未完成时显示 “A full refund of $… has been requested. Our team will follow up if it fails.”。
 4. 再预约不足 24 小时后的时段并完成 Demo 支付。取消弹窗应显示押金 non-refundable。
-   确认后应为 Cancelled / Forfeited，没有退款交易。
+   确认后应为 Cancelled / Forfeited，没有退款交易；确认页状态下方应显示 “Your $… deposit is non-refundable.”。
 5. 创建尚未付款的预约；取消弹窗应显示 “This booking has no deposit to refund.”。
    确认后押金保持 Awaiting payment。后台手动确认且 No online deposit 的预约同样没有可退押金。
 6. 员工在后台点 Cancel：先打开结果向导；不足 24 小时的已付预约按不退处理。

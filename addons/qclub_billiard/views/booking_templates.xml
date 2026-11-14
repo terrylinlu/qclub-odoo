@@ -64,6 +64,7 @@
                     <p>Table fee: <span t-field="booking.table_fee"/></p>
                     <p>Deposit: <span t-field="booking.deposit_amount"/></p>
                     <p t-field="booking.state"/>
+                    <p t-if="booking.state == 'cancelled'" t-out="booking._cancellation_result_text()"/>
                     <button t-if="booking._can_cancel()" type="button" class="btn btn-outline-danger o_qclub_cancel"
                             t-att-data-booking-id="booking.id" t-att-data-csrf-token="request.csrf_token()">Cancel booking</button>
                     <p t-if="booking.created_in_cancel_window and booking.state in ('pending', 'confirmed')" class="alert alert-warning" role="alert">This booking cannot be cancelled free of charge.</p>

@@ -8,6 +8,7 @@ from lxml import html
 from odoo import Command, fields
 from odoo.tests import tagged
 from odoo.tools import SQL
+from odoo.tools.misc import format_amount
 from odoo.tools.safe_eval import safe_eval
 from odoo.tests.common import new_test_user
 from odoo.addons.payment.tests.http_common import PaymentHttpCommon
@@ -114,6 +115,44 @@ class TestCancelRefundHttp(PaymentHttpCommon):
             page = html.fromstring(response.content)
             self.assertTrue(page.xpath('//*[@id="wrap"]//p[normalize-space(.)="Cancelled"]'))
             self.assertNotIn(warning, page.text_content())
+
+    def test_rf_007_confirmation_shows_forfeited_deposit(self):
+        self._pay()
+        self.authenticate(self.owner.login, 'offline')
+        with freeze_time(self.booking.start - timedelta(hours=1)):
+            token = self._token()
+            self.assertTrue(self._call('confirm', {'csrf_token': token}).json()['result']['cancelled'])
+            self.booking.invalidate_recordset()
+            self.assertEqual(self.booking.deposit_state, 'forfeited')
+            response = self.url_open(self.path)
+        self.assertEqual(response.status_code, 200)
+        amount = format_amount(self.env, self.booking.paid_amount, self.booking.currency_id)
+        page = html.fromstring(response.content)
+        result = page.xpath('//*[@id="wrap"]//p[normalize-space(.)="Cancelled"]/following-sibling::*[1]')
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].tag, 'p')
+        self.assertEqual(result[0].text_content(), f'Your {amount} deposit is non-refundable.')
+
+    def test_rf_007_confirmation_shows_refunded_deposit(self):
+        tx = self._pay()
+        self.authenticate(self.owner.login, 'offline')
+        token = self._token()
+
+        def done(refund):
+            refund._set_done()
+
+        with patch.object(type(tx), '_send_refund_request', done):
+            self.assertTrue(self._call('confirm', {'csrf_token': token}).json()['result']['cancelled'])
+        self.booking.invalidate_recordset()
+        self.assertEqual(self.booking.deposit_state, 'refunded')
+        response = self.url_open(self.path)
+        self.assertEqual(response.status_code, 200)
+        amount = format_amount(self.env, self.booking.paid_amount, self.booking.currency_id)
+        page = html.fromstring(response.content)
+        result = page.xpath('//*[@id="wrap"]//p[normalize-space(.)="Cancelled"]/following-sibling::*[1]')
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].tag, 'p')
+        self.assertEqual(result[0].text_content(), f'Your deposit of {amount} has been refunded in full.')
 
     def test_rf_003_owner_buttons_and_server_outcomes(self):
         self.authenticate(self.owner.login, 'offline')
