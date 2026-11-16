@@ -8,7 +8,8 @@ class DepositRefund(models.TransientModel):
     _name = 'qclub.deposit.refund'
     _description = 'Deposit Refund and Booking Cancellation'
 
-    mode = fields.Selection([('extra_refund', 'Refund extra payment'), ('cancel', 'Cancel booking')],
+    mode = fields.Selection([('extra_refund', 'Refund extra payment'), ('cancel', 'Cancel booking'),
+                             ('no_show_revert', 'Revert to Arrived')],
                             required=True, default='extra_refund')
     booking_id = fields.Many2one('qclub.booking', required=True, readonly=True)
     website_id = fields.Many2one(related='booking_id.website_id', store=True)
@@ -26,13 +27,13 @@ class DepositRefund(models.TransientModel):
     def create(self, vals_list):
         default_mode = self.default_get(['mode']).get('mode')
         for vals in vals_list:
-            if vals.get('mode', default_mode) == 'extra_refund' and not self.env.user.has_group(
+            if vals.get('mode', default_mode) in ('extra_refund', 'no_show_revert') and not self.env.user.has_group(
                     'qclub_billiard.group_billiard_manager'):
                 raise AccessError(_('Only billiard managers can refund extra payments.'))
         return super().create(vals_list)
 
     def write(self, vals):
-        if vals.get('mode') == 'extra_refund' and not self.env.user.has_group(
+        if vals.get('mode') in ('extra_refund', 'no_show_revert') and not self.env.user.has_group(
                 'qclub_billiard.group_billiard_manager'):
             raise AccessError(_('Only billiard managers can refund extra payments.'))
         return super().write(vals)
@@ -114,4 +115,11 @@ class DepositRefund(models.TransientModel):
             time=fields.Datetime.now(),
         ))
         booking.sudo()._refresh_payment_attention()
+        return {'type': 'ir.actions.act_window_close'}
+
+    def action_revert_no_show(self):
+        self.ensure_one()
+        if self.mode != 'no_show_revert':
+            raise ValidationError(_('Use the no-show reversal wizard.'))
+        self.booking_id._revert_no_show(self.reason)
         return {'type': 'ir.actions.act_window_close'}

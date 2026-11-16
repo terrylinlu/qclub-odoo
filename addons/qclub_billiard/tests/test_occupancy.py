@@ -81,13 +81,20 @@ class TestOccupancy(BilliardCase):
         transitions = {
             "pending": (), "confirmed": ("action_confirm",), "arrived": ("action_confirm", "action_arrive"),
             "cancelled": ("action_cancel",), "expired": ("_action_expire",),
-            "no_show": ("action_confirm", "action_no_show"),
+            "no_show": ("action_confirm", "_mark_no_show"),
             "done": ("action_confirm", "action_arrive", "action_complete"),
         }
         for index, (state, actions) in enumerate(transitions.items()):
             booking = self._book(start=datetime(2026, 6, 1, 4, 30) + timedelta(hours=index))
             for action in actions:
-                getattr(booking, action)()
+                if action == "action_arrive":
+                    with freeze_time(booking.start):
+                        booking.action_arrive()
+                elif action == "_mark_no_show":
+                    with freeze_time(booking.start + timedelta(minutes=booking.no_show_wait_minutes)):
+                        booking._mark_no_show()
+                else:
+                    getattr(booking, action)()
             self.assertEqual(booking.state, state)
         self.second.active = False
         result = self._result()

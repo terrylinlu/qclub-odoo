@@ -7,3 +7,4 @@ from . import qclub_board
 from . import payment_transaction
 from . import booking_deposit
 from . import deposit_refund
+from . import booking_no_show

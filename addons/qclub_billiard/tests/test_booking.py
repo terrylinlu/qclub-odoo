@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from xml.etree import ElementTree
 
@@ -196,7 +196,7 @@ class TestBooking(BilliardCase):
         with freeze_time("2026-06-01 04:30:00"):
             self._reject()
         booking = self._book()
-        with freeze_time("2026-06-01 06:30:00"):
+        with freeze_time("2026-06-01 04:45:00"):
             booking.action_confirm()
             booking.action_arrive()
             booking.duration_hours = 3
@@ -204,11 +204,12 @@ class TestBooking(BilliardCase):
                 booking.write({"start": "2026-06-01 04:30:00"})
 
     def test_bk_006_overlap_adjacency_and_different_tables(self):
-        booking = self._book(duration_hours=2)
-        for method in (None, "action_confirm", "action_arrive"):
-            if method:
-                getattr(booking, method)()
-            self._reject(start="2026-06-01 05:30:00")
+        with freeze_time("2026-06-01 04:15:00"):
+            booking = self._book(duration_hours=2)
+            for method in (None, "action_confirm", "action_arrive"):
+                if method:
+                    getattr(booking, method)()
+                self._reject(start="2026-06-01 05:30:00")
         self._book(table_id=self.other_table.id)
         self._book(start="2026-06-01 06:30:00")
         with self.assertRaisesRegex(ValidationError, "already booked"), self.env.cr.savepoint():
@@ -217,12 +218,19 @@ class TestBooking(BilliardCase):
     def test_bk_006_all_inactive_states_release_slot(self):
         for path in (
             ("action_cancel",), ("_action_expire",),
-            ("action_confirm", "action_no_show"),
+            ("action_confirm", "_mark_no_show"),
             ("action_confirm", "action_arrive", "action_complete"),
         ):
             booking = self._book()
             for method in path:
-                getattr(booking, method)()
+                if method == "_mark_no_show":
+                    with freeze_time(booking.start + timedelta(minutes=booking.no_show_wait_minutes)):
+                        booking._mark_no_show()
+                elif method == "action_arrive":
+                    with freeze_time("2026-06-01 04:45:00"):
+                        booking.action_arrive()
+                else:
+                    getattr(booking, method)()
             replacement = self._book()
             replacement.action_cancel()
 
@@ -401,8 +409,9 @@ class TestBooking(BilliardCase):
         booking = self._book()
         self.table.active = False
         self._reject(start="2026-06-01 06:30:00")
-        for method in ("action_confirm", "action_arrive", "action_complete"):
-            getattr(booking, method)()
+        with freeze_time("2026-06-01 04:45:00"):
+            for method in ("action_confirm", "action_arrive", "action_complete"):
+                getattr(booking, method)()
         self.assertEqual(booking.state, "done")
         other = self._book(table_id=self.other_table.id)
         with self.assertRaises(ValidationError), self.env.cr.savepoint():
@@ -413,13 +422,15 @@ class TestBooking(BilliardCase):
             "table_id": self.table.id, "partner_id": self.partner.id,
             "start": "2026-06-01 04:30:00", "duration_hours": 1,
         })
-        for method in ("action_confirm", "action_arrive", "action_complete"):
-            getattr(booking, method)()
+        with freeze_time("2026-06-01 04:45:00"):
+            for method in ("action_confirm", "action_arrive", "action_complete"):
+                getattr(booking, method)()
         booking = self._book().with_user(self.staff)
         booking.action_cancel()
         booking = self._book().with_user(self.staff)
         booking.action_confirm()
-        booking.action_no_show()
+        with freeze_time(booking.start + timedelta(minutes=booking.no_show_wait_minutes)):
+            booking._mark_no_show()
         for user in (self.staff, self.manager, self.internal):
             with self.assertRaises(UserError), self.env.cr.savepoint():
                 booking.with_user(user).unlink()
@@ -429,12 +440,16 @@ class TestBooking(BilliardCase):
         root = ElementTree.fromstring(self.env.ref("qclub_billiard.qclub_booking_view_form").arch_db)
         expected = {"action_confirm": "state != 'pending'", "action_arrive": "state != 'confirmed'",
                     "action_complete": "state != 'arrived'", "action_cancel": "state not in ('pending', 'confirmed')",
-                    "action_no_show": "state != 'confirmed'"}
+                    "action_revert_no_show": "state != 'no_show'"}
         self.assertEqual(len(root.findall("./header/button")), 5)
         for method, condition in expected.items():
             button = root.find(f"./header/button[@name='{method}']")
             self.assertEqual(button.get("invisible"), condition)
-            self.assertEqual(button.get("groups"), "qclub_billiard.group_billiard_staff")
+            expected_group = (
+                "qclub_billiard.group_billiard_manager" if method == "action_revert_no_show"
+                else "qclub_billiard.group_billiard_staff"
+            )
+            self.assertEqual(button.get("groups"), expected_group)
 
     def test_adm_002_views_search_and_menu(self):
         action = self.env.ref("qclub_billiard.qclub_booking_action")
