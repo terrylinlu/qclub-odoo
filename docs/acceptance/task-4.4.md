@@ -20,7 +20,8 @@
 
 | 单号 | 问题 | 规格/依据 | 状态 |
 |---|---|---|---|
-| — | （待补充） | | |
+| task-4.4-v1-01 | admin 在后台 cancel 一个预约后，顾客在"我的预约"能看到已取消，但没收到取消邮件 | 代码确认：`booking_deposit.py::_queue_cancellation_email` 只在 `booking_channel == 'online'` 时才发邮件；QB2026-00001 的 `booking_channel` 是 `backoffice`（员工在后台代客下的单），所以被跳过。这是取消邮件（阶段3功能）里的既有逻辑，不属于 NS-001–005，但本轮验收中发现，按流程记录 | 已确认，待批量修复 |
+| task-4.4-v1-02（待确认是否算 bug） | 后台 Mark Arrived 后，顾客没收到邮件 | 查了 docs/spec 全文，NS/BK/ADM 等需求里都没有"标记已到店要发邮件"这一条；现有代码（`qclub_booking.py::action_arrive`、`booking_no_show.py` 的 override）也确实没有发邮件的逻辑。所以这不是对现有规格的偏离，而是看你是否想新增这个需求 | 待你确认是否要加为新需求，不作为 bug 记录 |
 
 ## 三、流程说明（本任务起生效）
 
