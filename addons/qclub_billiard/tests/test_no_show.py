@@ -108,3 +108,61 @@ class TestNoShow(TestCancelRefund):
         booking.with_user(self.manager)._revert_no_show('Present')
         self.assertEqual((booking.state, booking.deposit_state), ('arrived', 'no_deposit'))
         self.assertEqual(other.read(['name', 'currency_id']), before)
+
+    def test_ns_006_arrival_paths_channels_and_no_recipient(self):
+        for channel in ('online', 'backoffice'):
+            for revert in (False, True):
+                for email in ('arrival@example.invalid', False):
+                    with self.subTest(channel=channel, revert=revert, email=email):
+                        self.partner.email = email
+                        booking = self._book(booking_channel=channel)
+                        booking.action_confirm()
+                        if revert:
+                            with freeze_time(booking.start + timedelta(minutes=30)):
+                                booking._mark_no_show()
+                        before = self.env['mail.mail'].search_count([])
+                        with freeze_time(booking.start):
+                            if revert:
+                                booking.with_user(self.manager)._revert_no_show('Present')
+                            else:
+                                booking.with_user(self.staff).action_arrive()
+                            with self.assertRaises(UserError):
+                                if revert:
+                                    booking.with_user(self.manager)._revert_no_show('Again')
+                                else:
+                                    booking.action_arrive()
+                        self.assertEqual(booking.state, 'arrived')
+                        self.assertEqual(self.env['mail.mail'].search_count([]), before + bool(email))
+                        if email:
+                            mail = self.env['mail.mail'].search([
+                                ('subject', '=', 'Booking arrived: ' + booking.name),
+                            ])
+                            self.assertEqual(len(mail), 1)
+                            for text in (booking.name, booking.table_id.name, booking._time_label(),
+                                         booking.website_id.company_id.name, 'confirmed as arrived'):
+                                self.assertIn(text, mail.body_html)
+                            for text in ('$', 'AUD', 'deposit', self.aushare.company_id.name):
+                                self.assertNotIn(text, mail.body_html)
+                        booking.action_complete()
+
+    def test_ns_006_missing_sender_and_queue_failure_preserve_arrival(self):
+        from unittest.mock import patch
+
+        for failure in (False, True):
+            booking = self._book(booking_channel='backoffice')
+            booking.action_confirm()
+            before = self.env['mail.mail'].search_count([])
+            if not failure:
+                self.config.booking_email_from = False
+                with freeze_time(booking.start):
+                    booking.action_arrive()
+            else:
+                self.config.booking_email_from = 'booking@example.invalid'
+                with patch.object(type(self.env['ir.qweb']), '_render', side_effect=RuntimeError('Offline')), \
+                        patch('odoo.addons.qclub_billiard.models.booking_no_show._logger') as logger, \
+                        freeze_time(booking.start):
+                    booking.action_arrive()
+                    logger.exception.assert_called_once()
+            self.assertEqual(booking.state, 'arrived')
+            self.assertEqual(self.env['mail.mail'].search_count([]), before)
+            booking.action_complete()

@@ -35,7 +35,7 @@
                         <h1><field name="website_id" options="{'no_create': True, 'no_open': True}"/></h1>
                     </div>
                     <div class="text-muted mb-3">
-                        Changes only apply to new bookings. Existing bookings keep the values in force when they were made.
+                        Pricing and booking limits only apply to new bookings. Notification switches apply to future emails, including those for existing bookings.
                     </div>
                     <group string="Website Availability">
                         <field name="online_booking"/>
@@ -60,6 +60,13 @@
                         <field name="board_requires_login"/>
                         <field name="board_max_players"/>
                         <field name="board_rate_limit"/>
+                    </group>
+                    <group string="Notifications">
+                        <field name="notify_booking_received"/>
+                        <field name="notify_deposit_confirmed"/>
+                        <field name="notify_cancellation"/>
+                        <field name="notify_no_show"/>
+                        <field name="notify_arrival"/>
                     </group>
                     <group string="Booking Email and Contact">
                         <field name="booking_email_from"/>

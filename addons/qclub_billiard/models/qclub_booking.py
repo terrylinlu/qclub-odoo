@@ -423,7 +423,7 @@ class QclubBooking(models.Model):
     def _queue_booking_email(self):
         self.ensure_one()
         config = self._config()
-        if self.booking_channel != "online" or not config.booking_email_from or not self.partner_id.email:
+        if not config.notify_booking_received or self.booking_channel != "online" or not config.booking_email_from or not self.partner_id.email:
             return
         try:
             with self.env.cr.savepoint():

@@ -34,3 +34,5 @@ from . import test_deposit_payment_http
 from . import test_cancel_refund
 from . import test_cancel_refund_http
 from . import test_no_show
+
+from . import test_cfg_notify_toggle

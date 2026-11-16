@@ -171,7 +171,7 @@ class BookingDeposit(models.Model):
         self.ensure_one()
         config = self._config()
         recipient = config.contact_email if event == 'duplicate' else self.partner_id.email
-        if self.booking_channel != 'online' or not config.booking_email_from or not recipient:
+        if not config.notify_deposit_confirmed or self.booking_channel != 'online' or not config.booking_email_from or not recipient:
             return
         try:
             with self.env.cr.savepoint():
@@ -377,7 +377,7 @@ class BookingDeposit(models.Model):
         self.ensure_one()
         config = self._config()
         recipient = config.contact_email if attention else self.partner_id.email
-        if self.booking_channel != 'online' or not config.booking_email_from or not recipient:
+        if not config.notify_cancellation or self.booking_channel != 'online' or not config.booking_email_from or not recipient:
             return
         try:
             with self.env.cr.savepoint():

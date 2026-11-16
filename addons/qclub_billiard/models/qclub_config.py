@@ -64,6 +64,26 @@ class QclubConfig(models.Model):
 
     max_unpaid_online_bookings = fields.Integer(string="Max Unpaid Online Bookings per Customer", default=2, required=True)
     booking_email_from = fields.Char(string="Booking Email From")
+    notify_booking_received = fields.Boolean(
+        string="Notify: Booking Received", default=True,
+        help="Send the booking received notification for online bookings.",
+    )
+    notify_deposit_confirmed = fields.Boolean(
+        string="Notify: Deposit Confirmed", default=True,
+        help="Send deposit confirmation and refund event notifications.",
+    )
+    notify_cancellation = fields.Boolean(
+        string="Notify: Cancellation", default=True,
+        help="Send cancellation result notifications.",
+    )
+    notify_no_show = fields.Boolean(
+        string="Notify: No-show", default=True,
+        help="Send no-show notifications for all booking channels.",
+    )
+    notify_arrival = fields.Boolean(
+        string="Notify: Arrival", default=True,
+        help="Send arrival confirmations, including no-show reversals, for all booking channels.",
+    )
     contact_phone = fields.Char(string="Contact Phone")
     contact_email = fields.Char(string="Contact Email")
 
