@@ -328,6 +328,10 @@ class TestCancelRefund(PaymentCommon):
         Mail = self.env['mail.mail']
         before = Mail.search_count([])
         booking.action_cancel()
+        # Cancellation emails go out regardless of channel (task-4.4-v1-01); only the
+        # deposit-confirmation family stays online-only (PAY-010: no online deposit to confirm).
+        self.assertEqual(Mail.search_count([]), before + 1)
+        before = Mail.search_count([])
         for event in ('confirmed', 'duplicate', 'refunded', 'refund_pending'):
             booking._queue_deposit_email(event)
         self.assertEqual(Mail.search_count([]), before)
@@ -422,7 +426,7 @@ class TestCancelRefund(PaymentCommon):
             board_mails = added - cancellation
             self.assertEqual(len(board_mails), 4)
             self.assertEqual(board_mails.mapped('email_to').count(applicant.email), 3)
-            self.assertEqual(len(cancellation), 1 if channel == 'online' else 0)
-            if cancellation:
-                self.assertEqual(cancellation.email_to, booking.partner_id.email)
-                self.assertIn('no deposit', cancellation.body_html)
+            # Cancellation emails go out regardless of channel (task-4.4-v1-01).
+            self.assertEqual(len(cancellation), 1)
+            self.assertEqual(cancellation.email_to, booking.partner_id.email)
+            self.assertIn('no deposit', cancellation.body_html)

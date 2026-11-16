@@ -377,7 +377,10 @@ class BookingDeposit(models.Model):
         self.ensure_one()
         config = self._config()
         recipient = config.contact_email if attention else self.partner_id.email
-        if not config.notify_cancellation or self.booking_channel != 'online' or not config.booking_email_from or not recipient:
+        # Unlike the deposit/booking-received emails (online-only; backoffice bookings have no
+        # online deposit, PAY-010), cancellation notices go out regardless of channel, matching
+        # NS-003/NS-006's channel-independent behavior (task-4.4-v1-01).
+        if not config.notify_cancellation or not config.booking_email_from or not recipient:
             return
         try:
             with self.env.cr.savepoint():

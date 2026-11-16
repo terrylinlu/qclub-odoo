@@ -174,7 +174,13 @@ class TestBoardJoin(HttpCase):
         self.booking.write({"start": "2026-11-07 12:30:00", "duration_hours": 1})
         self.assertEqual(self.post_record._summary(False)["hours"], 1)
         self.booking.action_cancel()
-        mails = Mail.search([]) - previous
+        added = Mail.search([]) - previous
+        # Cancellation emails go out regardless of channel (task-4.4-v1-01); this booking's
+        # own cancellation notice is separate from the board-notification mails below.
+        cancellation = added.filtered(lambda m: m.subject == "Booking cancelled: " + self.booking.name)
+        self.assertEqual(len(cancellation), 1)
+        self.assertEqual(cancellation.email_to, self.customer.partner_id.email)
+        mails = added - cancellation
         self.assertEqual(len(mails), 4)
         self.assertEqual(mails.mapped("email_to").count(self.other.partner_id.email), 3)
         for mail in mails:
@@ -185,7 +191,7 @@ class TestBoardJoin(HttpCase):
             self.assertNotIn(self.customer.partner_id.email, mail.body_html)
         self.config.booking_email_from = False
         self.post_record._queue_email("accepted", self.other.partner_id, self.customer.partner_id)
-        self.assertEqual(Mail.search([]) - previous, mails)
+        self.assertEqual(Mail.search([]) - previous, added)
         self.config.booking_email_from = "Q Club <board@example.invalid>"
         with patch.object(type(Mail), "create", side_effect=RuntimeError("queue failed")), mute_logger(
             "odoo.addons.qclub_billiard.models.qclub_board",
@@ -345,6 +351,10 @@ class TestBoardJoin(HttpCase):
         Mail = self.env["mail.mail"]
         with patch.object(type(Mail), "create", side_effect=RuntimeError("queue failed")), mute_logger(
             "odoo.addons.qclub_billiard.models.qclub_board",
+            # action_cancel() now also queues a cancellation email regardless of channel
+            # (task-4.4-v1-01); the same mocked Mail.create failure hits that queue attempt
+            # too, logged and swallowed the same way, unrelated to this test's own assertions.
+            "odoo.addons.qclub_billiard.models.booking_deposit",
         ):
             application = self.apply()
             application._transition("accept", self.customer.partner_id)

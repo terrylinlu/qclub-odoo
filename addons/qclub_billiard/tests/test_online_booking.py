@@ -99,6 +99,9 @@ class TestOnlineBooking(BilliardCase):
         booking._queue_booking_email()
         self.assertEqual(self.env["mail.mail"].search_count([]), before)
         booking.action_cancel()
+        # Cancellation emails go out regardless of channel (task-4.4-v1-01).
+        self.assertEqual(self.env["mail.mail"].search_count([]), before + 1)
+        before = self.env["mail.mail"].search_count([])
         booking = self._book(booking_channel="online")
         self.config.booking_email_from = False
         booking._queue_booking_email()
