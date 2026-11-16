@@ -37,15 +37,12 @@ for name, domain in SITE_DOMAINS.items():
 qclub = Website.search([("name", "=", "Q Club")], limit=1)
 aushare = Website.search([("name", "=", "AUSHARE")], limit=1)
 aushare.company_id.name = "AUSHAREU PTY LTD (Demo)"
-tab = env["res.company"].search([("name", "=", "TAB Entertainment Pty Ltd (Demo)")], limit=1)
-if not tab:
-    tab = env["res.company"].with_context(no_vat_validation=True).create({
-        "name": "TAB Entertainment Pty Ltd (Demo)", "currency_id": env.ref("base.AUD").id,
-        "country_id": env.ref("base.au").id, "vat": "00 000 000 000",
-        "street": "1 Demo Street", "city": "Adelaide", "zip": "5000",
-    })
+# Rename qclub_base's own "(Test)"-labelled company in place (same as AUSHARE above);
+# searching by the "(Demo)" name and creating one when not found left the cloned
+# "(Test)" company orphaned alongside a brand-new "(Demo)" one.
+tab = qclub.company_id
+tab.name = "TAB Entertainment Pty Ltd (Demo)"
 tab.partner_id.tz = "Australia/Adelaide"
-qclub.company_id = tab
 env.ref("base.user_admin").write({"company_ids": [(4, tab.id), (4, aushare.company_id.id)]})
 summary.append("companies: Q Club -> TAB Entertainment (Demo); AUSHARE -> AUSHAREU PTY LTD (Demo)")
 
