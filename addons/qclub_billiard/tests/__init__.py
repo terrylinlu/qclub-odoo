@@ -36,3 +36,5 @@ from . import test_cancel_refund_http
 from . import test_no_show
 
 from . import test_cfg_notify_toggle
+
+from . import test_settlement

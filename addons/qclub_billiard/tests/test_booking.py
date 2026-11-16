@@ -439,14 +439,14 @@ class TestBooking(BilliardCase):
         self.assertFalse(booking.sudo().exists())
         root = ElementTree.fromstring(self.env.ref("qclub_billiard.qclub_booking_view_form").arch_db)
         expected = {"action_confirm": "state != 'pending'", "action_arrive": "state != 'confirmed'",
-                    "action_complete": "state != 'arrived'", "action_cancel": "state not in ('pending', 'confirmed')",
+                    "action_settle": "state != 'arrived'", "action_correct_settlement": "state != 'done'", "action_cancel": "state not in ('pending', 'confirmed')",
                     "action_revert_no_show": "state != 'no_show'"}
-        self.assertEqual(len(root.findall("./header/button")), 5)
+        self.assertEqual(len(root.findall("./header/button")), 6)
         for method, condition in expected.items():
             button = root.find(f"./header/button[@name='{method}']")
             self.assertEqual(button.get("invisible"), condition)
             expected_group = (
-                "qclub_billiard.group_billiard_manager" if method == "action_revert_no_show"
+                "qclub_billiard.group_billiard_manager" if method in ("action_revert_no_show", "action_correct_settlement")
                 else "qclub_billiard.group_billiard_staff"
             )
             self.assertEqual(button.get("groups"), expected_group)

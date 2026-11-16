@@ -27,7 +27,7 @@ class BookingDeposit(models.Model):
 
     deposit_state = fields.Selection([
         ('awaiting', 'Awaiting payment'), ('paid', 'Paid'), ('no_deposit', 'No online deposit'),
-        ('refunded', 'Refunded'), ('forfeited', 'Forfeited'), ('refund_failed', 'Refund failed'),
+        ('applied', 'Applied to settlement'), ('refunded', 'Refunded'), ('forfeited', 'Forfeited'), ('refund_failed', 'Refund failed'),
     ], required=True, default='no_deposit', readonly=True, copy=False)
     refund_amount = fields.Monetary(readonly=True, copy=False)
     refund_at = fields.Datetime(readonly=True, copy=False)

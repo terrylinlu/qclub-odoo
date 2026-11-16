@@ -34,8 +34,10 @@
                             groups="qclub_billiard.group_billiard_staff" invisible="state != 'pending'"/>
                     <button name="action_arrive" string="Mark Arrived" type="object"
                             groups="qclub_billiard.group_billiard_staff" invisible="state != 'confirmed'"/>
-                    <button name="action_complete" string="Complete" type="object"
+                    <button name="action_settle" string="Settle" type="object"
                             groups="qclub_billiard.group_billiard_staff" invisible="state != 'arrived'"/>
+                    <button name="action_correct_settlement" string="Correct Settlement" type="object"
+                            groups="qclub_billiard.group_billiard_manager" invisible="state != 'done'"/>
                     <button name="action_cancel" string="Cancel" context="{'qclub_cancel_dialog': True}" type="object"
                             groups="qclub_billiard.group_billiard_staff"
                             invisible="state not in ('pending', 'confirmed')"/>
@@ -95,6 +97,17 @@
                         <field name="has_extra_payment" invisible="True" />
                         <field name="payment_transactions_html" readonly="True" />
                         <button name="action_refund_extra_payment" string="Refund extra payment" type="object" groups="qclub_billiard.group_billiard_manager" invisible="not has_extra_payment" />
+                    </group>
+                    <group string="Settlement" invisible="not settle_at">
+                        <field name="actual_table_fee"/>
+                        <field name="balance_amount"/>
+                        <field name="balance_method"/>
+                        <field name="settle_reason"/>
+                        <field name="settle_operator_id"/>
+                        <field name="settle_at"/>
+                        <field name="settle_correction_reason" invisible="not settle_correction_at"/>
+                        <field name="settle_correction_operator_id" invisible="not settle_correction_at"/>
+                        <field name="settle_correction_at" invisible="not settle_correction_at"/>
                     </group>
                 </sheet>
                 <chatter />
