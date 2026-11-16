@@ -8,3 +8,5 @@ from . import payment_transaction
 from . import booking_deposit
 from . import deposit_refund
 from . import booking_no_show
+from . import booking_settlement
+from . import booking_settle_wizard

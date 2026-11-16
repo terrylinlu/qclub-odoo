@@ -646,9 +646,6 @@ class QclubBooking(models.Model):
     def action_arrive(self):
         return self.write({"state": "arrived"})
 
-    def action_complete(self):
-        return self.write({"state": "done"})
-
     def action_cancel(self):
         return self.write({"state": "cancelled"})
 

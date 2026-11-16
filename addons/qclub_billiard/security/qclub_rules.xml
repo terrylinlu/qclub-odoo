@@ -143,4 +143,21 @@
         <field name="groups" eval="[(4, ref('group_billiard_manager'))]"/>
         <field name="domain_force">[(1, '=', 1)]</field>
     </record>
+    <record id="rule_booking_settle_company" model="ir.rule">
+        <field name="name">Booking settlement: allowed companies</field>
+        <field name="model_id" ref="model_qclub_booking_settle"/>
+        <field name="domain_force">[('company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_booking_settle_staff_mode" model="ir.rule">
+        <field name="name">Staff: settlement only</field>
+        <field name="model_id" ref="model_qclub_booking_settle"/>
+        <field name="groups" eval="[(4, ref('group_billiard_staff'))]"/>
+        <field name="domain_force">[('mode', '=', 'settle')]</field>
+    </record>
+    <record id="rule_booking_settle_manager_mode" model="ir.rule">
+        <field name="name">Managers: settlement and correction</field>
+        <field name="model_id" ref="model_qclub_booking_settle"/>
+        <field name="groups" eval="[(4, ref('group_billiard_manager'))]"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+    </record>
 </odoo>
