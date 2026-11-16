@@ -145,14 +145,17 @@ class BilliardBooking(http.Controller):
                 website=True, sitemap=False, methods=["GET"])
     def confirmation(self, name, **kwargs):
         self._website_config()
-        if request.env.user._is_public():
-            raise NotFound()
         booking = request.env["qclub.booking"].sudo().search([
             ("name", "=", name), ("website_id", "=", request.website.id),
             ("partner_id", "=", request.env.user.partner_id.id),
         ], limit=1)
         if not booking:
-            raise NotFound()
+            # Anonymous, logged in as someone else, wrong website, or an unknown booking number
+            # all land here the same way (task-4.4-v1-01 follow-up: a cancellation/no-show/arrival
+            # email's "View booking" link must not 404 for a channel/account mismatch, but also
+            # must not let the response itself reveal whether that booking number exists or whose
+            # it is). /my/billiard sends an anonymous visitor on to /web/login and back on its own.
+            return request.redirect("/my/billiard")
         config = self._website_config()
         find_players = (config.online_board and booking.state == "confirmed"
                         and booking.start > fields.Datetime.now()

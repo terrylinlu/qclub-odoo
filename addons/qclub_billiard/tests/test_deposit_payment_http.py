@@ -151,10 +151,16 @@ class TestDepositHttp(PaymentHttpCommon):
             self.opener.cookies.clear()
             if user:
                 self.authenticate(user.login, 'offline')
-            self.assertEqual(self.url_open(self.path).status_code, 404)
+            # Anonymous or someone else's account: a 303 to /my/billiard, never a 404 that
+            # would leak whether the booking exists or whose it is (task-4.4-v1-01 follow-up).
+            response = self.url_open(self.path, allow_redirects=False)
+            self.assertEqual(response.status_code, 303)
+            self.assertEqual(response.headers['Location'], '/my/billiard')
             self._refused()
         self._website(self.aushare)
         self.authenticate(self.owner.login, 'offline')
+        # AUSHARE has no billiard config at all, so this still 404s in _website_config()
+        # itself, before the confirmation route's own ownership check ever runs.
         self.assertEqual(self.url_open(self.path).status_code, 404)
         self._refused()
 

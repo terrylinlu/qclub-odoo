@@ -92,15 +92,25 @@ class TestOnlineBookingHttp(HttpCase):
         result = self._rpc("submit", csrf_token=self.token).json()["result"]
         path = result["confirmation_url"]
         self._login(self.other)
-        self.assertEqual(self.url_open(path).status_code, 404)
+        # Anonymous, someone else's account, a wrong-website booking number, or an unknown one
+        # must all be indistinguishable: a 303 to /my/billiard, never a 404 (task-4.4-v1-01
+        # follow-up) and never different responses that would let a visitor tell these cases
+        # apart (e.g. "exists but is someone else's" vs "does not exist").
+        response = self.url_open(path, allow_redirects=False)
+        self.assertEqual(response.status_code, 303)
+        self.assertEqual(response.headers["Location"], "/my/billiard")
         self.opener.cookies.clear()
-        self.assertEqual(self.url_open(path).status_code, 404)
+        response = self.url_open(path, allow_redirects=False)
+        self.assertEqual(response.status_code, 303)
+        self.assertEqual(response.headers["Location"], "/my/billiard")
         self.config.occupancy_requires_login = True
         self.env.flush_all()
         self.assertEqual(self._rpc("quote").json()["result"], {"error": "login_required"})
         self._website(self.aushare)
         for route in ("quote", "submit"):
             self.assertEqual(self._rpc(route).status_code, 404)
+        # AUSHARE has no billiard config at all, so this still 404s in _website_config()
+        # itself, before the confirmation route's own ownership check ever runs.
         self.assertEqual(self.url_open(path).status_code, 404)
 
     def test_web_004_foreign_table_rejected(self):

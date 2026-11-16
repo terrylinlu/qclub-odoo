@@ -35,10 +35,15 @@ class BilliardPayment(BilliardAccount, PaymentPortal):
     @http.route()
     def confirmation(self, name, **kwargs):
         response = super().confirmation(name, **kwargs)
-        booking = response.qcontext['booking']
-        response.qcontext['show_deposit_form'] = booking._can_pay_deposit()
-        if response.qcontext['show_deposit_form']:
-            response.qcontext.update(self._get_booking_payment_values(booking))
+        qcontext = getattr(response, 'qcontext', None)
+        if not qcontext or 'booking' not in qcontext:
+            # No accessible booking (anonymous, wrong owner, wrong website, unknown number):
+            # the base controller already redirected to /my/billiard (task-4.4-v1-01 follow-up).
+            return response
+        booking = qcontext['booking']
+        qcontext['show_deposit_form'] = booking._can_pay_deposit()
+        if qcontext['show_deposit_form']:
+            qcontext.update(self._get_booking_payment_values(booking))
         return response
 
     @http.route('/billiard/booking/<int:booking_id>/transaction', type='jsonrpc', auth='user',
