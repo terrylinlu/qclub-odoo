@@ -121,4 +121,22 @@
             </t>
         </field>
     </record>
+    <record id="arrival_email" model="ir.ui.view">
+        <field name="name">Q Club arrival email</field>
+        <field name="key">qclub_billiard.arrival_email</field>
+        <field name="type">qweb</field>
+        <field name="model">qclub.booking</field>
+        <field name="arch" type="xml">
+            <t t-name="qclub_billiard.arrival_email">
+                <div style="font-family:Arial,sans-serif;max-width:600px">
+                    <h2>Q Club</h2>
+                    <p>Your booking is confirmed as arrived. See you at the table!</p>
+                    <p>Booking: <t t-out="booking.name"/></p>
+                    <p>Table: <t t-out="booking.table_id.name"/></p>
+                    <p>Time: <t t-out="booking._time_label()"/></p>
+                    <p t-out="booking.website_id.company_id.name"/>
+                </div>
+            </t>
+        </field>
+    </record>
 </odoo>

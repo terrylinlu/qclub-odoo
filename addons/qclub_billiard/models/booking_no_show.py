@@ -53,7 +53,10 @@ class BookingNoShow(models.Model):
     def action_arrive(self):
         self._lock_no_show()
         self._check_arrival_window()
-        return super().action_arrive()
+        result = super().action_arrive()
+        for booking in self:
+            booking._queue_arrival_email()
+        return result
 
     @api.model
     def _cron_mark_no_show(self):
@@ -115,12 +118,13 @@ class BookingNoShow(models.Model):
             if self.deposit_state == 'forfeited':
                 values['deposit_state'] = 'paid'
             self._write_deposit(values)
+            self._queue_arrival_email()
             self.flush_recordset()
 
     def _queue_no_show_email(self):
         self.ensure_one()
         config = self._config()
-        if not self.partner_id.email or not config.booking_email_from:
+        if not config.notify_no_show or not self.partner_id.email or not config.booking_email_from:
             return
         try:
             with self.env.cr.savepoint():
@@ -136,3 +140,22 @@ class BookingNoShow(models.Model):
                 mail.send_after_commit()
         except Exception:
             _logger.exception('Could not queue no-show email for booking %s', self.id)
+
+    def _queue_arrival_email(self):
+        self.ensure_one()
+        config = self._config()
+        if not config.notify_arrival or not self.partner_id.email or not config.booking_email_from:
+            return
+        try:
+            with self.env.cr.savepoint():
+                body = self.env['ir.qweb']._render('qclub_billiard.arrival_email', {
+                    'booking': self, 'config': config,
+                })
+                mail = self.env['mail.mail'].sudo().create({
+                    'subject': _('Booking arrived: %s', self.name),
+                    'email_from': config.booking_email_from, 'email_to': self.partner_id.email,
+                    'body_html': body, 'auto_delete': False,
+                })
+                mail.send_after_commit()
+        except Exception:
+            _logger.exception('Could not queue arrival email for booking %s', self.id)
