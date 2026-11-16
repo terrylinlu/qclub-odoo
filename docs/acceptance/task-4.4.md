@@ -1,8 +1,8 @@
 # 任务 4.4 验收记录：未到场与没收（NS-001–005）
 
-状态：**验收中**（v1 验收通过，task-4.4-v1-01 待批量修复；v2 新增 NS-006/CFG-007 待测）
-版本：`task-4.4-v2`（main @ a9d473d，在 task-4.4-v1 基础上新增 PR #50 NS-006 到店确认邮件 + CFG-007 通知邮件开关；这两个是你验收 v1 时提出并批准的新需求，不是 bug 修复，所以 task-4.4-v1-01 仍待批量修复，还没解决）
-演示环境：`make demo-reset`（演示库 `qclub_demo`，从 main @ task-4.4-v2 重建）
+状态：**验收中**（v1 验收通过；v2 的 NS-006/CFG-007 待测；task-4.4-v1-01 已在 v3 修复，待你验证）
+版本：`task-4.4-v3`（main @ 52fcfa8，在 task-4.4-v2 基础上新增 PR #51，修复 task-4.4-v1-01：取消邮件不再限制 `booking_channel == 'online'`；顺带修了确认页对非预约本人访问的处理——统一跳转 `/my/billiard`，不再 404，也修了一个连带发现的真 bug（未登录访问付款确认页会 500）。详见 `docs/design/4.4-fix-v1-01-cancel-email.md`）
+演示环境：`make demo-reset`（演示库 `qclub_demo`，从 main @ task-4.4-v3 重建）
 
 ## 一、验收步骤
 
@@ -24,13 +24,19 @@
 | 7 | NS-006：管理员 Revert to Arrived 撤销未到场后，顾客也收到同一封到店确认邮件 | ⬜ | — |
 | 8 | CFG-007：后台 Billiard Settings → Notifications 能看到 5 个开关，默认全开；关闭某一个后对应事件不再发邮件，但状态流转/押金处理不受影响；员工只读，改不动 | ⬜ | — |
 
+### task-4.4-v3（task-4.4-v1-01 修复，待测）
+
+| 步骤 | 内容 | 结果 | 依据 |
+|---|---|---|---|
+| 9 | admin 在后台 cancel 一个 backoffice 渠道、顾客留了邮箱的预约（比如重新用 QB2026-00001 的场景），顾客这次能收到取消邮件 | ⬜ | — |
+
 ## 二、发现的问题
 
 逐条确认但先不修复；等你验收全部测完（含 v2 的 NS-006/CFG-007），再统一修复、出回归版本。
 
 | 单号 | 问题 | 规格/依据 | 状态 |
 |---|---|---|---|
-| task-4.4-v1-01 | admin 在后台 cancel 一个预约后，顾客在"我的预约"能看到已取消，但没收到取消邮件 | 代码确认：`booking_deposit.py::_queue_cancellation_email` 只在 `booking_channel == 'online'` 时才发邮件；QB2026-00001 的 `booking_channel` 是 `backoffice`（员工在后台代客下的单），所以被跳过。这是取消邮件（阶段3功能）里的既有逻辑，不属于 NS-001–005，但本轮验收中发现，按流程记录 | 已确认，待批量修复 |
+| task-4.4-v1-01 | admin 在后台 cancel 一个预约后，顾客在"我的预约"能看到已取消，但没收到取消邮件 | 代码确认：`booking_deposit.py::_queue_cancellation_email` 只在 `booking_channel == 'online'` 时才发邮件；QB2026-00001 的 `booking_channel` 是 `backoffice`（员工在后台代客下的单），所以被跳过。这是取消邮件（阶段3功能）里的既有逻辑，不属于 NS-001–005，但本轮验收中发现，按流程记录 | **已在 task-4.4-v3 修复**（PR #51），待你验证 |
 
 原 task-4.4-v1-02（Mark Arrived 没邮件）确认不是对规格的偏离，你已批准把它加为新需求 NS-006，随 v2 实现，不再作为 bug 记录；同时你追加批准了 CFG-007（通知邮件可配置开关）。两者均已合并到 main、随 task-4.4-v2 待验收（见上方第二张表）。
 
