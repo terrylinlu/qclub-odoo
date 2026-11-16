@@ -142,7 +142,8 @@ class TestMyAccount(HttpCase):
             "table_id": self.table.id, "partner_id": self.customer.partner_id.id,
             "start": "2026-11-08 12:30:00", "duration_hours": 1,
         })
-        self.own.action_arrive()
+        with freeze_time("2026-11-06 12:30:00"):
+            self.own.action_arrive()
         self.authenticate("account-customer", "account-test")
         expected = sorted([self.own.business_date.isoformat(), self.foreign.business_date.isoformat(),
                            pending.business_date.isoformat()])

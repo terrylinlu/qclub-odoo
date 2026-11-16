@@ -652,9 +652,6 @@ class QclubBooking(models.Model):
     def action_cancel(self):
         return self.write({"state": "cancelled"})
 
-    def action_no_show(self):
-        return self.write({"state": "no_show"})
-
     def _action_expire(self):
         return self.write({"state": "expired"})
 

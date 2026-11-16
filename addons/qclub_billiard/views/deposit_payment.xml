@@ -86,4 +86,39 @@
             </t>
         </field>
     </record>
+
+    <record id="no_show_revert_form" model="ir.ui.view">
+        <field name="name">qclub.deposit.refund.no.show.revert</field>
+        <field name="model">qclub.deposit.refund</field>
+        <field name="arch" type="xml">
+            <form string="Revert to Arrived">
+                <group>
+                    <field name="mode" invisible="True"/>
+                    <field name="booking_id"/>
+                    <field name="reason" required="True"/>
+                </group>
+                <footer>
+                    <button name="action_revert_no_show" type="object" string="Confirm" class="btn-primary"/>
+                    <button special="cancel" string="Cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+    <record id="no_show_email" model="ir.ui.view">
+        <field name="name">Q Club no-show email</field>
+        <field name="key">qclub_billiard.no_show_email</field>
+        <field name="type">qweb</field>
+        <field name="model">qclub.booking</field>
+        <field name="arch" type="xml">
+            <t t-name="qclub_billiard.no_show_email">
+                <div style="font-family:Arial,sans-serif;max-width:600px">
+                    <h2>Q Club</h2>
+                    <p t-if="booking.deposit_state == 'forfeited'">Your booking was marked as no-show; your <t t-out="amount"/> deposit has been forfeited.</p>
+                    <p t-else="">Your booking was marked as no-show.</p>
+                    <p>Booking: <t t-out="booking.name"/></p>
+                    <p t-out="booking.website_id.company_id.name"/>
+                </div>
+            </t>
+        </field>
+    </record>
 </odoo>

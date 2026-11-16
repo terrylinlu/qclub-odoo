@@ -39,8 +39,8 @@
                     <button name="action_cancel" string="Cancel" context="{'qclub_cancel_dialog': True}" type="object"
                             groups="qclub_billiard.group_billiard_staff"
                             invisible="state not in ('pending', 'confirmed')"/>
-                    <button name="action_no_show" string="No-show" type="object"
-                            groups="qclub_billiard.group_billiard_staff" invisible="state != 'confirmed'"/>
+                    <button name="action_revert_no_show" string="Revert to Arrived" type="object"
+                            groups="qclub_billiard.group_billiard_manager" invisible="state != 'no_show'"/>
                     <field name="state" widget="statusbar" statusbar_visible="pending,confirmed,arrived,done"/>
                 </header>
                 <sheet>
@@ -71,6 +71,10 @@
                         <field name="deposit_ratio" readonly="True"/>
                         <field name="free_cancel_hours" readonly="True"/>
                         <field name="no_show_wait_minutes" readonly="True"/>
+                        <field name="no_show_at"/>
+                        <field name="no_show_revert_reason"/>
+                        <field name="no_show_revert_operator_id"/>
+                        <field name="no_show_revert_at"/>
                         <field name="table_fee" readonly="True"/>
                         <field name="deposit_amount" readonly="True"/>
                     </group>
