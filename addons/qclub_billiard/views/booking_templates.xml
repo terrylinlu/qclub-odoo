@@ -61,8 +61,17 @@
                     <h2 t-out="booking.name"/>
                     <p t-out="booking.table_id.name"/>
                     <p t-out="time_label"/>
-                    <p>Table fee: <span t-field="booking.table_fee"/></p>
-                    <p>Deposit: <span t-field="booking.deposit_amount"/></p>
+                    <t t-if="booking.state == 'done'">
+                        <p>Table fee: <span t-field="booking.actual_table_fee"/></p>
+                        <p>Amount paid: <span t-esc="booking.paid_amount + booking.balance_amount"
+                                               t-options="{'widget': 'monetary', 'display_currency': booking.currency_id}"/></p>
+                        <p t-if="booking.balance_method">Balance paid via:
+                            <span t-out="dict(booking._fields['balance_method'].selection)[booking.balance_method]"/></p>
+                    </t>
+                    <t t-if="booking.state != 'done'">
+                        <p>Table fee: <span t-field="booking.table_fee"/></p>
+                        <p>Deposit: <span t-field="booking.deposit_amount"/></p>
+                    </t>
                     <p t-field="booking.state"/>
                     <p t-if="booking.state == 'cancelled'" t-out="booking._cancellation_result_text()"/>
                     <button t-if="booking._can_cancel()" type="button" class="btn btn-outline-danger o_qclub_cancel"
