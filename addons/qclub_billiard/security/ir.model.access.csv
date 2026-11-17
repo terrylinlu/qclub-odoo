@@ -27,3 +27,5 @@ access_qclub_board_ban_manager,qclub.board.ban manager,model_qclub_board_ban,gro
 access_qclub_deposit_refund_manager,Deposit refund manager,model_qclub_deposit_refund,qclub_billiard.group_billiard_manager,1,1,1,1
 access_qclub_deposit_refund_staff,Deposit cancellation staff,model_qclub_deposit_refund,group_billiard_staff,1,1,1,1
 access_qclub_booking_settle_staff,Booking settlement staff,model_qclub_booking_settle,group_billiard_staff,1,1,1,1
+access_qclub_reconciliation_staff,Reconciliation staff,model_qclub_reconciliation,group_billiard_staff,1,0,1,0
+access_qclub_reconciliation_manager,Reconciliation manager,model_qclub_reconciliation,group_billiard_manager,1,0,1,0

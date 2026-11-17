@@ -56,4 +56,7 @@
               action="qclub_board_reply_action" groups="group_billiard_staff" sequence="30"/>
     <menuitem id="menu_billiard_board_ban" name="Banned Customers" parent="menu_billiard_board"
               action="qclub_board_ban_action" groups="group_billiard_manager" sequence="40"/>
+    <menuitem id="menu_billiard_reconciliation" name="Daily Reconciliation"
+              parent="menu_billiard_root" action="qclub_reconciliation_action"
+              groups="group_billiard_staff" sequence="25"/>
 </odoo>

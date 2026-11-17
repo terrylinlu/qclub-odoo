@@ -183,7 +183,7 @@ class TestAccessIsolation(BilliardCase):
             for key, value in cls.__dict__.items()
             if isinstance(value, Field) and (key.startswith("qclub_") or key == "website_id")
         }
-        own_models = OWN_MODELS | {"qclub.deposit.refund", "qclub.booking.settle"}
+        own_models = OWN_MODELS | {"qclub.deposit.refund", "qclub.booking.settle", "qclub.reconciliation"}
         offending = []
         for data in self.env["ir.model.data"].search([("module", "=", "qclub_billiard")]):
             xmlid = f"{data.module}.{data.name}"
