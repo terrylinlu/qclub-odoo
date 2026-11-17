@@ -1,8 +1,8 @@
 # 任务 4.5 验收记录：现场结算（ST-001、ST-005–007）
 
-状态：**验收中**（功能步骤已通过；发现 3 个客户侧展示/样式问题，已确认登记，统一修复后出回归版本）
-版本：`task-4.5-v1`（main @ c357b38，PR #52）
-演示环境：`make demo-reset`（演示库 `qclub_demo`，从 main @ task-4.5-v1 重建）；测试用预约 QB2026-00004~00007 是我通过后台直接创建的、已处于 Arrived 状态的场景数据，留在库里供你复查
+状态：**验收通过**（功能步骤 1-8 通过；发现并修复了 3 个客户侧展示/样式问题，回归版本 `task-4.5-v2` 已验证）
+版本：`task-4.5-v1`（main @ c357b38，PR #52，功能实现）→ `task-4.5-v2`（main @ da508ff，PR #53，修复 v1-01/02/03）
+演示环境：`make demo-reset`（演示库 `qclub_demo`，从 main @ task-4.5-v2 重建）；库里目前只有种子数据自带的 QB2026-00001/00002，之前验收用的手工测试预约已被重建清空
 
 ## 一、验收步骤
 
@@ -23,9 +23,14 @@
 
 | 单号 | 问题 | 规格/依据 | 状态 |
 |---|---|---|---|
-| task-4.5-v1-01 | 客户门户（确认页 `/billiard/booking/confirmation/<name>`，以及邮件模板）的 "Table fee" 始终显示 `booking.table_fee`（预约时的原价），结算（尤其是 Correct Settlement 改价）后不会更新。实测 QB2026-00009：后台 `actual_table_fee=10`（原价 `table_fee=20`），客户确认页仍显示 Table fee: $20.00 | 已确认。设计文档 4.5-settlement.md 只规划了员工/管理员后台的结算字段和操作，没有规划客户门户的展示联动——这是设计遗漏，不是实现偏离设计 | 已确认，待批量修复 |
-| task-4.5-v1-02 | 客户门户/邮件完全没有展示结算后的实际金额（`actual_table_fee`/`balance_amount`/`balance_method`），客户无法知道自己实际被收了多少钱、怎么付的尾款——不管后台怎么改实际付款金额，客户看到的页面都不变 | 已确认，根因与 v1-01 相同：客户门户模板（`views/booking_templates.xml`）、邮件模板都未引用任何结算字段，全代码库搜索 `actual_table_fee`/`balance_amount`/`balance_method` 只出现在后台视图、向导和模型里 | 已确认，待批量修复（建议和 v1-01 一起修：确认页/邮件改成"实际台费 + 已付金额"的展示，done 状态下不再显示原始预约台费作为最终结果） |
-| task-4.5-v1-03 | "My Bookings" 列表（`/my/billiard`）里，"Booked on ..." 一行和右侧 "View booking date / Cancel booking / Find players" 操作区，在不同订单行之间没有对齐，视觉上参差不齐（见你截图的红圈） | 已确认。根因：`my_account_templates.xml` 里 `.o_qclub_booking_details` 用 `display:flex; justify-content:space-between` 把"时间·球桌"段落、"Booked on ..."段落、操作区三个宽度不固定的元素放在同一行分散对齐，再加 `flex-wrap:wrap`；当第一段文字长度随订单内容（球桌名、时间文案长度）变化、或某些行没有 Cancel/Find players 链接导致操作区宽度不同时，三个元素的换行/分布位置就会跟着变，造成逐行视觉不对齐。这是纯 CSS 布局问题，不是数据问题 | 已确认，待批量修复（建议改成固定两栏结构：左边详情、右边操作区各自纵向堆叠，不依赖 space-between 在不定宽元素间分配空间） |
+| task-4.5-v1-01 | 客户门户（确认页 `/billiard/booking/confirmation/<name>`，以及邮件模板）的 "Table fee" 始终显示 `booking.table_fee`（预约时的原价），结算（尤其是 Correct Settlement 改价）后不会更新。实测 QB2026-00009：后台 `actual_table_fee=10`（原价 `table_fee=20`），客户确认页仍显示 Table fee: $20.00 | 已确认。设计文档 4.5-settlement.md 只规划了员工/管理员后台的结算字段和操作，没有规划客户门户的展示联动——这是设计遗漏，不是实现偏离设计 | **已修复**（task-4.5-v2，PR #53）：`state == 'done'` 时改显示 `actual_table_fee` |
+| task-4.5-v1-02 | 客户门户/邮件完全没有展示结算后的实际金额（`actual_table_fee`/`balance_amount`/`balance_method`），客户无法知道自己实际被收了多少钱、怎么付的尾款——不管后台怎么改实际付款金额，客户看到的页面都不变 | 已确认，根因与 v1-01 相同：客户门户模板（`views/booking_templates.xml`）、邮件模板都未引用任何结算字段，全代码库搜索 `actual_table_fee`/`balance_amount`/`balance_method` 只出现在后台视图、向导和模型里 | **已修复**（task-4.5-v2，PR #53）：新增 "Amount paid" 和 "Balance paid via" 展示 |
+| task-4.5-v1-03 | "My Bookings" 列表（`/my/billiard`）里，"Booked on ..." 一行和右侧 "View booking date / Cancel booking / Find players" 操作区，在不同订单行之间没有对齐，视觉上参差不齐（见你截图的红圈） | 已确认。根因：`my_account_templates.xml` 里 `.o_qclub_booking_details` 用 `display:flex; justify-content:space-between` 把"时间·球桌"段落、"Booked on ..."段落、操作区三个宽度不固定的元素放在同一行分散对齐，再加 `flex-wrap:wrap`；当第一段文字长度随订单内容（球桌名、时间文案长度）变化、或某些行没有 Cancel/Find players 链接导致操作区宽度不同时，三个元素的换行/分布位置就会跟着变，造成逐行视觉不对齐。这是纯 CSS 布局问题，不是数据问题 | **已修复**（task-4.5-v2，PR #53）：改成固定两栏结构（`.o_qclub_booking_info` 包住信息段落） |
+
+修复详情见 `docs/design/4.5-fix-v1-01-02-03.md`。`make lint test iso-check` 全绿（291 测试）；新增 HTTP 测试覆盖结算后确认页展示。我在 `task-4.5-v2` 重建后的 demo 里逐条复测：
+- QB2026-00013（结算到 $10，刚好等于已付押金，无尾款）：确认页显示 "Table fee: $10.00"、"Amount paid: $10.00"，无 "Balance paid via"（method 为空时正确不显示）
+- QB2026-00014（backoffice 无押金，结算 $25 全额现金）：确认页显示 "Table fee: $25.00"、"Amount paid: $25.00"、"Balance paid via: Cash"
+- My Bookings 列表截图确认：各行 "Booked on ..." 和操作区都左右对齐一致，不再参差
 
 小瑕疵（不影响功能，不记为 bug）：Settle 时如果没有填写 Reason，chatter 日志会显示 "Reason: . Operator: ..."，这里的句点看起来略怪；纯文案问题，不影响数据正确性。
 
