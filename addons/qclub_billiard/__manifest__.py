@@ -18,6 +18,7 @@
         "views/qclub_booking_views.xml",
         "views/booking_settlement.xml",
         "views/qclub_board_views.xml",
+        "views/reconciliation.xml",
         "views/qclub_menus.xml",
         "views/booking_templates.xml",
         "views/deposit_payment.xml",

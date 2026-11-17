@@ -17,7 +17,7 @@ DEPOSIT_FIELDS = {
     'deposit_state', 'paid_amount', 'paid_at', 'payment_reference', 'paid_transaction_id',
     'payment_attention', 'payment_attention_reason', 'lock_extended',
     'refund_amount', 'refund_at', 'refund_reference', 'refund_reason', 'refund_operator_id',
-    'refund_transaction_id', 'refund_failure',
+    'refund_transaction_id', 'refund_failure', 'cancelled_at',
 }
 
 
@@ -31,6 +31,7 @@ class BookingDeposit(models.Model):
     ], required=True, default='no_deposit', readonly=True, copy=False)
     refund_amount = fields.Monetary(readonly=True, copy=False)
     refund_at = fields.Datetime(readonly=True, copy=False)
+    cancelled_at = fields.Datetime(readonly=True, copy=False, index=True)
     refund_reference = fields.Char(readonly=True, copy=False)
     refund_reason = fields.Char(readonly=True, copy=False)
     refund_operator_id = fields.Many2one('res.users', readonly=True, copy=False)
@@ -253,6 +254,7 @@ class BookingDeposit(models.Model):
                 raise ValidationError(_('An exception refund reason is required.'))
         # Keep QclubBooking.write: it closes board posts and notifies accepted players (BRD-015).
         super().write({'state': 'cancelled'})
+        self._write_deposit({'cancelled_at': fields.Datetime.now()})
         if outcome['kind'] == 'refund' or exception_refund:
             self._write_deposit({
                 'refund_reason': 'Exception refund: ' + reason.strip() if exception_refund else 'Free cancellation',

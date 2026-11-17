@@ -38,3 +38,5 @@ from . import test_no_show
 from . import test_cfg_notify_toggle
 
 from . import test_settlement
+
+from . import test_reconciliation

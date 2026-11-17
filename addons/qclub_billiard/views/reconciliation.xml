@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="qclub_reconciliation_form" model="ir.ui.view">
+        <field name="name">qclub.reconciliation.form</field>
+        <field name="model">qclub.reconciliation</field>
+        <field name="arch" type="xml">
+            <form string="Daily Reconciliation" edit="false" delete="false">
+                <sheet>
+                    <group>
+                        <field name="website_id" domain="[('company_id', 'in', context.get('allowed_company_ids', []))]"
+                               options="{'no_create': True}"/>
+                        <field name="business_date"/>
+                        <field name="currency_id" invisible="1"/>
+                        <field name="company_id" invisible="1"/>
+                    </group>
+                    <group col="3" string="Funds events">
+                    <label for="deposits_received" string="Deposits received"/>
+                    <field name="deposits_received" nolabel="1"/>
+                    <button name="action_view_deposits_received" type="object" string="View"/>
+                    <label for="deposits_refunded" string="Deposits refunded"/>
+                    <field name="deposits_refunded" nolabel="1"/>
+                    <button name="action_view_deposits_refunded" type="object" string="View"/>
+                    <label for="deposits_applied" string="Deposits applied"/>
+                    <field name="deposits_applied" nolabel="1"/>
+                    <button name="action_view_deposits_applied" type="object" string="View"/>
+                    <label for="cancellation_forfeited" string="Cancellation forfeitures"/>
+                    <field name="cancellation_forfeited" nolabel="1"/>
+                    <button name="action_view_cancellation_forfeited" type="object" string="View"/>
+                    <label for="no_show_forfeited" string="No-show forfeitures"/>
+                    <field name="no_show_forfeited" nolabel="1"/>
+                    <button name="action_view_no_show_forfeited" type="object" string="View"/>
+                    <label for="eftpos" string="On-site EFTPOS"/>
+                    <field name="eftpos" nolabel="1"/>
+                    <button name="action_view_eftpos" type="object" string="View"/>
+                    <label for="cash" string="On-site cash"/>
+                    <field name="cash" nolabel="1"/>
+                    <button name="action_view_cash" type="object" string="View"/>
+                    <label for="settlement_retained" string="Settlement difference retained"/>
+                    <field name="settlement_retained" nolabel="1"/>
+                    <button name="action_view_settlement_retained" type="object" string="View"/>
+                    </group>
+                    <group string="Self-check 1: received − refunds − applied − forfeitures = outstanding net change">
+                        <field name="check1_left" string="Events net total"/>
+                        <field name="check1_right" string="Outstanding deposit net change"/>
+                        <field name="check1_ok" string="Balanced" decoration-success="check1_ok" decoration-danger="not check1_ok"/>
+                        <div class="text-success" invisible="not check1_ok">Balanced</div>
+                        <div class="text-danger" invisible="check1_ok">Unbalanced. Please reconcile manually</div>
+                    </group>
+                    <group string="Self-check 2: actual fees + retained difference = applied + EFTPOS + cash">
+                        <field name="settled_fee_total" string="Actual table fees"/>
+                        <field name="check2_left" string="Fees plus retained difference"/>
+                        <field name="check2_right" string="Applied plus on-site receipts"/>
+                        <field name="check2_ok" string="Balanced" decoration-success="check2_ok" decoration-danger="not check2_ok"/>
+                        <div class="text-success" invisible="not check2_ok">Balanced</div>
+                        <div class="text-danger" invisible="check2_ok">Unbalanced. Please reconcile manually</div>
+                    </group>
+                </sheet>
+                <footer>
+                    <button name="action_export_xlsx" type="object" string="Export Excel" class="btn-primary"/>
+                    <button string="Close" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+    <record id="qclub_reconciliation_action" model="ir.actions.act_window">
+        <field name="name">Daily Reconciliation</field>
+        <field name="res_model">qclub.reconciliation</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>
