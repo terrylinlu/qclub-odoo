@@ -161,7 +161,12 @@
         border-color: #dee2e6;
         color: #495057 !important;
     }
-    .o_qclub_booking_details { flex-wrap: wrap; }
+    .o_qclub_booking_details {
+        align-items: flex-start;
+        flex-wrap: wrap;
+        gap: 0.25rem 1rem;
+    }
+    .o_qclub_booking_info { min-width: 0; }
     .o_qclub_row_actions { font-size: 0.875rem; }
     .o_qclub_user_text { white-space: pre-wrap; }
 }

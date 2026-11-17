@@ -2,6 +2,7 @@ from datetime import timedelta
 from unittest.mock import patch
 
 from freezegun import freeze_time
+from lxml import html
 from odoo import Command, fields, http
 from odoo.tests import tagged
 from odoo.tests.common import new_test_user
@@ -71,6 +72,67 @@ class TestDepositHttp(PaymentHttpCommon):
         response = self.url_open(self.route, json={'jsonrpc': '2.0', 'id': 1,
                                                   'method': 'call', 'params': self.params})
         self.assertTrue(response.status_code != 200 or 'error' in response.json())
+
+    def test_st_005_st_006_st_007_confirmation_settlement_and_correction(self):
+        """task-4.5-v1-01/02: show settled charges and actual receipts to the owner."""
+        self.authenticate(self.owner.login, 'offline')
+        page = self.url_open(self.path)
+        self.assertEqual(page.status_code, 200)
+        self.assertIn('20.00', page.text)
+        self.assertIn('Deposit:', page.text)
+        self.assertNotIn('Amount paid:', page.text)
+        manager = new_test_user(
+            self.env, login='settlement-http-manager',
+            groups='qclub_billiard.group_billiard_manager',
+            company_id=self.qclub.company_id.id,
+            company_ids=[Command.set(self.qclub.company_id.ids)],
+        )
+        tx = self.env['payment.transaction'].create({
+            'provider_id': self.provider.id, 'payment_method_id': self.payment_method.id,
+            'partner_id': self.owner.partner_id.id, 'amount': self.booking.deposit_amount,
+            'currency_id': self.booking.currency_id.id, 'operation': 'online_redirect',
+            'qclub_booking_id': self.booking.id,
+        })
+        tx._set_done()
+        tx._post_process()
+        with freeze_time(self.booking.start):
+            self.booking.with_user(manager).action_arrive()
+        for correction, fee, method, expected_paid in (
+            (False, 35, 'eftpos', '35.00'),
+            (True, 15, 'cash', '15.00'),
+            (True, 5, False, '10.00'),
+        ):
+            with self.subTest(correction=correction, fee=fee):
+                booking = self.booking.with_user(manager)
+                action = booking.action_correct_settlement() if correction else booking.action_settle()
+                wizard = self.env[action['res_model']].with_user(manager).with_context(
+                    **action['context']).create({
+                        'actual_table_fee': fee, 'method': method, 'reason': 'HTTP regression charge',
+                    })
+                if correction:
+                    wizard.action_confirm_correction()
+                else:
+                    wizard.action_confirm_settlement()
+                self.assertEqual(self.booking.state, 'done')
+                self.assertEqual(self.booking.deposit_state, 'applied')
+                self.env.flush_all()
+                page = self.url_open(self.path)
+                self.assertEqual(page.status_code, 200)
+                self.assertIn(f'{fee:.2f}', page.text)
+                self.assertNotIn('20.00', page.text)
+                document = html.fromstring(page.content)
+                table_fee = document.xpath("//p[starts-with(normalize-space(.), 'Table fee:')]")
+                self.assertEqual(len(table_fee), 1)
+                self.assertTrue(table_fee[0].text_content().strip().endswith(f'{fee:.2f}'))
+                paid = document.xpath("//p[starts-with(normalize-space(.), 'Amount paid:')]")
+                self.assertEqual(len(paid), 1)
+                self.assertIn(expected_paid, paid[0].text_content())
+                self.assertNotIn('Deposit:', page.text)
+                if method:
+                    self.assertIn('Balance paid via:', page.text)
+                    self.assertIn('EFTPOS' if method == 'eftpos' else 'Cash', page.text)
+                else:
+                    self.assertNotIn('Balance paid via:', page.text)
 
     def test_pay_003_booking_routes_include_payment_override(self):
         # Exercise Odoo's real controller-leaf selection and routing metadata merging.
