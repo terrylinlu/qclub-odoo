@@ -66,6 +66,6 @@
         <field name="name">Daily Reconciliation</field>
         <field name="res_model">qclub.reconciliation</field>
         <field name="view_mode">form</field>
-        <field name="target">new</field>
+        <field name="target" eval="False"/>
     </record>
 </odoo>
