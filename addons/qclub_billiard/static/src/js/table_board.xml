@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="qclub_billiard.TableBoard">
+        <div class="o_qclub_table_board p-4 h-100 overflow-auto">
+            <h1 class="h3 mb-4">Table Board</h1>
+            <div t-if="state.loading" class="text-muted">Loading tables…</div>
+            <div t-if="state.error" class="alert alert-warning" role="alert" t-esc="state.error"/>
+            <div t-if="!state.loading and !state.error and !state.tables.length" class="text-muted">No enabled tables.</div>
+            <div class="row g-3" role="list" aria-label="Current table occupancy">
+                <div t-foreach="state.tables" t-as="table" t-key="table.id"
+                     class="col-12 col-sm-6 col-lg-4 col-xl-3" role="listitem">
+                    <article t-att-data-table-id="table.id"
+                             t-att-class="'card h-100 border-2 ' + (table.booking ? 'border-warning' : 'border-success')">
+                        <div class="card-body">
+                            <div class="text-muted small" t-esc="table.website_name"/>
+                            <h2 class="h5" t-esc="table.name"/>
+                            <strong t-if="!table.booking" class="text-success">Free</strong>
+                            <t t-else="">
+                                <strong class="text-warning">Occupied</strong>
+                                <div class="mt-2" t-esc="table.booking.name"/>
+                                <div t-esc="table.booking.customer"/>
+                                <div>Ends <t t-esc="endLabel(table.booking.end)"/></div>
+                            </t>
+                        </div>
+                    </article>
+                </div>
+            </div>
+        </div>
+    </t>
+</templates>

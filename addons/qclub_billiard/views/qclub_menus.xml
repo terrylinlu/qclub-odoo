@@ -59,4 +59,11 @@
     <menuitem id="menu_billiard_reconciliation" name="Daily Reconciliation"
               parent="menu_billiard_root" action="qclub_reconciliation_action"
               groups="group_billiard_staff" sequence="25"/>
+    <record id="qclub_table_board_action" model="ir.actions.client">
+        <field name="name">Table Board</field>
+        <field name="tag">qclub_table_board</field>
+    </record>
+    <menuitem id="menu_billiard_table_board" name="Table Board"
+              parent="menu_billiard_root" action="qclub_table_board_action"
+              groups="group_billiard_staff" sequence="26"/>
 </odoo>

@@ -72,6 +72,11 @@ def ensure_user(login, name, group_xmlids):
 
 # 任务 1.1：demo-staff 加入 Billiard Staff 组（只读桌台和配置）
 ensure_user("demo-staff", "[Demo] Staff Wang", ["base.group_user", "qclub_billiard.group_billiard_staff"])
+# RT-006: a second employee can independently verify simultaneous broadcasts.
+ensure_user("demo-staff-realtime", "[Demo] Realtime Staff", [
+    "base.group_user", "qclub_billiard.group_billiard_staff",
+])
+ensure_user("demo-customer-realtime", "[Demo] Realtime Customer", ["base.group_portal"])
 ensure_user("demo-customer-a", "[Demo] Customer A", ["base.group_portal"])
 ensure_user("demo-customer-b", "[Demo] Customer B", ["base.group_portal"])
 ensure_user("demo-customer-c", "[Demo] Customer C", ["base.group_portal"])
@@ -84,8 +89,8 @@ ensure_user("demo-aushare-staff", "[Demo] AUSHARE Staff", [
     "base.group_user", "qclub_billiard.group_billiard_staff",
 ])
 for login in ("demo-staff", "demo-customer-a", "demo-customer-b", "demo-customer-c",
-              *PAYMENT_CUSTOMERS, "demo-aushare-staff"):
-    company = tab if login in ("demo-staff", "demo-customer-c") else aushare.company_id
+              *PAYMENT_CUSTOMERS, "demo-aushare-staff", "demo-staff-realtime", "demo-customer-realtime"):
+    company = tab if login in ("demo-staff", "demo-staff-realtime", "demo-customer-c") else aushare.company_id
     Users.search([("login", "=", login)], limit=1).write({
         "company_id": company.id, "company_ids": [(6, 0, company.ids)],
     })
@@ -99,7 +104,7 @@ config.write({
     "booking_email_from": "Q Club Demo <bookings@qclub.localhost>",
     "contact_phone": "08 0000 0000", "contact_email": "contact@qclub.localhost",
 })
-for login in ("demo-customer-a", "demo-customer-b", "demo-customer-c", *PAYMENT_CUSTOMERS):
+for login in ("demo-customer-a", "demo-customer-b", "demo-customer-c", "demo-customer-realtime", *PAYMENT_CUSTOMERS):
     Users.search([("login", "=", login)], limit=1).partner_id.email = login + "@qclub.localhost"
 # 任务 2.1：仅演示库的 Q Club 菜单，模块数据本身不创建网站菜单。
 Menu = env["website.menu"]
