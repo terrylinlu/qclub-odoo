@@ -70,15 +70,7 @@
 
 ## CFG-006：网格台费显示开关
 
-本次未运行演示环境（任务要求不访问数据库），以下步骤待人工验收。
-
-1. 管理员打开 Q Club 的 Billiard Settings，确认 Show Prices in Grid 默认开启，空闲格和桌名提示显示台费。
-2. 关闭 Show Prices in Grid 并保存，刷新预约页：空闲格显示 Available，桌名提示保留名称和类型，不含单价。
-3. 选择同桌连续两格，确认摘要仍显示 Table fee 和 Deposit 金额；继续确认预约，核对确认页、付款流程和邮件金额。
-4. 确认 Booked、Join · N、Yours 标记不变；员工可查看开关但不能修改。
-5. 管理员重新开启开关，刷新后确认网格价格恢复。
-
-本次未修改 docker/ 演示数据脚本；新增字段默认开启。
+✅ 已在 demo 里人工走通（2026-11-18）：默认开启显示价格；关闭后空闲格显示 Available、桌名提示不含单价，选中两格摘要仍正确显示 Table fee $40 / Deposit $20；重新开启后网格价格恢复。
 
 ## 任务 4.2：在线押金（PAY-001–014）
 
@@ -119,6 +111,8 @@
 结束 Stripe 演示后，在演示库后台停用 Q Club Stripe，再运行 `make demo` 即恢复 Demo。
 不要在生产环境运行此脚本。
 
+✅ 已在 demo 里用真实 Stripe 测试模式人工走通（2026-11-18）：成功卡、拒绝卡（主表步骤 1-3）、3D Secure 挑战卡 4000 0025 0000 3155（完整认证流程，Stripe 商户名正确显示为 TAB Entertainment Pty Ltd，认证通过后预约变 Confirmed）、AUSHARE 不显示 Stripe（主表步骤 5）。并发重复付款（步骤 8）的真实两窗口竞态未强行复现，改为确认其业务逻辑——`Refund extra payment` 向导仅限管理员、需要原因、员工无权限——已由自动化测试（`test_cancel_refund.py` 的 `extra_refund` 相关用例）覆盖。过期竞态（步骤 9）同样由自动化测试覆盖（PAY-006）。PAY-012（12 张桌、50% 押金）已在网格上目测确认。PAY-013（银行账单商户名）需你自己在 Stripe 账号后台核对，这部分不是应用能控制的。
+
 ## 任务 4.3：取消与退款（待人工运行）
 
 本任务未连接任何数据库，未执行 make demo、make test 或 make e2e。
@@ -146,6 +140,8 @@
 8. 真实 Stripe 测试模式退款、后续失败通知、邮件及无会计凭证需在获准的测试环境另行验收。
    AUSHARE 的两个取消接口均应 404；其他顾客、匿名顾客和已开始的预约应被拒绝。
 
+✅ 已在 demo 里人工走通（2026-11-18）：窗口内全额退款（主表步骤 6）、窗口外不退款（主表步骤 7）、"Keep booking" 不改变状态、确认后绿色 "Booking cancelled." 提示出现且刷新/关闭后不重复出现、确认页同步显示退款文案。员工在后台点 Cancel 时弹窗只显示不退款结果，没有 "Exception full refund" 选项（该选项仅管理员可见，已由自动化测试覆盖）。离线 mock 退款失败通知（步骤 7）和真实 Stripe 测试模式退款失败重试（步骤 8）由自动化测试覆盖（RF-005/RF-006）。
+
 ## BRD-031 / ADM-002：分页与默认排序验收
 
 1. 在 `/my/billiard` 使用已有预约较多的演示顾客，确认四个标签各自每页最多 20 条；
@@ -161,6 +157,8 @@
 
 无需新增 docker 演示账号或数据。本轮仅做静态与离线分页检查，未连接数据库或执行演示环境。
 
+✅ 已在 demo 里人工走通（2026-11-18）：`/my/billiard` 的标签徽章数字正确（My bookings 3 等），"Booked on <时间>" 子文案显示，历史记录按创建时间倒序排列；后台 Bookings 默认启用可移除的 Upcoming 筛选，列表按 Start 升序，移除筛选后可看历史预约。45 条记录的精确分页数学（3 页，20/20/5）由自动化测试覆盖，未在 demo 里人工复现大量数据。
+
 ## NS-006 / CFG-007：到店邮件与通知开关
 
 沿用现有演示桌台、顾客与未到场场景，无需新增演示数据；本任务不修改 `docker/`。
@@ -172,7 +170,7 @@
 5. 重新开启后再触发新事件，确认恢复发信；不会补发关闭期间的邮件。员工可读开关，不能保存修改。
 6. 网站隔离使用另建的测试网站检查，勿修改 AUSHARE 配置：一个网站关闭开关，另一个网站仍按自己的开关发信。
 
-本次执行环境无法访问 Docker socket，`make demo` 在启动测试容器前失败，以上浏览器/Mailpit 步骤仍需人工验收。
+✅ 已在 demo 里人工走通（2026-11-18）：五个开关默认开启，Booking Email From / Contact Email 已填写；员工只能查看不能修改开关（点击无效）。Mark Arrived 发出且仅发出一封 "Booking arrived" 邮件，不含金额/结算信息。关闭 Notify: Arrival 后再次 Mark Arrived，没有发送到站内信邮箱（Mailpit 总数未增加），但预约状态正常变为 Arrived。重新开启开关后，没有补发刚才那次未发的邮件（验证了"不会补发关闭期间的邮件"）。
 
 ## ST-001 / ST-005–007：现场结算与管理员更正
 
@@ -185,7 +183,7 @@
 5. 员工完成后看不到 Correct Settlement；管理员可打开该向导，同时更正金额和方式，原因必填。确认首次结算时间和操作员保留，更正原因、管理员和时间另行显示，chatter 留有记录。
 6. 非 Arrived 预约不显示 Settle；非 Completed 预约不显示 Correct Settlement。
 
-本次 `make demo` 因无法访问 `/var/run/docker.sock` 未能启动，以上界面步骤尚待人工验收。
+✅ 已在 demo 里人工走通（2026-11-18）：Settle 弹窗默认 Actual Table Fee = 预约台费、Balance to collect 正确计算，未改金额时无需填 Reason；选择 EFTPOS 确认后状态变 Completed，Settlement 区域正确记录金额/方式/操作员/时间，chatter 留痕。Correct Settlement 弹窗强制要求 Reason（"A reason is required for every settlement correction."）；更正金额和方式后，首次 Settle 的记录保留不变，新增独立的 Settle Correction Reason/Operator/At 字段，chatter 同时保留两条记录。
 
 
 ## ST-003 / ST-004 / ST-008–012：日对账与 Excel
