@@ -1,6 +1,6 @@
 # qclub_billiard 需求规格：阶段 5（员工日常：实时看板与到店提醒）
 
-放置路径：`docs/spec/phase5.md`　状态：**草案，待你评审**（2026-11-18 起草，等待批准后定稿）
+放置路径：`docs/spec/phase5.md`　状态：**已定稿**（2026-11-18 起草，当天评审通过）
 每条需求必须有至少一个测试，测试名或 docstring 中带编号（如 `test_rt_001_board_shows_occupancy`）。
 本阶段新增前缀 **RT**（Real-Time，第 A、B 节）；定稿后加入 `tools/make_report.py` 的覆盖检查。
 界面文字为英语，示例文字以本文件为准。范围仅限 Q Club 网站（billiard 模块专属功能，不涉及 AUSHARE）。
