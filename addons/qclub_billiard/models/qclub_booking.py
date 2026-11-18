@@ -10,6 +10,7 @@ from odoo import _, api, fields, models
 from odoo.exceptions import UserError, ValidationError
 from odoo.tools import SQL
 
+from .qclub_realtime import notify_alert, notify_board
 from .qclub_opening_hours import BUSINESS_DAY_CUTOFF, BUSINESS_TZ, business_date_of_utc, business_today
 
 _logger = logging.getLogger(__name__)
@@ -560,6 +561,10 @@ class QclubBooking(models.Model):
                 bookings._check_slot()
                 bookings._check_future()
                 bookings.flush_recordset()
+                for booking in bookings:
+                    notify_board(self.env, booking)
+                    if booking.booking_channel == "online":
+                        notify_alert(self.env, booking, "booking_submitted")
                 return bookings
         except ExclusionViolation as error:
             raise BookingConflict(_(
@@ -580,6 +585,7 @@ class QclubBooking(models.Model):
             raise ValidationError(_("Booking end, business date and amounts are calculated automatically."))
         try:
             with self.env.cr.savepoint():
+                old_tables = {booking.id: booking.table_id for booking in self}
                 slot_changed = bool({"start", "duration_hours", "table_id"}.intersection(vals))
                 board_changed_ids = []
                 if slot_changed:
@@ -634,6 +640,17 @@ class QclubBooking(models.Model):
                             posts._notify_accepted("closed")
                         elif slot_changed:
                             posts.filtered(lambda post: post.booking_id.id in board_changed_ids)._notify_accepted("changed")
+                if slot_changed or "state" in vals:
+                    for booking in self:
+                        old_table = old_tables[booking.id]
+                        if old_table != booking.table_id:
+                            # Invalidate the original tile as well when a booking moves.
+                            self.env['bus.bus']._sendone(
+                                (self.env.cr.dbname, 'qclub.staff', old_table.website_id.id),
+                                'qclub.board_update',
+                                {'table_id': old_table.id, 'booking_id': booking.id, 'state': booking.state},
+                            )
+                        notify_board(self.env, booking)
                 return result
         except ExclusionViolation as error:
             raise BookingConflict(_(

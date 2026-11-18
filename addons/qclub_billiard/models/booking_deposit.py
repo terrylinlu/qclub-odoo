@@ -9,6 +9,7 @@ from odoo.exceptions import AccessError, ValidationError
 from odoo.tools import SQL
 from odoo.tools.misc import format_amount
 
+from .qclub_realtime import notify_alert, notify_board
 from .qclub_booking import BookingConflict, QclubBooking
 
 _logger = logging.getLogger(__name__)
@@ -89,7 +90,11 @@ class BookingDeposit(models.Model):
 
     def _write_deposit(self, vals):
         """Private server-only write. No RPC-settable context flag bypasses protection."""
-        return super(QclubBooking, self).write(vals)
+        result = super(QclubBooking, self).write(vals)
+        if 'state' in vals:
+            for booking in self:
+                notify_board(self.env, booking)
+        return result
 
     def action_confirm(self):
         result = super().action_confirm()
@@ -155,6 +160,8 @@ class BookingDeposit(models.Model):
                 })
                 self.message_post(body=_('Deposit received: %s', tx.reference))
                 self._queue_deposit_email('confirmed')
+                notify_board(self.env, self)
+                notify_alert(self.env, self, 'deposit_confirmed')
         else:
             self._refund_unavailable_deposit(tx)
         self._refresh_payment_attention()
@@ -266,6 +273,7 @@ class BookingDeposit(models.Model):
         note = _('Exception full refund requested.') if exception_refund else outcome['text']
         self.sudo().message_post(body=_('Booking cancelled. %s', note))
         self._queue_cancellation_email()
+        notify_alert(self.env, self, 'cancelled')
         return True
 
     def action_cancel(self):

@@ -27,6 +27,9 @@
     "assets": {
         "web.assets_backend": [
             "qclub_billiard/static/src/js/booking_conflict_dialog.js",
+            "qclub_billiard/static/src/js/staff_alert_systray.js",
+            "qclub_billiard/static/src/js/table_board.js",
+            "qclub_billiard/static/src/js/table_board.xml",
         ],
         "web.assets_frontend": [
             "qclub_billiard/static/src/interactions/booking_grid.js",

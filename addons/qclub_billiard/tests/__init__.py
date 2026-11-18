@@ -40,3 +40,5 @@ from . import test_cfg_notify_toggle
 from . import test_settlement
 
 from . import test_reconciliation
+
+from . import test_realtime

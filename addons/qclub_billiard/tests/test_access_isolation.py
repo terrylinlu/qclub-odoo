@@ -21,7 +21,7 @@ PORTAL_MODELS = OWN_MODELS - {
 DATA_MODELS = OWN_MODELS | {
     "ir.model", "ir.model.fields", "ir.model.constraint", "ir.model.access", "ir.rule",
     "res.groups", "res.groups.privilege", "ir.ui.view", "ir.ui.menu", "ir.actions.act_window",
-    "ir.sequence", "ir.cron", "ir.actions.server", "ir.model.fields.selection",
+    "ir.sequence", "ir.cron", "ir.actions.server", "ir.actions.client", "ir.model.fields.selection",
 }
 # Any future core extension must be listed here with a reason and reviewed explicitly.
 CORE_EXTENSION_ALLOWLIST = frozenset()
@@ -249,6 +249,18 @@ class TestAccessIsolation(BilliardCase):
                             key in own_fields
                             or (key in metadata and cls.__dict__[key] == metadata[key])
                             or (callable(cls.__dict__[key]) and (key in overrides or key.startswith("_qclub")))
+                        )]
+                        if not attributes:
+                            continue
+                    elif name == "ir.websocket":
+                        metadata = {
+                            "_inherit": ["ir.websocket"], "_name": "ir.websocket",
+                            "_module": "qclub_billiard", "_field_definitions": [],
+                            "_table_object_definitions": [],
+                        }
+                        attributes = [key for key in attributes if not (
+                            (key in metadata and cls.__dict__[key] == metadata[key])
+                            or (key == "_build_bus_channel_list" and callable(cls.__dict__[key]))
                         )]
                         if not attributes:
                             continue

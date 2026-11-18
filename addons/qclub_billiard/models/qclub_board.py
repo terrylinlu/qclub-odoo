@@ -5,6 +5,8 @@ import logging
 from odoo import _, api, fields, models
 from odoo.exceptions import AccessError, ValidationError
 
+from .qclub_realtime import notify_alert
+
 _logger = logging.getLogger(__name__)
 
 BOARD_DISPLAY_NAME = "Q Club Player"
@@ -306,6 +308,8 @@ class BoardApplication(models.Model):
         self.write({"state": target})
         if action != "withdraw":
             self.post_id._queue_email(target, self.partner_id, self.post_id.partner_id)
+        if action == "accept":
+            notify_alert(self.env, self.post_id.booking_id, "player_joined")
 
 
 class BoardReport(models.Model):

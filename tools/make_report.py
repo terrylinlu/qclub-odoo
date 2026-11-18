@@ -3,7 +3,7 @@
 
 约定：测试方法名包含小写需求编号，如 test_bk_004_overlap_rejected 对应需求 BK-004。
 环境变量：
-  SPEC_PREFIXES  参与覆盖检查的编号前缀，默认 CFG,TBL,BK,WEB,SEC,ISO,ADM,BRD,CO,PAY,RF,NS,ST（DEMO 由演示验收检验）
+  SPEC_PREFIXES  参与覆盖检查的编号前缀，默认 CFG,TBL,BK,WEB,SEC,ISO,ADM,BRD,CO,PAY,RF,NS,ST,RT（DEMO 由演示验收检验）
   STRICT=1       存在未覆盖需求或失败测试时返回非零退出码（CI 在阶段 1 完成后开启）
 """
 import datetime
@@ -14,7 +14,7 @@ import sys
 import xml.etree.ElementTree as ET
 
 REPORTS = "docs/reports"
-PREFIXES = set(os.environ.get("SPEC_PREFIXES", "CFG,TBL,BK,WEB,SEC,ISO,ADM,BRD,CO,PAY,RF,NS,ST").split(","))
+PREFIXES = set(os.environ.get("SPEC_PREFIXES", "CFG,TBL,BK,WEB,SEC,ISO,ADM,BRD,CO,PAY,RF,NS,ST,RT").split(","))
 STRICT = os.environ.get("STRICT") == "1"
 ROW = re.compile(r"^\|\s*([A-Z]{2,4}-\d{3})\s*\|\s*(.*?)\s*\|\s*$")
 TID = re.compile(r"(?:^|_)([a-z]{2,4})_(\d{3})(?=_|$)")
@@ -95,7 +95,11 @@ def main():
             "- [ ] 目测 AUSHARE 网站：页面、产品、邮件均无变化",
             "- [ ] 手机浏览器上预约网格的显示和操作",
             "- [ ] 周五/周六跨午夜时段的预约，在页面、邮件上的文案是否清楚",
-            "- [ ] 员工实际收到新预约通知"]
+            "- [ ] 员工实际收到新预约通知",
+            "- [ ] RT-002/004：两个独立浏览器上下文验证看板增量刷新和四类 toast",
+            "- [ ] RT-006：两名员工同时收到提醒，断线期间的提醒重连后不补发",
+            "- [ ] RT-007：不同公司员工频道隔离，同公司多网站按现有权限订阅",
+            "- [ ] WebSocket 握手失败时，Table Board 仍显示初次 RPC 快照"]
     os.makedirs(REPORTS, exist_ok=True)
     path = os.path.join(REPORTS, "report.md")
     with open(path, "w", encoding="utf-8") as fh:
