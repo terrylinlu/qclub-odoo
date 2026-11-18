@@ -1,7 +1,13 @@
 # 阶段 5 演示脚本
 
 对应 RT-001–007。运行 `make demo` 后，用 Chrome 或 Edge 打开三个互相独立的浏览器上下文。
-本次实现环境的 Docker socket 拒绝访问，`make demo` 启动与下列人工步骤待验收。
+
+✅ 已在 demo 里人工走通（2026-11-19，Claude 验收）：步骤 1-7、9、10 全部实测通过。步骤 8（未到场自动没收触发看板刷新）
+与步骤 11（WebSocket 握手失败时的静态快照降级）受限于浏览器工具（无法精确控制定时任务时序、无法可靠模拟网络层断连），
+未独立复现；这两步底层机制（notify_board 挂在同一个 `_write_deposit` 状态变更钩子上、`table_board.js` 的 onMounted
+无条件做初次 RPC）已走读代码确认，且步骤 8 的业务逻辑由自动化测试 `test_rt_002_arrival_settlement_no_show_refresh_without_alert`
+覆盖。步骤 9 是在验证步骤 10（AUSHARE 隔离）时顺带验证的：员工 A 登出改用 AUSHARE 账号期间，顾客在 Q Club 新建了一笔预约
+（QB2026-00022），员工 A 重新登录后看板只显示当前快照，没有补发错过的 toast。
 
 | 上下文 | 入口与账号 | 用途 |
 |---|---|---|
@@ -29,5 +35,6 @@
 每条 toast 仅含预约编号、桌台、时段和事件。核对其中没有金额、支付方式、电话或邮箱。
 多网站属于同一公司的场景按已确认方案共享该公司的员工访问权限，员工订阅该公司下可访问的网站频道。
 
-自动验证入口为 `make lint test iso-check`，另有前端契约测试 `node --experimental-vm-modules tools/test_realtime_frontend.mjs`。
-当前没有新增两个浏览器上下文的 Playwright 实时用例。当前环境无法启动 Odoo 或验证 WebSocket，跨上下文时序与测试数据清理尚未实测，浏览器验收按本脚本记录。
+自动验证入口为 `make lint test iso-check`（314 个测试全绿），另有前端契约测试 `node --experimental-vm-modules tools/test_realtime_frontend.mjs`（4 个全过）。
+当前没有新增两个浏览器上下文的 Playwright 实时用例；Claude 本轮验收时 Chrome 扩展（员工 B 的独立会话）未连上，改为单浏览器顺序验证（同一账号在 localhost 域共享 cookie，无法同时登录两个不同后台用户），
+员工 A 收到 toast 的内容和时机均已实测确认；"A、B 同时收到"这一点未用两个真正独立的会话同时验证过，留给你用两台设备或两个不同浏览器再确认一次。
