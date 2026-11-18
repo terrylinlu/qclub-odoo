@@ -16,6 +16,15 @@ from .test_cancel_refund import TestCancelRefund
 @tagged('post_install', '-at_install')
 @freeze_time('2026-11-01 00:00:00')
 class TestReconciliation(TestCancelRefund):
+    def test_st_008_reconciliation_display_name(self):
+        wizard = self.env['qclub.reconciliation'].with_user(self.staff).with_context(lang='en_US')
+        saved = self._report().with_context(lang='en_US')
+
+        for report in (wizard.new({}), saved):
+            self.assertNotIn('NewId', report.display_name)
+            self.assertNotIn('qclub.reconciliation', report.display_name)
+            self.assertEqual(report.display_name, 'Daily Reconciliation')
+
     def _report(self, day=date(2026, 11, 6), website=None, user=None):
         return self.env['qclub.reconciliation'].with_user(user or self.staff).create({
             'website_id': (website or self.qclub).id, 'business_date': day,

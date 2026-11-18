@@ -60,6 +60,11 @@ class QclubReconciliation(models.TransientModel):
     check2_left = fields.Monetary(compute='_compute_totals')
     check2_right = fields.Monetary(compute='_compute_totals')
 
+    @api.depends_context('lang')
+    def _compute_display_name(self):
+        for report in self:
+            report.display_name = _("Daily Reconciliation")
+
     def _check_report_access(self):
         self.ensure_one()
         user = self.env.user
