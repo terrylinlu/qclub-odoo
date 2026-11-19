@@ -14,6 +14,34 @@ const defer = () => {
 };
 const tick = () => new Promise((done) => setImmediate(done));
 
+test('test_rt_010_board_booking_entries_open_the_matching_form', async () => {
+    const frontend = await loadFrontend();
+    const calls = [];
+    frontend.setServices({
+        qclub_realtime: new EventBus(),
+        action: { doAction: (action) => calls.push(action) },
+    });
+    const board = new frontend.namespaces[1].TableBoard();
+    board.setup();
+
+    const template = await readFile(
+        new URL('../addons/qclub_billiard/static/src/js/table_board.xml', import.meta.url), 'utf8',
+    );
+    const handlers = [...template.matchAll(/<button\b[^>]*t-on-click="([^"]+)"/g)];
+    assert.equal(handlers.length, 2);
+    const scope = { table: { booking: { id: 41 } }, slot: { id: 72 }, openBooking: board.openBooking.bind(board) };
+    for (const [, handler] of handlers) {
+        vm.runInNewContext(`(${handler})()`, scope);
+    }
+    assert.deepEqual(JSON.parse(JSON.stringify(calls)), [72, 41].map((id) => ({
+        type: 'ir.actions.act_window',
+        res_model: 'qclub.booking',
+        res_id: id,
+        views: [[false, 'form']],
+        target: 'current',
+    })));
+});
+
 async function loadFrontend() {
     const services = new Map();
     const components = new Map();

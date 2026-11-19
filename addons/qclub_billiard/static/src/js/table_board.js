@@ -9,6 +9,7 @@ export class TableBoard extends Component {
     static props = ["*"];
 
     setup() {
+        this.action = useService("action");
         this.orm = useService("orm");
         this.realtime = useService("qclub_realtime");
         this.state = useState({ tables: [], loading: true, error: false });
@@ -36,6 +37,16 @@ export class TableBoard extends Component {
                 this.state.error = "Could not load Table Board. Refresh to try again.";
                 console.error(error);
             }
+        });
+    }
+
+    openBooking(id) {
+        return this.action.doAction({
+            type: "ir.actions.act_window",
+            res_model: "qclub.booking",
+            res_id: id,
+            views: [[false, "form"]],
+            target: "current",
         });
     }
 

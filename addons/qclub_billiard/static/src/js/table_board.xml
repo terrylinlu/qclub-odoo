@@ -19,17 +19,23 @@
                                 <div t-if="table.upcoming.length" class="mt-2 small">
                                     <div class="text-muted">Remaining today</div>
                                     <ul class="list-unstyled mb-0">
-                                        <li t-foreach="table.upcoming" t-as="slot" t-key="slot.start">
-                                            <t t-esc="timeLabel(slot.start)"/> – <t t-esc="timeLabel(slot.end)"/>
+                                        <li t-foreach="table.upcoming" t-as="slot" t-key="slot.id">
+                                            <button type="button" class="btn btn-link p-0 small"
+                                                    t-on-click="() => openBooking(slot.id)">
+                                                <t t-esc="timeLabel(slot.start)"/> – <t t-esc="timeLabel(slot.end)"/>
+                                            </button>
                                         </li>
                                     </ul>
                                 </div>
                             </t>
                             <t t-else="">
                                 <strong class="text-warning">Occupied</strong>
-                                <div class="mt-2" t-esc="table.booking.name"/>
-                                <div t-esc="table.booking.customer"/>
-                                <div>Ends <t t-esc="timeLabel(table.booking.end)"/></div>
+                                <button type="button" class="btn btn-link d-block mt-2 p-0 text-start"
+                                        t-on-click="() => openBooking(table.booking.id)">
+                                    <span class="d-block" t-esc="table.booking.name"/>
+                                    <span class="d-block" t-esc="table.booking.customer"/>
+                                    <span class="d-block">Ends <t t-esc="timeLabel(table.booking.end)"/></span>
+                                </button>
                             </t>
                         </div>
                     </article>

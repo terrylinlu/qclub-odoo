@@ -57,7 +57,11 @@
         <field name="arch" type="xml">
             <t t-name="qclub_billiard.booking_confirmation" t-call="website.layout">
                 <div id="wrap" class="container py-4 o_qclub_confirmation">
-                    <h1>Booking received</h1>
+                    <h1 t-if="booking.state == 'pending'">Booking received</h1>
+                    <h1 t-elif="booking.state in ('confirmed', 'arrived')">Booking confirmed</h1>
+                    <h1 t-elif="booking.state == 'done'">Booking completed</h1>
+                    <h1 t-elif="booking.state == 'cancelled'">Booking cancelled</h1>
+                    <h1 t-elif="booking.state in ('expired', 'no_show')">Booking expired</h1>
                     <h2 t-out="booking.name"/>
                     <p t-out="booking.table_id.name"/>
                     <p t-out="time_label"/>

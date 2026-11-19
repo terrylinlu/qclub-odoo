@@ -116,7 +116,8 @@ class RealtimeTable(models.Model):
         ], order='start')
         for booking in upcoming:
             upcoming_by_table.setdefault(booking.table_id.id, []).append({
-                'start': booking.start.isoformat() + 'Z', 'end': booking.end.isoformat() + 'Z',
+                'id': booking.id, 'start': booking.start.isoformat() + 'Z',
+                'end': booking.end.isoformat() + 'Z',
             })
         return [{
             'id': table.id, 'name': table.name, 'website_id': table.website_id.id,
