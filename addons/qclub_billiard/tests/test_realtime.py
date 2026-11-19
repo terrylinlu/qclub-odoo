@@ -5,7 +5,9 @@ from unittest.mock import patch
 
 from freezegun import freeze_time
 
+from odoo import Command
 from odoo.exceptions import AccessError
+from odoo.tools import html2plaintext
 from odoo.tests import HttpCase, tagged
 from odoo.tests.common import new_test_user
 
@@ -28,8 +30,14 @@ class TestRealtime(TestDepositPayment):
                 {'table_id': self.table.id, 'booking_id': booking.id, 'state': 'pending'},
             ))
             for kind in qclub_realtime.ALERT_KINDS:
+                send.reset_mock()
                 qclub_realtime.notify_alert(self.env, booking, kind)
-                self.assertEqual(send.call_args.args, (
+                # message_notify queues its own bus traffic for the recipient's
+                # inbox; look for our explicit qclub.alert call among all of them
+                # rather than assuming it is the last _sendone call.
+                alert_calls = [call for call in send.call_args_list if call.args[1] == 'qclub.alert']
+                self.assertEqual(len(alert_calls), 1)
+                self.assertEqual(alert_calls[0].args, (
                     (self.env.cr.dbname, 'qclub.staff', self.qclub.id), 'qclub.alert',
                     {'kind': kind, 'booking_id': booking.id, 'booking_name': booking.name,
                      'table_name': self.table.name, 'start': booking.start.isoformat(),
@@ -154,6 +162,94 @@ class TestRealtime(TestDepositPayment):
             tables.with_user(internal).get_table_board()
         action = self.env.ref('qclub_billiard.qclub_table_board_action')
         self.assertEqual(action.tag, 'qclub_table_board')
+
+    def test_rt_003_upcoming_only_confirmed_today_in_time_order(self):
+        late = self._book(start='2026-11-06 07:30:00', booking_channel='backoffice')
+        early = self._book(start='2026-11-06 05:30:00', booking_channel='backoffice')
+        current = self._book(booking_channel='backoffice')
+        tomorrow = self._book(start='2026-11-07 05:30:00', booking_channel='backoffice')
+        (late | early | current | tomorrow).action_confirm()
+        self._book(start='2026-11-06 06:30:00', booking_channel='backoffice')
+        tables = self.env['qclub.table'].with_user(self.staff)
+        with freeze_time(current.start):
+            row = tables.get_table_board([self.table.id])[0]
+        self.assertEqual(row['booking']['id'], current.id)
+        self.assertEqual(row['upcoming'], [
+            {'start': booking.start.isoformat() + 'Z', 'end': booking.end.isoformat() + 'Z'}
+            for booking in (early, late)
+        ])
+
+    def test_rt_002_deposit_and_cancellation_refresh_upcoming(self):
+        tables = self.env['qclub.table'].with_user(self.staff)
+        with freeze_time('2026-11-06 00:00:00'):
+            booking = self._book()
+            self.assertEqual(tables.get_table_board([self.table.id])[0]['upcoming'], [])
+            with patch.object(booking_deposit, 'notify_board', wraps=qclub_realtime.notify_board) as board:
+                booking._receive_deposit(self._tx(booking))
+                self._assert_notification_call(board, booking.env, booking)
+            self.assertEqual(tables.get_table_board([self.table.id])[0]['upcoming'], [
+                {'start': booking.start.isoformat() + 'Z', 'end': booking.end.isoformat() + 'Z'},
+            ])
+            with patch.object(booking_deposit, 'notify_board', wraps=qclub_realtime.notify_board) as board:
+                self.assertTrue(booking._cancel_booking())
+                self._assert_notification_call(board, booking.env, booking)
+            self.assertEqual(tables.get_table_board([self.table.id])[0]['upcoming'], [])
+
+    def test_rt_008_rt_009_alerts_persist_as_unread_inbox_for_eligible_staff(self):
+        self.staff.notification_type = 'email'
+        self.manager.notification_type = 'inbox'
+        foreign = new_test_user(
+            self.env, login='rt-inbox-foreign', groups='qclub_billiard.group_billiard_staff',
+            company_id=self.aushare.company_id.id, company_ids=[Command.set(self.aushare.company_id.ids)],
+        )
+        internal = new_test_user(
+            self.env, login='rt-inbox-internal', groups='base.group_user',
+            company_id=self.qclub.company_id.id, company_ids=[Command.set(self.qclub.company_id.ids)],
+        )
+        booking = self._book(booking_channel='backoffice')
+        booking.message_subscribe(partner_ids=internal.partner_id.ids)
+        events = {
+            'booking_submitted': f'New booking {booking.name} awaiting deposit',
+            'deposit_confirmed': f'Deposit received for booking {booking.name}',
+            'cancelled': f'Booking {booking.name} cancelled',
+            'player_joined': f'New player accepted for booking {booking.name}',
+        }
+        with patch.object(type(self.env['bus.bus']), '_sendone') as send:
+            for kind, sentence in events.items():
+                qclub_realtime.notify_alert(self.env, booking, kind)
+        messages = self.env['mail.message'].sudo().search([
+            ('model', '=', booking._name), ('res_id', '=', booking.id),
+            ('message_type', '=', 'user_notification'), ('subject', '=', booking.name),
+        ], order='id')
+        self.assertEqual(len(messages), 4)
+        self.assertEqual(len(self._messages(send, 'qclub.alert')), 4)
+        for message, sentence in zip(messages, events.values()):
+            self.assertEqual(html2plaintext(message.body),
+                             f'{sentence} · {self.table.name} · 6 Nov, 2:00 pm – 6 Nov, 3:00 pm')
+            self.assertIn(self.staff.partner_id, message.partner_ids)
+            self.assertIn(self.manager.partner_id, message.partner_ids)
+            self.assertNotIn(foreign.partner_id, message.partner_ids)
+            self.assertNotIn(internal.partner_id, message.partner_ids)
+            self.assertEqual(message.notification_ids.res_partner_id, message.partner_ids)
+            self.assertTrue(all(n.notification_type == 'inbox' and not n.is_read for n in message.notification_ids))
+        self.assertEqual(self.staff.notification_type, 'email')
+
+    def test_rt_009_no_staff_skips_message_notify_but_still_sends_toast(self):
+        booking = self._book(booking_channel='backoffice')
+        with (
+            patch.object(qclub_realtime, 'staff_users', return_value=self.env['res.users']),
+            patch.object(type(booking), 'message_notify') as message_notify,
+            patch.object(type(self.env['bus.bus']), '_sendone') as send,
+        ):
+            qclub_realtime.notify_alert(self.env, booking, 'booking_submitted')
+        message_notify.assert_not_called()
+        self.assertEqual(len(self._messages(send, 'qclub.alert')), 1)
+
+    def test_rt_009_staff_lookup_follows_same_company_permissions(self):
+        self.aushare.company_id = self.qclub.company_id
+        self.assertEqual(qclub_realtime.staff_users(self.env, self.qclub),
+                         qclub_realtime.staff_users(self.env, self.aushare))
+        self.assertIn(self.staff, qclub_realtime.staff_users(self.env, self.aushare))
 
     def test_rt_003_overnight_and_dst_snapshot(self):
         for start, now in [('2026-04-04 14:30:00', '2026-04-04 15:00:00'),

@@ -73,9 +73,11 @@ def ensure_user(login, name, group_xmlids):
 # 任务 1.1：demo-staff 加入 Billiard Staff 组（只读桌台和配置）
 ensure_user("demo-staff", "[Demo] Staff Wang", ["base.group_user", "qclub_billiard.group_billiard_staff"])
 # RT-006: a second employee can independently verify simultaneous broadcasts.
-ensure_user("demo-staff-realtime", "[Demo] Realtime Staff", [
+realtime_staff = ensure_user("demo-staff-realtime", "[Demo] Realtime Staff", [
     "base.group_user", "qclub_billiard.group_billiard_staff",
 ])
+# RT-008: exercise Discuss delivery for an employee who prefers email.
+realtime_staff.notification_type = "email"
 ensure_user("demo-customer-realtime", "[Demo] Realtime Customer", ["base.group_portal"])
 ensure_user("demo-customer-a", "[Demo] Customer A", ["base.group_portal"])
 ensure_user("demo-customer-b", "[Demo] Customer B", ["base.group_portal"])

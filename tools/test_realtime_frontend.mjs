@@ -174,3 +174,32 @@ test('test_rt_004_systray_toast_uses_allowlisted_fields_as_plain_text', async ()
         assert.equal(options.sticky, false);
     }
 });
+
+test('test_rt_002_rt_003_board_update_replaces_upcoming_for_one_table', async () => {
+    const frontend = await loadFrontend();
+    const realtime = Object.assign(new EventBus(), { ready: Promise.resolve(true), context: () => ({}) });
+    const upcoming = [{ start: '2026-11-06T03:30:00Z', end: '2026-11-06T04:30:00Z' }];
+    const table = { id: 2, name: 'B', booking: false, upcoming: [] };
+    const other = { id: 1, name: 'A', booking: false, upcoming: [] };
+    let rows = [other, table];
+    const calls = [];
+    const orm = { call: async (_model, _method, args) => {
+        calls.push(args);
+        return rows;
+    } };
+    frontend.setServices({ orm, qclub_realtime: realtime });
+    const board = new frontend.namespaces[1].TableBoard();
+    board.setup();
+    await Promise.all(frontend.starting.map((fn) => fn()));
+    await Promise.all(frontend.mounted.map((fn) => fn()));
+
+    for (const [state, slots] of [['confirmed', upcoming], ['cancelled', []]]) {
+        rows = [{ ...table, upcoming: slots }];
+        realtime.trigger('qclub.board_update', { table_id: table.id, booking_id: 9, state });
+        await board.updates;
+        assert.equal(board.state.tables[0], other);
+        assert.equal(board.state.tables[1].upcoming, slots);
+    }
+    assert.equal(JSON.stringify(calls), '[[],[[2]],[[2]]]');
+    assert.match(board.timeLabel(upcoming[0].start), /^2:00\s+pm$/);
+});

@@ -67,7 +67,7 @@ export class TableBoard extends Component {
         });
     }
 
-    endLabel(value) {
+    timeLabel(value) {
         return new Intl.DateTimeFormat("en-AU", {
             timeZone: "Australia/Adelaide", hour: "numeric", minute: "2-digit",
         }).format(new Date(value));

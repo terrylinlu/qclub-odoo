@@ -274,7 +274,16 @@ class BookingDeposit(models.Model):
         self.sudo().message_post(body=_('Booking cancelled. %s', note))
         self._queue_cancellation_email()
         notify_alert(self.env, self, 'cancelled')
+        notify_board(self.env, self)
         return True
+
+    def _notify_get_recipients(self, message, msg_vals=False, **kwargs):
+        recipients = super()._notify_get_recipients(message, msg_vals=msg_vals, **kwargs)
+        if self.env.context.get('qclub_staff_alert_inbox') and message.message_type == 'user_notification':
+            # Deliver only the explicitly addressed staff via Discuss, regardless of preference.
+            partner_ids = set(message.partner_ids.ids)
+            return [dict(recipient, notif='inbox') for recipient in recipients if recipient['id'] in partner_ids]
+        return recipients
 
     def action_cancel(self):
         if self.env.context.get('qclub_cancel_dialog'):
