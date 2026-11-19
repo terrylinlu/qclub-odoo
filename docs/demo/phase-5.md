@@ -1,6 +1,6 @@
 # 阶段 5 演示脚本
 
-对应 RT-001–009。运行 `make demo` 后，用 Chrome 或 Edge 打开三个互相独立的浏览器上下文。
+对应 RT-001–010。运行 `make demo` 后，用 Chrome 或 Edge 打开三个互相独立的浏览器上下文。
 
 5.1 版验收记录（2026-11-19，Claude 验收）：当时版本的步骤 1-7、9、10 已实测通过。步骤 8（未到场自动没收触发看板刷新）
 与步骤 11（WebSocket 握手失败时的静态快照降级）受限于浏览器工具（无法精确控制定时任务时序、无法可靠模拟网络层断连），
@@ -33,6 +33,10 @@
 | 9 | 退出 A 的后台，在顾客端完成一次新预约提交，再重新登录 A | 顶部消息按钮有未读提示，Discuss 可找到离线时收到的提醒。将该条标记已读后，未读数减少。离线时错过的 toast 不补发 |
 | 10 | 另一个独立上下文用 `demo-aushare-staff` 登录后台，顾客在 Q Club 再提交预约 | 该员工收不到 Q Club 的 toast 和 Discuss 通知，其 Table Board 没有 Q Club 桌台 |
 | 11 | 在浏览器开发工具阻止 WebSocket 连接后重新打开 Table Board | 看板仍能显示初次 RPC 快照，之后需手动刷新 |
+
+确认页标题回归验收：顾客在步骤 2 提交后看到 **Booking received**，步骤 3 付押金后看到 **Booking confirmed**，步骤 4 取消后看到 **Booking cancelled**。对步骤 6–8 中归属该顾客的预约，用顾客账号打开确认页，核对 Arrived 对应 **Booking confirmed**，Done 对应 **Booking completed**，No-show 对应 **Booking expired**。另提交一条预约并等待未支付锁定超时，核对 Expired 对应 **Booking expired**。
+
+RT-010 验收：步骤 3 后，员工 A 点击 **Remaining today** 的时段，核对打开的是该时段对应的 Bookings 表单，并用浏览器后退返回看板。步骤 6 后，点击占用卡上的预约信息，核对打开的是该卡对应的表单，并点击 **Table Board** 面包屑返回。两次返回均重新加载当前安排。核对 **Remaining today** 的入口文字只显示时段。
 
 每条 toast 和 Discuss 通知的正文仅含预约编号、桌台、时段和事件。核对其中没有金额、支付方式、电话或邮箱。
 多网站属于同一公司的场景沿用 5.1 的公司权限，符合角色条件的员工可以订阅该公司下可访问的网站频道，也会收到对应的 Discuss 通知。

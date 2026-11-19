@@ -89,6 +89,30 @@ class TestCancelRefundHttp(PaymentHttpCommon):
         tx._post_process()
         return tx
 
+    def test_web_009_confirmation_heading_matches_booking_state(self):
+        """Task 5.3 regression: render the confirmation route for each stored state."""
+        self.authenticate(self.owner.login, 'offline')
+        self.env.flush_all()
+        for state, title in (
+            ('pending', 'Booking received'),
+            ('confirmed', 'Booking confirmed'),
+            ('arrived', 'Booking confirmed'),
+            ('done', 'Booking completed'),
+            ('cancelled', 'Booking cancelled'),
+            ('expired', 'Booking expired'),
+            ('no_show', 'Booking expired'),
+        ):
+            with self.subTest(state=state):
+                self.env.cr.execute(SQL(
+                    'UPDATE qclub_booking SET state = %s WHERE id = %s',
+                    state, self.booking.id,
+                ))
+                self.booking.invalidate_recordset(['state'])
+                response = self.url_open(self.path)
+                self.assertEqual(response.status_code, 200)
+                headings = html.fromstring(response.content).xpath('//*[@id="wrap"]/h1')
+                self.assertEqual([heading.text_content().strip() for heading in headings], [title])
+
     def test_web_009_cancelled_booking_hides_cancellation_window_warning(self):
         self.config.free_cancel_hours = 24
         with freeze_time('2026-11-06 03:00:00'):

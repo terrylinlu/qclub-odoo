@@ -175,9 +175,26 @@ class TestRealtime(TestDepositPayment):
             row = tables.get_table_board([self.table.id])[0]
         self.assertEqual(row['booking']['id'], current.id)
         self.assertEqual(row['upcoming'], [
-            {'start': booking.start.isoformat() + 'Z', 'end': booking.end.isoformat() + 'Z'}
+            {'id': booking.id, 'start': booking.start.isoformat() + 'Z', 'end': booking.end.isoformat() + 'Z'}
             for booking in (early, late)
         ])
+
+    def test_rt_010_board_entries_carry_real_booking_ids_for_detail_links(self):
+        """Every id the board exposes (current occupant and upcoming entries)
+        must resolve to a real qclub.booking the frontend can open as a form."""
+        upcoming = self._book(start='2026-11-06 07:30:00', booking_channel='backoffice')
+        current = self._book(booking_channel='backoffice')
+        (upcoming | current).action_confirm()
+        tables = self.env['qclub.table'].with_user(self.staff)
+        with freeze_time(current.start):
+            row = tables.get_table_board([self.table.id])[0]
+        booking_id = row['booking']['id']
+        upcoming_id = row['upcoming'][0]['id']
+        self.assertEqual(self.env['qclub.booking'].browse(booking_id), current)
+        self.assertEqual(self.env['qclub.booking'].browse(upcoming_id), upcoming)
+        # The schedule list still exposes only times as display text, never the
+        # booking number or customer name (RT-003's minimal-exposure principle).
+        self.assertEqual(set(row['upcoming'][0]), {'id', 'start', 'end'})
 
     def test_rt_002_deposit_and_cancellation_refresh_upcoming(self):
         tables = self.env['qclub.table'].with_user(self.staff)
@@ -188,7 +205,7 @@ class TestRealtime(TestDepositPayment):
                 booking._receive_deposit(self._tx(booking))
                 self._assert_notification_call(board, booking.env, booking)
             self.assertEqual(tables.get_table_board([self.table.id])[0]['upcoming'], [
-                {'start': booking.start.isoformat() + 'Z', 'end': booking.end.isoformat() + 'Z'},
+                {'id': booking.id, 'start': booking.start.isoformat() + 'Z', 'end': booking.end.isoformat() + 'Z'},
             ])
             with patch.object(booking_deposit, 'notify_board', wraps=qclub_realtime.notify_board) as board:
                 self.assertTrue(booking._cancel_booking())
