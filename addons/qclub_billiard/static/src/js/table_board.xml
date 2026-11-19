@@ -14,12 +14,22 @@
                         <div class="card-body">
                             <div class="text-muted small" t-esc="table.website_name"/>
                             <h2 class="h5" t-esc="table.name"/>
-                            <strong t-if="!table.booking" class="text-success">Free</strong>
+                            <t t-if="!table.booking">
+                                <strong class="text-success">Free</strong>
+                                <div t-if="table.upcoming.length" class="mt-2 small">
+                                    <div class="text-muted">Remaining today</div>
+                                    <ul class="list-unstyled mb-0">
+                                        <li t-foreach="table.upcoming" t-as="slot" t-key="slot.start">
+                                            <t t-esc="timeLabel(slot.start)"/> – <t t-esc="timeLabel(slot.end)"/>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </t>
                             <t t-else="">
                                 <strong class="text-warning">Occupied</strong>
                                 <div class="mt-2" t-esc="table.booking.name"/>
                                 <div t-esc="table.booking.customer"/>
-                                <div>Ends <t t-esc="endLabel(table.booking.end)"/></div>
+                                <div>Ends <t t-esc="timeLabel(table.booking.end)"/></div>
                             </t>
                         </div>
                     </article>
