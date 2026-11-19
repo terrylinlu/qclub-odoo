@@ -402,7 +402,7 @@
 - [x] 🟠 **安全组（2026-11-06）**：已删除对外开放的 8069（外网只能经 Nginx / HTTPS 访问 Odoo）；8072 本来未开放。**已接受的风险（你的决定）**：22（SSH）保持对所有 IP 开放（登录 IP 经常变化）；18280 TCP/UDP 保留（偶尔使用）
 - [x] 🟡 SSH 补强（2026-11-06 已核查）：`passwordauthentication no`（只允许密钥登录）；`permitrootlogin without-password`（root 不可用密码登录）。22 端口对所有 IP 开放的风险由此缓解
 - [ ] 🟡 纵深防御：`odoo.conf` 加 `http_interface = 127.0.0.1`（安全组已拦截 8069，此项为第二道防线，可与升级 Odoo 时一并做）
-- [ ] 🟡 **升级生产 Odoo 到最新 19.0**（当前为 2026-03-17 的提交 `203c9270`，缺约 7.5 个月补丁）：先在生产库副本上验证，再安排维护窗口；完成后测试镜像与之对齐
+- [ ] 🟡 **升级生产 Odoo**（当前为 2026-03-17 的提交 `203c9270`，缺约 7.5 个月补丁）：清单已写好 `docs/deploy/odoo-core-upgrade.md`（2026-11-19），目标对齐测试镜像版本（提交 `86ab4d9c`，2026-11-02），待在生产库副本上彩排，再安排维护窗口
 - [ ] 🟡 Q Club 站点 Nginx（`/etc/nginx/sites-available/odoo`）的 `location /websocket` 加 `proxy_http_version 1.1;`，`sudo nginx -t` 后重载
 - [ ] 🟠 **Q Club 发件邮箱（阶段 4 上线前）**：开一个 `cueclub.com.au` 的发件邮箱（如 `bookings@cueclub.com.au`），在 Odoo 加一个只用于该地址的发件服务器（发件过滤 = 该地址），并为 `cueclub.com.au` 配 SPF / DKIM；否则预约邮件会以 AUSHARE 的 `service@aushare.com.au` 发出或被判为伪造（穿刺 2）
 - [ ] 🟡 Odoo 改由无 sudo 权限的专用系统用户运行；Odoo 的数据库账号不使用超级用户（上线前）
