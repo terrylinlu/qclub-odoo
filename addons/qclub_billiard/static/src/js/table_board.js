@@ -40,7 +40,9 @@ export class TableBoard extends Component {
         });
     }
 
-    openBooking(id) {
+    // Arrow function: the template calls this as a bare identifier
+    // ("() => openBooking(id)"), which drops `this` on a plain method.
+    openBooking = (id) => {
         return this.action.doAction({
             type: "ir.actions.act_window",
             res_model: "qclub.booking",
@@ -48,7 +50,7 @@ export class TableBoard extends Component {
             views: [[false, "form"]],
             target: "current",
         });
-    }
+    };
 
     read(ids) {
         return this.orm.call("qclub.table", "get_table_board", ids === undefined ? [] : [ids], {
