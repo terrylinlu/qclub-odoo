@@ -29,7 +29,9 @@ test('test_rt_010_board_booking_entries_open_the_matching_form', async () => {
     );
     const handlers = [...template.matchAll(/<button\b[^>]*t-on-click="([^"]+)"/g)];
     assert.equal(handlers.length, 2);
-    const scope = { table: { booking: { id: 41 } }, slot: { id: 72 }, openBooking: board.openBooking.bind(board) };
+    // Call it unbound, exactly like the template's "() => openBooking(id)"
+    // does, so this test would have caught the original missing-`this` bug.
+    const scope = { table: { booking: { id: 41 } }, slot: { id: 72 }, openBooking: board.openBooking };
     for (const [, handler] of handlers) {
         vm.runInNewContext(`(${handler})()`, scope);
     }
