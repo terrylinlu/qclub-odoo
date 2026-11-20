@@ -402,7 +402,8 @@
 - [x] 🟠 **安全组（2026-11-06）**：已删除对外开放的 8069（外网只能经 Nginx / HTTPS 访问 Odoo）；8072 本来未开放。**已接受的风险（你的决定）**：22（SSH）保持对所有 IP 开放（登录 IP 经常变化）；18280 TCP/UDP 保留（偶尔使用）
 - [x] 🟡 SSH 补强（2026-11-06 已核查）：`passwordauthentication no`（只允许密钥登录）；`permitrootlogin without-password`（root 不可用密码登录）。22 端口对所有 IP 开放的风险由此缓解
 - [ ] 🟡 纵深防御：`odoo.conf` 加 `http_interface = 127.0.0.1`（安全组已拦截 8069，此项为第二道防线，可与升级 Odoo 时一并做）
-- [ ] 🟡 **升级生产 Odoo**（当前为 2026-03-17 的提交 `203c9270`，缺约 7.5 个月补丁）：清单 `docs/deploy/odoo-core-upgrade.md`，目标对齐测试镜像版本（提交 `86ab4d9c`，2026-11-02）。**2026-11-19 已在本机副本彩排通过**：`-u all` 零错误，AUSHARE 指纹 928 行差异逐项核实均为核心自身版本变化（无数据丢失），装模块后零额外差异，测试失败集合跟升级前完全一致（不是升级引入的新问题），备份恢复 ~20 秒验证可行。待你安排维护窗口执行
+- [x] 🟡 **升级生产 Odoo**（原为 2026-03-17 的提交 `203c9270`）：清单 `docs/deploy/odoo-core-upgrade.md`。2026-11-19 本机副本彩排通过后，**2026-11-20 已在生产正式执行**：手动备份+恢复验证通过，代码切到 `86ab4d9c`（2026-11-02），`pip install` 无变化，`-u all` 升级 99 个模块零错误（92 秒），服务重启正常，AUSHARE/Q Club 首页、后台登录、AUSHARE 结账冒烟检查全部通过。升级后观察期内发现一个独立问题（见下一条），已确认与本次升级无关、且不是持续性故障
+- [ ] 🟡 **发票/报表二维码渲染缺系统依赖**（2026-11-20 升级后冒烟检查发现）：AUSHARE 结账流程生成的订单确认/发票 PDF 如果带二维码（`l10n_au` 本地化发票常见），wkhtmltopdf 内嵌二维码图片时报 `ModuleNotFoundError: No module named 'rlPyCairo'` / `'_rl_renderPM'`，PDF 渲染失败；发生在 2026-11-20 16:16 左右，重试几次后自动停止，之后未再出现，不是常驻循环任务。确认与本次 Odoo 核心升级无关（`reportlab` 版本升级前后一致），是生产服务器本身缺少 `reportlab` 二维码渲染所需的系统级依赖（大概率需要 `pip install rlPyCairo` 加 cairo 开发库）。不阻塞已完成的核心升级，但在真实顾客订单触发同一条路径（打印发票/邮件附件二维码）之前应补上，建议下次维护窗口一并处理
 - [ ] 🟡 Q Club 站点 Nginx（`/etc/nginx/sites-available/odoo`）的 `location /websocket` 加 `proxy_http_version 1.1;`，`sudo nginx -t` 后重载
 - [ ] 🟠 **Q Club 发件邮箱（阶段 4 上线前）**：开一个 `cueclub.com.au` 的发件邮箱（如 `bookings@cueclub.com.au`），在 Odoo 加一个只用于该地址的发件服务器（发件过滤 = 该地址），并为 `cueclub.com.au` 配 SPF / DKIM；否则预约邮件会以 AUSHARE 的 `service@aushare.com.au` 发出或被判为伪造（穿刺 2）
 - [ ] 🟡 Odoo 改由无 sudo 权限的专用系统用户运行；Odoo 的数据库账号不使用超级用户（上线前）

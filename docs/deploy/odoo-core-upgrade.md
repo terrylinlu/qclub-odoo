@@ -3,7 +3,7 @@
 对应：`docs/progress.md` 第八节"🟡 升级生产 Odoo 到最新 19.0"。
 执行人：**你**（Claude Code 不操作生产，AGENTS.md 红线）。Claude Code 负责在本机生产库副本上彩排、验证兼容性、整理出这份可执行清单；真正的 `git checkout`、`systemctl restart` 等操作由你在生产上执行。
 
-状态：**✅ 2026-11-19 已在本机生产库副本上彩排一轮，结果干净**。见第六节详细记录。`-u all` 升级 0 错误，AUSHARE 指纹差异全部可解释为 Odoo 核心自身版本更新（不是数据丢失/损坏），装 `qclub_billiard` 后零额外差异，测试失败集合跟 Phase 6 彩排完全一致（没有引入新问题），备份恢复 ~20 秒验证可行。可以安排生产执行窗口了。
+状态：**✅ 2026-11-20 已在生产正式执行，升级完成**。彩排见第六节；生产执行记录见第八节。手动备份+恢复验证通过，`-u all` 零错误（99 模块，92 秒），服务重启正常，冒烟检查通过。观察期内发现一个独立问题（PDF 二维码渲染缺系统依赖），已确认与本次升级无关、非常驻故障，详见第八节和 `docs/progress.md` 第八节对应待办。
 
 ## 一、目标版本
 
@@ -60,3 +60,16 @@
 - 跟 **Phase 6 上线彩排**（`docs/deploy/phase6-go-live-rehearsal.md`）的关系：建议**先做这次 Odoo 核心升级，再做 Phase 6 的正式上线彩排**——这样 Phase 6 彩排时就不用再套用"旧源码遮盖镜像"的特殊处理，直接在生产实际运行的新核心上彩排，结果更贴近真实上线情况
 - 跟 **公司拆分**（`docs/deploy/company-split.md`）没有先后依赖，两件事互相独立，顺序不影响结果
 - 跟 **Q Club 专用发件邮箱**（`docs/progress.md` 第八节）没有依赖关系
+
+## 八、生产执行记录
+
+| 日期 | 执行人 | 结果 |
+|---|---|---|
+| 2026-11-20 | 你（Claude Code 不操作生产） | ✅ 按第四节步骤执行：手动 `pg_dump`+filestore 备份并恢复验证通过（模块数、`res_partner` 数量核对一致）；`git checkout 86ab4d9caa40fc36425488573a424857e8eff5c7`；`pip install -r requirements.txt` 无变化；停服务后手动跑 `odoo-bin -u all --stop-after-init`，99 个模块升级，92 秒，无 ERROR/CRITICAL；`systemctl start odoo` 正常；冒烟检查：AUSHARE/Q Club 首页 200、后台登录正常、AUSHARE 结账页测试通过 |
+
+**观察期发现（非阻塞）**：升级后约 2 分钟内，日志出现重复的 PDF 渲染失败——`ModuleNotFoundError: No module named 'rlPyCairo'` / `'_rl_renderPM'`，经 Nginx access log 确认是 Odoo 自身的 `wkhtmltopdf` 子进程在渲染一个带二维码的 PDF（很可能是冒烟检查里 AUSHARE 结账触发的订单确认/发票，`l10n_au` 本地化发票常带支付二维码），二维码图片生成失败导致整份 PDF 渲染失败，重试几次后自动停止。核查结论：
+- 最近 30 分钟 `odoo.http: Exception during request handling` 报错次数为 0，确认已自行停止，不是常驻循环
+- `ir_cron` 中没有秒级间隔的定时任务，`mail_mail` 中没有相关的卡住邮件，排除是定时任务或邮件队列反复重试
+- 与本次核心升级无关：`pip install` 期间 `reportlab` 版本在升级前后一致（`already satisfied`），缺的是系统级 Python 扩展（渲染二维码用的 PM 后端），不是 Odoo 代码或 Python 包版本问题
+
+**后续待办**：生产服务器缺少 `reportlab` 二维码渲染所需的系统依赖（大概率需要 `pip install rlPyCairo` 加 cairo 开发库）。真实顾客订单一旦触发同一条路径（打印发票、邮件夹带二维码附件）会复现同样的失败。已记入 `docs/progress.md` 第八节待办，建议下次维护窗口一并处理，不阻塞这次核心升级的完成状态。
