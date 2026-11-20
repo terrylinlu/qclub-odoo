@@ -26,11 +26,11 @@
 
 ## 三、执行后检查
 
-- [ ] AUSHARE：首页、商城、商品页、购物车、结账页与执行前的截图一致；用一个现有顾客账号登录正常
-- [ ] AUSHARE 的支付方式、日记账没有变化（Settings → Payment Providers；Accounting → Journals，切换到 AUSHAREU 查看）
+- [x] AUSHARE：首页、商城、商品页、购物车、结账页与执行前的截图一致；用一个现有顾客账号登录正常（2026-11-20 补检，你已确认）
+- [x] AUSHARE 的支付方式、日记账没有变化（Settings → Payment Providers；Accounting → Journals，切换到 AUSHAREU 查看）（2026-11-20 补检，你已确认）
 - [ ] （可选）再次导出 AUSHARE 指纹并对比：除新公司的停用支付方式外应完全一致（新版 `tools/iso_fingerprint.sql` 已只比较 AUSHARE 公司的支付方式）
-- [ ] Q Club：网站正常打开；用现有顾客账号能登录；在 Q Club 新注册的账号归属 TAB Entertainment
-- [ ] 只能访问 AUSHAREU 的员工，在后台看不到 Q Club 的桌台和预约（模块安装后检查）
+- [x] Q Club：网站正常打开；用现有顾客账号能登录；在 Q Club 新注册的账号归属 TAB Entertainment（2026-11-20 补检，你已确认）
+- [ ] 只能访问 AUSHAREU 的员工，在后台看不到 Q Club 的桌台和预约（`qclub_billiard` 还没装，待装模块后再检查）
 
 ## 四、回退
 
